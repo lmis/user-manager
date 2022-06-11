@@ -115,7 +115,7 @@ func runServer(log *util.Logger) error {
 
 	httpServer = &http.Server{
 		Addr:         ":" + port,
-		Handler:      app.New(dbConnection),
+		Handler:      app.New(dbConnection, environment),
 		ReadTimeout:  1 * time.Minute,
 		WriteTimeout: 1 * time.Minute,
 	}

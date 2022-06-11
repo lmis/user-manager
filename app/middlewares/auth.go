@@ -76,5 +76,3 @@ func requireRole(c *gin.Context, role models.UserRole) bool {
 
 	return true
 }
-
-// user.Use(userAuthorizationMiddleware)
