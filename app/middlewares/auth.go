@@ -5,7 +5,7 @@ import (
 	"user-manager/db"
 	"user-manager/db/generated/models"
 	"user-manager/domainmodel"
-	ginext "user-manager/gin-extenstions"
+	ginext "user-manager/gin-extensions"
 
 	"net/http"
 

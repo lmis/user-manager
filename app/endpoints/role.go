@@ -3,7 +3,7 @@ package endpoints
 import (
 	"net/http"
 	"user-manager/db/generated/models"
-	ginext "user-manager/gin-extenstions"
+	ginext "user-manager/gin-extensions"
 
 	"github.com/gin-gonic/gin"
 )

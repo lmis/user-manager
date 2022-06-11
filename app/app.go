@@ -3,7 +3,7 @@ package app
 import (
 	"user-manager/app/endpoints"
 	"user-manager/app/middlewares"
-	ginext "user-manager/gin-extenstions"
+	ginext "user-manager/gin-extensions"
 
 	"database/sql"
 	"fmt"

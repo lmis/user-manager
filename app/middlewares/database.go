@@ -2,7 +2,7 @@ package middlewares
 
 import (
 	"user-manager/db"
-	ginext "user-manager/gin-extenstions"
+	ginext "user-manager/gin-extensions"
 
 	"database/sql"
 	"net/http"

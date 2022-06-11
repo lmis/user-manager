@@ -2,7 +2,7 @@ package middlewares
 
 import (
 	"user-manager/db/generated/models"
-	ginext "user-manager/gin-extenstions"
+	ginext "user-manager/gin-extensions"
 	"user-manager/util"
 
 	"time"
