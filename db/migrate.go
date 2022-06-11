@@ -53,6 +53,7 @@ func MigrateUp(db *sql.DB) (int, error) {
             email TEXT NOT NULL,
             status EMAIL_STATUS NOT NULL,
             number_of_failed_attempts SMALLINT NOT NULL,
+            priority SMALLINT NOT NULL,
             created_at TIMESTAMP WITH TIME ZONE NOT NULL,
             updated_at TIMESTAMP WITH TIME ZONE NOT NULL
           );

@@ -21,7 +21,7 @@ func recoveryHandler(c *gin.Context, requestErr interface{}) {
 
 }
 
-func New(db *sql.DB) *gin.Engine {
+func New(db *sql.DB, environment string) *gin.Engine {
 	if db == nil {
 		panic("Invalid gin engine construction: db is nil")
 	}
@@ -33,7 +33,7 @@ func New(db *sql.DB) *gin.Engine {
 	{
 		api := r.Group("api")
 		api.Use(middlewares.DatabaseMiddleware(db))
-		// api.Use(csrfMiddleware) // TODO
+		api.Use(middlewares.CsrfMiddleware(environment))
 		api.GET("role", middlewares.SessionCheckMiddleware, endpoints.GetAuthRole)
 		api.POST("sign-up") // TODO
 
@@ -46,7 +46,7 @@ func New(db *sql.DB) *gin.Engine {
 		{
 			user := api.Group("user")
 			user.Use(middlewares.SessionCheckMiddleware)
-			// user.Use(userAuthorizationMiddleware)
+			user.Use(middlewares.UserAuthorizationMiddleware)
 
 			user.POST("confirm-email")
 
@@ -61,7 +61,7 @@ func New(db *sql.DB) *gin.Engine {
 		{
 			admin := api.Group("admin")
 			admin.Use(middlewares.SessionCheckMiddleware)
-			// admin.Use(adminAuthorizationMiddleware)
+			admin.Use(middlewares.AdminAuthorizationMiddleware)
 
 			{
 				superAdmin := api.Group("super")

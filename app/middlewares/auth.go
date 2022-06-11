@@ -1,6 +1,7 @@
 package middlewares
 
 import (
+	"fmt"
 	"time"
 	"user-manager/db"
 	"user-manager/db/generated/models"
@@ -43,3 +44,37 @@ func SessionCheckMiddleware(c *gin.Context) {
 		requestContext.Authentication = &domainmodel.Authentication{UserID: session.AppUserID, Role: session.R.AppUser.Role, UserSession: session}
 	}
 }
+
+func UserAuthorizationMiddleware(c *gin.Context) {
+	if ok := requireRole(c, models.UserRoleUSER); !ok {
+		return
+	}
+
+	c.Next()
+}
+
+func AdminAuthorizationMiddleware(c *gin.Context) {
+	if ok := requireRole(c, models.UserRoleADMIN); !ok {
+		return
+	}
+
+	c.Next()
+}
+
+func requireRole(c *gin.Context, role models.UserRole) bool {
+	requestContext := ginext.GetRequestContext(c)
+	authentication := requestContext.Authentication
+	if authentication == nil {
+		ginext.LogAndAbortWithError(c, http.StatusUnauthorized, fmt.Errorf("not authenticated"))
+		return false
+	}
+
+	if authentication.Role != models.UserRoleUSER {
+		ginext.LogAndAbortWithError(c, http.StatusForbidden, fmt.Errorf("wrong user role. required %s, received %s", models.UserRoleUSER, authentication.Role))
+		return false
+	}
+
+	return true
+}
+
+// user.Use(userAuthorizationMiddleware)
