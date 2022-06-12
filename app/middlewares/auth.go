@@ -46,7 +46,9 @@ func SessionCheckMiddleware(c *gin.Context) {
 }
 
 func UserAuthorizationMiddleware(c *gin.Context) {
-	if ok := requireRole(c, models.UserRoleUSER); !ok {
+	requestContext := ginext.GetRequestContext(c)
+	if err := requireRole(requestContext, models.UserRoleUSER); err != nil {
+		ginext.LogAndAbortWithError(c, getStatusCode(err), err)
 		return
 	}
 
@@ -54,25 +56,47 @@ func UserAuthorizationMiddleware(c *gin.Context) {
 }
 
 func AdminAuthorizationMiddleware(c *gin.Context) {
-	if ok := requireRole(c, models.UserRoleADMIN); !ok {
+	requestContext := ginext.GetRequestContext(c)
+	if err := requireRole(requestContext, models.UserRoleADMIN); err != nil {
+		ginext.LogAndAbortWithError(c, getStatusCode(err), err)
 		return
 	}
 
 	c.Next()
 }
 
-func requireRole(c *gin.Context, role models.UserRole) bool {
-	requestContext := ginext.GetRequestContext(c)
+type AuthError struct {
+	StatusCode int
+	Err        error
+}
+
+func (e *AuthError) Error() string {
+	return e.Err.Error()
+}
+
+func getStatusCode(err error) int {
+	authError, ok := err.(*AuthError)
+	if !ok {
+		return http.StatusInternalServerError
+	}
+	return authError.StatusCode
+}
+
+func requireRole(requestContext *ginext.RequestContext, role models.UserRole) error {
 	authentication := requestContext.Authentication
 	if authentication == nil {
-		ginext.LogAndAbortWithError(c, http.StatusUnauthorized, fmt.Errorf("not authenticated"))
-		return false
+		return &AuthError{
+			http.StatusUnauthorized,
+			fmt.Errorf("not authenticated"),
+		}
 	}
 
 	if authentication.Role != models.UserRoleUSER {
-		ginext.LogAndAbortWithError(c, http.StatusForbidden, fmt.Errorf("wrong user role. required %s, received %s", models.UserRoleUSER, authentication.Role))
-		return false
+		return &AuthError{
+			http.StatusForbidden,
+			fmt.Errorf("wrong user role. required %s, received %s", models.UserRoleUSER, authentication.Role),
+		}
 	}
 
-	return true
+	return nil
 }

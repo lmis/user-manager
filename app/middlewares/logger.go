@@ -34,7 +34,7 @@ func LoggerMiddleware(c *gin.Context) {
 	logger.Info("Finished request. Status: %d", c.Writer.Status())
 }
 
-type LogPayload struct {
+type LogMetadata struct {
 	Topic        string          `json:"topic"`
 	Latency      time.Duration   `json:"latency,omitempty"`
 	Path         string          `json:"path,omitempty"`
@@ -48,8 +48,7 @@ type LogPayload struct {
 }
 
 func makeLogger(topic string, c *gin.Context, latency *time.Duration) *util.Logger {
-	return util.LogWithPayloadMaker(
-		topic,
+	return util.LogWithMetadata(
 		func() interface{} {
 			requestContext := ginext.GetRequestContext(c)
 			authentication := requestContext.Authentication
@@ -60,7 +59,7 @@ func makeLogger(topic string, c *gin.Context, latency *time.Duration) *util.Logg
 				path = path + "?" + raw
 			}
 
-			jsonPayload := LogPayload{
+			metadata := LogMetadata{
 				Topic:        topic,
 				Path:         path,
 				ClientIP:     c.ClientIP(),
@@ -68,14 +67,12 @@ func makeLogger(topic string, c *gin.Context, latency *time.Duration) *util.Logg
 				Status:       c.Writer.Status(),
 				ErrorMessage: c.Errors.ByType(gin.ErrorTypePrivate).String(),
 				BodySize:     c.Writer.Size(),
+				Latency:      *latency,
 			}
 			if authentication != nil {
-				jsonPayload.UserID = authentication.UserID
-				jsonPayload.Role = authentication.Role
+				metadata.UserID = authentication.UserID
+				metadata.Role = authentication.Role
 			}
-			if latency != nil {
-				jsonPayload.Latency = *latency
-			}
-			return jsonPayload
+			return metadata
 		})
 }

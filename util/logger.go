@@ -13,8 +13,7 @@ import (
 var logJson bool
 
 type Logger struct {
-	topic       string
-	makePayload func() interface{}
+	getMetadata func() interface{}
 }
 
 type LogData struct {
@@ -28,8 +27,7 @@ type LogData struct {
 
 func Log(topic string) *Logger {
 	return &Logger{
-		topic: topic,
-		makePayload: func() interface{} {
+		getMetadata: func() interface{} {
 			return struct {
 				Topic string `json:"topic"`
 			}{
@@ -39,10 +37,9 @@ func Log(topic string) *Logger {
 	}
 }
 
-func LogWithPayloadMaker(topic string, makePayload func() interface{}) *Logger {
+func LogWithMetadata(getMetadata func() interface{}) *Logger {
 	return &Logger{
-		topic:       topic,
-		makePayload: makePayload,
+		getMetadata: getMetadata,
 	}
 }
 
@@ -52,19 +49,18 @@ func (logger *Logger) log(level string, format string, args ...interface{}) {
 			fmt.Printf("Panic while printing log line. Level=%s format=%s", level, format)
 		}
 	}()
-	topic := logger.topic
 	message := fmt.Sprintf(format, args...)
 	_, file, number, _ := runtime.Caller(2)
 
 	fileParts := strings.Split(file, "/")
 	fileName := fileParts[len(fileParts)-1]
 	lineNumber := strconv.Itoa(number)
-	jsonPayload := logger.makePayload()
+	metadata := logger.getMetadata()
 
 	if logJson {
 		logData, err := json.Marshal(&LogData{
 			Level:       level,
-			JsonPayload: &jsonPayload,
+			JsonPayload: &metadata,
 			Timestamp:   time.Now(),
 			Message:     message,
 			FileName:    fileName,
@@ -77,7 +73,7 @@ func (logger *Logger) log(level string, format string, args ...interface{}) {
 		}
 	}
 
-	log.Printf("%s:%s [%s - %s]%v %s", fileName, lineNumber, level, topic, jsonPayload, message)
+	log.Printf("%s:%s [%s]%v %s", fileName, lineNumber, level, metadata, message)
 }
 
 func (logger *Logger) Info(format string, args ...interface{}) {

@@ -179,6 +179,5 @@ func startLocalDevDb(log *util.Logger) (*dbInfo, func(), error) {
 			panic(err)
 		}
 	}
-
 	return dbInfo, cleanup, nil
 }
