@@ -1,0 +1,3 @@
+// AbortWithError also returns the Error
+(*github.com/gin-gonic/gin.Context).AbortWithError
+

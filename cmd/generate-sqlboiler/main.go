@@ -75,7 +75,7 @@ func generateSqlBoiler(log *util.Logger) error {
 	if err != nil {
 		return err
 	}
-	defer dbConnection.Close()
+	defer util.CloseOrPanic(dbConnection)
 	numAttempts := 10
 	sleepTime := 500 * time.Millisecond
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(numAttempts)*sleepTime+1*time.Second)
@@ -102,10 +102,16 @@ func generateSqlBoiler(log *util.Logger) error {
 		return err
 	}
 	log.Info("Temporary file created in %s", file.Name())
-	defer file.Close()
 	defer func() {
+		err = file.Close()
+		if err != nil {
+			panic(err)
+		}
 		log.Info("Removing file %s", file.Name())
-		os.Remove(file.Name())
+		err = os.Remove(file.Name())
+		if err != nil {
+			panic(err)
+		}
 	}()
 
 	toml :=

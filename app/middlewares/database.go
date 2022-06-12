@@ -27,7 +27,11 @@ func DatabaseMiddleware(database *sql.DB) gin.HandlerFunc {
 
 		defer func() {
 			log.Info("ROLLBACK")
-			tx.Rollback()
+			err = tx.Rollback()
+			if err != nil {
+				// If rollback doesn't work, log and forget
+				log.Err(err)
+			}
 		}()
 		requestCtx.Tx = tx
 

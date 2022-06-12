@@ -76,7 +76,7 @@ func runServer(log *util.Logger) error {
 	if err != nil {
 		return err
 	}
-	defer dbConnection.Close()
+	defer util.CloseOrPanic(dbConnection)
 	numAttempts := 10
 	sleepTime := 500 * time.Millisecond
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(numAttempts)*sleepTime+1*time.Second)
