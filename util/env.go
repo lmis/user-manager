@@ -2,7 +2,7 @@ package util
 
 import "os"
 
-func GetEnvOrDefault(log *Logger, envVar string, defaultVal string) string {
+func GetEnvOrDefault(log Logger, envVar string, defaultVal string) string {
 	res := os.Getenv(envVar)
 	if res == "" {
 		res = defaultVal

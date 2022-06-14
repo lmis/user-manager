@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"os"
 	"runtime"
 	"strconv"
 	"strings"
@@ -11,9 +12,12 @@ import (
 )
 
 var logJson bool
+var out *log.Logger = log.New(os.Stdout, "", 0)
 
-type Logger struct {
-	getMetadata func() interface{}
+type Logger interface {
+	Info(format string, args ...interface{})
+	Warn(format string, args ...interface{})
+	Err(e error)
 }
 
 type LogData struct {
@@ -25,28 +29,32 @@ type LogData struct {
 	FileName    string      `json:"fileName"`
 }
 
-func Log(topic string) *Logger {
-	return &Logger{
-		getMetadata: func() interface{} {
-			return struct {
-				Topic string `json:"topic"`
-			}{
-				Topic: topic,
-			}
-		},
+type SimpleLogger struct {
+	Topic string `json:"topic"`
+}
+
+func (logger *SimpleLogger) Info(format string, args ...interface{}) {
+	WriteLog(logger, "INFO", format, args...)
+}
+
+func (logger *SimpleLogger) Warn(format string, args ...interface{}) {
+	WriteLog(logger, "WARN", format, args...)
+}
+
+func (logger *SimpleLogger) Err(e error) {
+	WriteLog(logger, "ERROR", e.Error())
+}
+
+func Log(topic string) Logger {
+	return &SimpleLogger{
+		topic,
 	}
 }
 
-func LogWithMetadata(getMetadata func() interface{}) *Logger {
-	return &Logger{
-		getMetadata: getMetadata,
-	}
-}
-
-func (logger *Logger) log(level string, format string, args ...interface{}) {
+func WriteLog(metadata interface{}, level string, format string, args ...interface{}) {
 	defer func() {
 		if p := recover(); p != nil {
-			fmt.Printf("Panic while printing log line. Level=%s format=%s", level, format)
+			log.Printf("Panic while printing log line. Level=%s format=%s", level, format)
 		}
 	}()
 	message := fmt.Sprintf(format, args...)
@@ -55,12 +63,11 @@ func (logger *Logger) log(level string, format string, args ...interface{}) {
 	fileParts := strings.Split(file, "/")
 	fileName := fileParts[len(fileParts)-1]
 	lineNumber := strconv.Itoa(number)
-	metadata := logger.getMetadata()
 
 	if logJson {
 		logData, err := json.Marshal(&LogData{
 			Level:       level,
-			JsonPayload: &metadata,
+			JsonPayload: metadata,
 			Timestamp:   time.Now(),
 			Message:     message,
 			FileName:    fileName,
@@ -68,22 +75,12 @@ func (logger *Logger) log(level string, format string, args ...interface{}) {
 		})
 
 		if err == nil {
-			fmt.Println(string(logData))
+			out.Println(string(logData))
 			return
 		}
 	}
 
 	log.Printf("%s:%s [%s]%v %s", fileName, lineNumber, level, metadata, message)
-}
-
-func (logger *Logger) Info(format string, args ...interface{}) {
-	logger.log("INFO", format, args...)
-}
-func (logger *Logger) Warn(format string, args ...interface{}) {
-	logger.log("WARN", format, args...)
-}
-func (logger *Logger) Err(e error) {
-	logger.log("ERROR", e.Error())
 }
 
 func SetLogJSON(enable bool) {

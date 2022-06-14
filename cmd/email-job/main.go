@@ -51,7 +51,7 @@ func main() {
 	}
 }
 
-func runServer(log *util.Logger) error {
+func runServer(log util.Logger) error {
 	log.Info("Starting up")
 
 	var dbConnection *sql.DB
@@ -119,7 +119,7 @@ func runServer(log *util.Logger) error {
 	}
 }
 
-func sendOneEmail(log *util.Logger, database *sql.DB, sendRealEmails bool) error {
+func sendOneEmail(log util.Logger, database *sql.DB, sendRealEmails bool) error {
 	var maxNumFailedAttempts int16 = 3
 	ctx, cancelTimeout := db.DefaultQueryContext()
 	defer cancelTimeout()

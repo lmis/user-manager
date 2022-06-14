@@ -14,8 +14,8 @@ import (
 type RequestContext struct {
 	Authentication *domainmodel.Authentication
 	Tx             *sql.Tx
-	Log            *util.Logger
-	SecurityLog    *util.Logger
+	Log            util.Logger
+	SecurityLog    util.Logger
 }
 
 func GetRequestContext(c *gin.Context) *RequestContext {

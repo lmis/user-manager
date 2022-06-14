@@ -52,7 +52,7 @@ func main() {
 	}
 }
 
-func runServer(log *util.Logger) error {
+func runServer(log util.Logger) error {
 	log.Info("Starting up")
 
 	var httpServer *http.Server
@@ -155,7 +155,7 @@ func runServer(log *util.Logger) error {
 	return nil
 }
 
-func startLocalDevDb(log *util.Logger) (*dbInfo, func(), error) {
+func startLocalDevDb(log util.Logger) (*dbInfo, func(), error) {
 	log.Info("Starting local postgres docker container")
 	generatedPassword, err := util.MakeRandomURLSafeB64(21)
 	if err != nil {

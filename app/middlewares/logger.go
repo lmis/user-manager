@@ -12,9 +12,8 @@ import (
 
 func LoggerMiddleware(c *gin.Context) {
 	// Add logger to context
-	var latency time.Duration
-	logger := makeLogger("REQUEST", c, &latency)
-	securityLogger := makeLogger("SECURITY", c, &latency)
+	logger := &RequestLogger{topic: "REQUEST", context: c}
+	securityLogger := &RequestLogger{topic: "SECURITY", context: c}
 
 	requestContext := ginext.GetRequestContext(c)
 	requestContext.Log = logger
@@ -29,7 +28,7 @@ func LoggerMiddleware(c *gin.Context) {
 	c.Next()
 
 	// Stop timer
-	latency = time.Since(start)
+	logger.latency = time.Since(start)
 
 	logger.Info("Finished request. Status: %d", c.Writer.Status())
 }
@@ -47,32 +46,50 @@ type LogMetadata struct {
 	Status       int             `json:"status,omitempty"`
 }
 
-func makeLogger(topic string, c *gin.Context, latency *time.Duration) *util.Logger {
-	return util.LogWithMetadata(
-		func() interface{} {
-			requestContext := ginext.GetRequestContext(c)
-			authentication := requestContext.Authentication
-			path := c.Request.URL.Path
-			raw := c.Request.URL.RawQuery
-			if raw != "" {
-				// TODO: Anonymize query values
-				path = path + "?" + raw
-			}
+type RequestLogger struct {
+	topic   string
+	context *gin.Context
+	latency time.Duration
+}
 
-			metadata := LogMetadata{
-				Topic:        topic,
-				Path:         path,
-				ClientIP:     c.ClientIP(),
-				Method:       c.Request.Method,
-				Status:       c.Writer.Status(),
-				ErrorMessage: c.Errors.ByType(gin.ErrorTypePrivate).String(),
-				BodySize:     c.Writer.Size(),
-				Latency:      *latency,
-			}
-			if authentication != nil {
-				metadata.UserID = authentication.UserID
-				metadata.Role = authentication.Role
-			}
-			return metadata
-		})
+func getMetadata(logger *RequestLogger) *LogMetadata {
+	topic := logger.topic
+	c := logger.context
+	latency := logger.latency
+	requestContext := ginext.GetRequestContext(c)
+	authentication := requestContext.Authentication
+	path := c.Request.URL.Path
+	raw := c.Request.URL.RawQuery
+	if raw != "" {
+		// TODO: Anonymize query values
+		path = path + "?" + raw
+	}
+
+	metadata := LogMetadata{
+		Topic:        topic,
+		Path:         path,
+		ClientIP:     c.ClientIP(),
+		Method:       c.Request.Method,
+		Status:       c.Writer.Status(),
+		ErrorMessage: c.Errors.ByType(gin.ErrorTypePrivate).String(),
+		BodySize:     c.Writer.Size(),
+		Latency:      latency,
+	}
+	if authentication != nil {
+		metadata.UserID = authentication.UserID
+		metadata.Role = authentication.Role
+	}
+	return &metadata
+}
+
+func (logger *RequestLogger) Info(format string, args ...interface{}) {
+	util.WriteLog(getMetadata(logger), "INFO", format, args...)
+}
+
+func (logger *RequestLogger) Warn(format string, args ...interface{}) {
+	util.WriteLog(getMetadata(logger), "WARN", format, args...)
+}
+
+func (logger *RequestLogger) Err(e error) {
+	util.WriteLog(getMetadata(logger), "ERROR", e.Error())
 }

@@ -39,7 +39,7 @@ func main() {
 	}
 }
 
-func generateSqlBoiler(log *util.Logger) error {
+func generateSqlBoiler(log util.Logger) error {
 	outputDir := ""
 	if len(os.Args) > 1 {
 		outputDir = os.Args[1]
