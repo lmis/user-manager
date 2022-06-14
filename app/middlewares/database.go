@@ -3,6 +3,7 @@ package middlewares
 import (
 	"user-manager/db"
 	ginext "user-manager/gin-extensions"
+	"user-manager/util"
 
 	"database/sql"
 	"net/http"
@@ -20,8 +21,7 @@ func DatabaseMiddleware(database *sql.DB) gin.HandlerFunc {
 		log.Info("BEGIN Transaction")
 		tx, err := database.BeginTx(ctx, nil)
 		if err != nil {
-			log.Err(err)
-			c.AbortWithError(http.StatusInternalServerError, err)
+			c.AbortWithError(http.StatusInternalServerError, util.Wrap("DatabaseMiddleware", "begin transaction failed", err))
 			return
 		}
 
@@ -40,7 +40,7 @@ func DatabaseMiddleware(database *sql.DB) gin.HandlerFunc {
 		if !c.IsAborted() {
 			log.Info("COMMIT")
 			if err := tx.Commit(); err != nil {
-				ginext.LogAndAbortWithError(c, http.StatusInternalServerError, err)
+				ginext.LogAndAbortWithError(c, http.StatusInternalServerError, util.Wrap("DatabaseMiddlware", "commit failed", err))
 			}
 		}
 	}

@@ -1,12 +1,12 @@
 package middlewares
 
 import (
-	"fmt"
 	"time"
 	"user-manager/db"
 	"user-manager/db/generated/models"
 	"user-manager/domainmodel"
 	ginext "user-manager/gin-extensions"
+	"user-manager/util"
 
 	"net/http"
 
@@ -17,7 +17,7 @@ import (
 func SessionCheckMiddleware(c *gin.Context) {
 	sessionID, err := c.Request.Cookie("SESSION_ID")
 	if err != nil && err != http.ErrNoCookie {
-		ginext.LogAndAbortWithError(c, http.StatusInternalServerError, err)
+		ginext.LogAndAbortWithError(c, http.StatusInternalServerError, util.Wrap("SessionCheckMiddleware", "getting session cookie failed", err))
 		return
 	}
 
@@ -37,7 +37,7 @@ func SessionCheckMiddleware(c *gin.Context) {
 		One(ctx, requestContext.Tx)
 
 	if err != nil {
-		ginext.LogAndAbortWithError(c, http.StatusInternalServerError, err)
+		ginext.LogAndAbortWithError(c, http.StatusInternalServerError, util.Wrap("SessionCheckMiddleware", "getting session failed", err))
 		return
 	}
 	if session != nil {
@@ -48,7 +48,8 @@ func SessionCheckMiddleware(c *gin.Context) {
 func UserAuthorizationMiddleware(c *gin.Context) {
 	requestContext := ginext.GetRequestContext(c)
 	if err := requireRole(requestContext, models.UserRoleUSER); err != nil {
-		ginext.LogAndAbortWithError(c, getStatusCode(err), err)
+		requestContext.SecurityLog.Info("Not a user: %v", err)
+		c.AbortWithStatus(getStatusCode(err))
 		return
 	}
 
@@ -58,7 +59,8 @@ func UserAuthorizationMiddleware(c *gin.Context) {
 func AdminAuthorizationMiddleware(c *gin.Context) {
 	requestContext := ginext.GetRequestContext(c)
 	if err := requireRole(requestContext, models.UserRoleADMIN); err != nil {
-		ginext.LogAndAbortWithError(c, getStatusCode(err), err)
+		requestContext.SecurityLog.Info("Not an admin: %v", err)
+		c.AbortWithStatus(getStatusCode(err))
 		return
 	}
 
@@ -87,14 +89,14 @@ func requireRole(requestContext *ginext.RequestContext, role models.UserRole) er
 	if authentication == nil {
 		return &AuthError{
 			http.StatusUnauthorized,
-			fmt.Errorf("not authenticated"),
+			util.Error("requireRole", "not authenticated"),
 		}
 	}
 
 	if authentication.Role != models.UserRoleUSER {
 		return &AuthError{
 			http.StatusForbidden,
-			fmt.Errorf("wrong user role. required %s, received %s", models.UserRoleUSER, authentication.Role),
+			util.Errorf("requireRole", "wrong user role. required %s, received %s", models.UserRoleUSER, authentication.Role),
 		}
 	}
 

@@ -1,9 +1,9 @@
 package middlewares
 
 import (
-	"fmt"
 	"net/http"
 	ginext "user-manager/gin-extensions"
+	"user-manager/util"
 
 	"github.com/gin-gonic/gin"
 )
@@ -16,16 +16,16 @@ func CsrfMiddleware(environment string) gin.HandlerFunc {
 		}
 		cookie, err := c.Cookie(cookieName)
 		if err != nil && err != http.ErrNoCookie {
-			ginext.LogAndAbortWithError(c, http.StatusInternalServerError, err)
+			ginext.LogAndAbortWithError(c, http.StatusInternalServerError, util.Wrap("CsrfMiddleware", "getting CSRF cookie failed", err))
 			return
 		}
 		header := c.GetHeader("X-CSRF-Token")
 		if header == "" || cookie == "" {
-			ginext.LogAndAbortWithError(c, http.StatusBadRequest, fmt.Errorf("missing tokens"))
+			ginext.LogAndAbortWithError(c, http.StatusBadRequest, util.Error("CsrfMiddleware", "missing tokens"))
 		}
 
 		if header != cookie {
-			ginext.LogAndAbortWithError(c, http.StatusBadRequest, fmt.Errorf("mismatching csrf tokens"))
+			ginext.LogAndAbortWithError(c, http.StatusBadRequest, util.Error("CsrfMiddleware", "mismatching csrf tokens"))
 			return
 		}
 

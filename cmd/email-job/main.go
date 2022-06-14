@@ -1,5 +1,7 @@
 package main
 
+// TODO: Extract and reuse common parts  from server/main.go
+
 //go:generate go run ../generate-sqlboiler/main.go ../../db/generated/models
 import (
 	"user-manager/db"

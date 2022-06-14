@@ -1,5 +1,7 @@
 package main
 
+// TODO: Extract and reuse common parts  from server/main.go
+
 import (
 	"user-manager/db"
 	"user-manager/util"
@@ -54,12 +56,9 @@ func generateSqlBoiler(log util.Logger) error {
 	dbHost := "localhost"
 	dbPort := "5432"
 	dbUser := "postgres"
-	dbPassword, err := util.MakeRandomURLSafeB64(21)
-	if err != nil {
-		return err
-	}
+	dbPassword := util.MakeRandomURLSafeB64(21)
 	cmd := fmt.Sprintf("docker run --name postgres-migration-container -p 5432:5432 -e POSTGRES_PASSWORD=%s -d postgres", dbPassword)
-	if err = util.RunShellCommand(cmd); err != nil {
+	if err := util.RunShellCommand(cmd); err != nil {
 		return fmt.Errorf("failed to start local postgres")
 	}
 

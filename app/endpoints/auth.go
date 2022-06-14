@@ -32,7 +32,7 @@ func PostLogin(c *gin.Context) {
 	var credentialsTO CredentialsTO
 	err := c.BindJSON(&credentialsTO)
 	if err != nil {
-		ginext.LogAndAbortWithError(c, http.StatusBadRequest, err)
+		ginext.LogAndAbortWithError(c, http.StatusBadRequest, util.Wrap("PostLogin", "cannot bind to credentialsTO", err))
 		return
 	}
 
@@ -42,7 +42,7 @@ func PostLogin(c *gin.Context) {
 
 	user, err = models.AppUsers(models.AppUserWhere.Email.EQ(credentialsTO.Email)).One(ctx, tx)
 	if err != nil {
-		ginext.LogAndAbortWithError(c, http.StatusInternalServerError, err)
+		ginext.LogAndAbortWithError(c, http.StatusInternalServerError, util.Wrap("PostLogin", "user not found", err))
 		return
 	}
 	if user == nil {
@@ -60,11 +60,7 @@ func PostLogin(c *gin.Context) {
 		return
 	}
 
-	sessionID, err := util.MakeRandomURLSafeB64(21)
-	if err != nil {
-		ginext.LogAndAbortWithError(c, http.StatusInternalServerError, err)
-		return
-	}
+	sessionID := util.MakeRandomURLSafeB64(21)
 
 	session := models.UserSession{
 		UserSessionID: sessionID,
@@ -75,7 +71,7 @@ func PostLogin(c *gin.Context) {
 	defer cancelTimeout()
 	err = session.Insert(ctx, tx, boil.Infer())
 	if err != nil {
-		ginext.LogAndAbortWithError(c, http.StatusInternalServerError, err)
+		ginext.LogAndAbortWithError(c, http.StatusInternalServerError, util.Wrap("PostLogin", "cannot insert session", err))
 		return
 	}
 
@@ -95,18 +91,18 @@ func PostLogout(c *gin.Context) {
 	}
 
 	if userSession == nil {
-		ginext.LogAndAbortWithError(c, http.StatusBadRequest, fmt.Errorf("logout without session present"))
+		ginext.LogAndAbortWithError(c, http.StatusBadRequest, util.Error("PostLogout", "logout without session present"))
 		return
 	}
 	ctx, cancelTimeout := db.DefaultQueryContext()
 	defer cancelTimeout()
 	rows, err := userSession.Delete(ctx, tx)
 	if err != nil {
-		ginext.LogAndAbortWithError(c, http.StatusInternalServerError, err)
+		ginext.LogAndAbortWithError(c, http.StatusInternalServerError, util.Wrap("PostLogout", "could not delete session", err))
 		return
 	}
 	if rows != 1 {
-		ginext.LogAndAbortWithError(c, http.StatusInternalServerError, fmt.Errorf("too many rows affected: %d", rows))
+		ginext.LogAndAbortWithError(c, http.StatusInternalServerError, util.Error("PostLogout", fmt.Sprintf("too many rows affected: %d", rows)))
 		return
 	}
 

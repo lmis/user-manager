@@ -46,7 +46,7 @@ func main() {
 	}()
 
 	if err := runServer(log); err != nil {
-		log.Err(err)
+		log.Err(util.Wrap("main", "run server returned error", err))
 		log.Warn("Server exited abnormally")
 		exitCode = 1
 	}
@@ -78,18 +78,18 @@ func runServer(log util.Logger) error {
 			var err error
 			dbInfo, cleanup, err = startLocalDevDb(log)
 			if err != nil {
-				return err
+				return util.Wrap("main", "cannot start local dev db", err)
 			}
 			defer cleanup()
 		} else {
-			return fmt.Errorf("missing database connection information")
+			return util.Error("main", "missing database connection information")
 		}
 	}
 
 	psqlInfo := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable", dbInfo.host, dbInfo.port, dbInfo.user, dbInfo.password, dbInfo.dbname)
 	dbConnection, err := sql.Open("postgres", psqlInfo)
 	if err != nil {
-		return err
+		return util.Wrap("main", "could not open db connection", err)
 	}
 	defer util.CloseOrPanic(dbConnection)
 	numAttempts := 10
@@ -104,12 +104,12 @@ func runServer(log util.Logger) error {
 		err = dbConnection.PingContext(ctx)
 	}
 	if err != nil {
-		return err
+		return util.Wrap("main", "could not ping db", err)
 	}
 	log.Info("Running migrations")
 	n, err := db.MigrateUp(dbConnection)
 	if err != nil {
-		return err
+		return util.Wrap("main", "could not run migration", err)
 	}
 	log.Info("Applied %d migrations", n)
 
@@ -127,7 +127,7 @@ func runServer(log util.Logger) error {
 			if errors.Is(err, http.ErrServerClosed) {
 				log.Info("Http server closed")
 			} else {
-				httpServerError <- err
+				httpServerError <- util.Wrap("main", "httpServer stopped with unexpected error", err)
 			}
 		}
 	}()
@@ -144,7 +144,7 @@ func runServer(log util.Logger) error {
 		defer cancel()
 		err = httpServer.Shutdown(ctx)
 		if err != nil {
-			return err
+			return util.Wrap("main", "httpServer shutdown error", err)
 		}
 
 		log.Info("Http server has shutdown normally")
@@ -157,10 +157,7 @@ func runServer(log util.Logger) error {
 
 func startLocalDevDb(log util.Logger) (*dbInfo, func(), error) {
 	log.Info("Starting local postgres docker container")
-	generatedPassword, err := util.MakeRandomURLSafeB64(21)
-	if err != nil {
-		return nil, nil, err
-	}
+	generatedPassword := util.MakeRandomURLSafeB64(21)
 
 	dbInfo := &dbInfo{
 		dbname:   "postgres",
@@ -170,13 +167,13 @@ func startLocalDevDb(log util.Logger) (*dbInfo, func(), error) {
 		password: generatedPassword,
 	}
 	cmd := fmt.Sprintf("docker run --name postgres-local-dev -p 5432:5432 -e POSTGRES_PASSWORD=%s -d postgres", generatedPassword)
-	if err = util.RunShellCommand(cmd); err != nil {
-		return nil, nil, err
+	if err := util.RunShellCommand(cmd); err != nil {
+		return nil, nil, util.Wrap("startLocalDevDb", "docker run failed", err)
 	}
 	cleanup := func() {
 		log.Info("Cleaning up local postgres docker container")
 		if err := util.RunShellCommand("docker rm -f postgres-local-dev"); err != nil {
-			panic(err)
+			panic(util.Wrap("startLocalDevDb", "docker rm failed", err))
 		}
 	}
 	return dbInfo, cleanup, nil

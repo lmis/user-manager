@@ -5,6 +5,6 @@ import "database/sql"
 func CloseOrPanic(db *sql.DB) {
 	err := db.Close()
 	if err != nil {
-		panic(err)
+		panic(Wrap("CloseOrPanic", "closing db failed", err))
 	}
 }
