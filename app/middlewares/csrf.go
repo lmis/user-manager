@@ -22,6 +22,7 @@ func CsrfMiddleware(config *config.Config) gin.HandlerFunc {
 		header := c.GetHeader("X-CSRF-Token")
 		if header == "" || cookie == "" {
 			c.AbortWithError(http.StatusBadRequest, util.Error("CsrfMiddleware", "missing tokens"))
+			return
 		}
 
 		if header != cookie {
@@ -29,6 +30,5 @@ func CsrfMiddleware(config *config.Config) gin.HandlerFunc {
 			return
 		}
 
-		c.Next()
 	}
 }

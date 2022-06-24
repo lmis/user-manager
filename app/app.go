@@ -1,6 +1,7 @@
 package app
 
 import (
+	"time"
 	"user-manager/app/endpoints"
 	"user-manager/app/middlewares"
 	"user-manager/config"
@@ -14,6 +15,9 @@ func New(db *sql.DB, config *config.Config) *gin.Engine {
 	if db == nil {
 		panic("Invalid gin engine construction: db is nil")
 	}
+	if config == nil {
+		panic("Invalid gin engine construction: config is nil")
+	}
 
 	r := gin.New()
 	r.Use(middlewares.LoggerMiddleware)
@@ -21,14 +25,20 @@ func New(db *sql.DB, config *config.Config) *gin.Engine {
 
 	{
 		api := r.Group("api")
-		api.Use(middlewares.DatabaseMiddleware(db))
 		api.Use(middlewares.CsrfMiddleware(config))
+		api.Use(middlewares.DatabaseMiddleware(db))
 		api.GET("role", middlewares.SessionCheckMiddleware, endpoints.GetAuthRole)
-		api.POST("sign-up") // TODO
+		api.POST("sign-up",
+			middlewares.TimingObfuscationMiddleware(400*time.Millisecond),
+			endpoints.PostSignUp,
+		) // TODO
 
 		{
 			auth := api.Group("auth")
-			auth.POST("login", endpoints.PostLogin)
+			auth.POST("login",
+				middlewares.TimingObfuscationMiddleware(400*time.Millisecond),
+				endpoints.PostLogin,
+			)
 			auth.POST("logout", endpoints.PostLogout)
 		}
 
@@ -37,7 +47,9 @@ func New(db *sql.DB, config *config.Config) *gin.Engine {
 			user.Use(middlewares.SessionCheckMiddleware)
 			user.Use(middlewares.UserAuthorizationMiddleware)
 
-			user.POST("confirm-email")
+			user.POST("confirm-email",
+				middlewares.TimingObfuscationMiddleware(400*time.Microsecond),
+			)
 
 			{
 				userSettings := api.Group("settings")
@@ -54,8 +66,8 @@ func New(db *sql.DB, config *config.Config) *gin.Engine {
 
 			{
 				superAdmin := api.Group("super")
-				superAdmin.POST("add-user") // TODO
-
+				admin.Use(middlewares.SuperAdminAuthorizationMiddleware)
+				superAdmin.POST("add-user")
 			}
 		}
 	}

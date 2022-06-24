@@ -16,7 +16,7 @@ import (
 
 type CredentialsTO struct {
 	Email    string `json:"email"`
-	Password string `json:"password"`
+	Password []byte `json:"password"`
 }
 
 type LoginResponseTO struct {
@@ -24,6 +24,7 @@ type LoginResponseTO struct {
 }
 
 // TODO: Hanlde 2FA
+// TODO: No info about email used?
 func PostLogin(c *gin.Context) {
 	requestContext := ginext.GetRequestContext(c)
 	tx := requestContext.Tx
@@ -42,7 +43,7 @@ func PostLogin(c *gin.Context) {
 
 	user, err = models.AppUsers(models.AppUserWhere.Email.EQ(credentialsTO.Email)).One(ctx, tx)
 	if err != nil {
-		c.AbortWithError(http.StatusInternalServerError, util.Wrap("PostLogin", "user not found", err))
+		c.AbortWithError(http.StatusInternalServerError, util.Wrap("PostLogin", "error finding user", err))
 		return
 	}
 	if user == nil {
@@ -52,7 +53,7 @@ func PostLogin(c *gin.Context) {
 		return
 	}
 
-	err = bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(credentialsTO.Password))
+	err = bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), credentialsTO.Password)
 	if err != nil {
 		securityLog.Info("Password mismatch")
 		// Avoid 401 etc, to keep browsers from throwing out basic auth

@@ -64,12 +64,7 @@ func getMetadata(logger *RequestLogger) *LogMetadata {
 	latency := logger.latency
 	requestContext := ginext.GetRequestContext(c)
 	authentication := requestContext.Authentication
-	path := c.Request.URL.Path
-	raw := c.Request.URL.RawQuery
-	if raw != "" {
-		// TODO: Anonymize query values
-		path = path + "?" + raw
-	}
+	path := c.FullPath()
 
 	metadata := LogMetadata{
 		Topic:        topic,

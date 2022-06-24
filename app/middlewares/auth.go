@@ -51,10 +51,7 @@ func UserAuthorizationMiddleware(c *gin.Context) {
 	if err := requireRole(requestContext, models.UserRoleUSER); err != nil {
 		requestContext.SecurityLog.Info("Not a user: %v", err)
 		c.AbortWithStatus(getStatusCode(err))
-		return
 	}
-
-	c.Next()
 }
 
 func AdminAuthorizationMiddleware(c *gin.Context) {
@@ -62,10 +59,12 @@ func AdminAuthorizationMiddleware(c *gin.Context) {
 	if err := requireRole(requestContext, models.UserRoleADMIN); err != nil {
 		requestContext.SecurityLog.Info("Not an admin: %v", err)
 		c.AbortWithStatus(getStatusCode(err))
-		return
 	}
+}
 
-	c.Next()
+func SuperAdminAuthorizationMiddleware(c *gin.Context) {
+	// TODO: Super admin user role
+	c.AbortWithStatus(http.StatusForbidden)
 }
 
 type AuthError struct {
