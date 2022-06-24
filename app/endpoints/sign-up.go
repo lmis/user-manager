@@ -63,7 +63,7 @@ func PostSignUp(c *gin.Context) {
 		Email:                  signUpTO.Email,
 		EmailVerificationToken: null.StringFrom(util.MakeRandomURLSafeB64(21)),
 		Role:                   models.UserRoleUSER,
-		Verified:               false,
+		EmailVerified:          false,
 	}
 
 	ctx, cancelTimeout = db.DefaultQueryContext()

@@ -6,7 +6,8 @@ import (
 )
 
 type Authentication struct {
-	UserID      appuser.ID
-	Role        models.UserRole
-	UserSession *models.UserSession
+	UserID        appuser.ID
+	Role          models.UserRole
+	EmailVerified bool
+	UserSession   *models.UserSession
 }

@@ -21,7 +21,7 @@ func MigrateUp(db *sql.DB) (int, error) {
             role USER_ROLE NOT NULL,
             email TEXT NOT NULL,
             email_verification_token TEXT,
-            verified BOOL NOT NULL,
+            email_verified BOOL NOT NULL,
             password_reset_token TEXT,
             password_reset_token_valid_until TIMESTAMP WITH TIME ZONE,
             two_factor_token TEXT,

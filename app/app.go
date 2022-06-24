@@ -27,11 +27,14 @@ func New(db *sql.DB, config *config.Config) *gin.Engine {
 		api := r.Group("api")
 		api.Use(middlewares.CsrfMiddleware(config))
 		api.Use(middlewares.DatabaseMiddleware(db))
-		api.GET("role", middlewares.SessionCheckMiddleware, endpoints.GetAuthRole)
+		api.GET("role",
+			middlewares.SessionCheckMiddleware,
+			endpoints.GetAuthRole,
+		)
 		api.POST("sign-up",
 			middlewares.TimingObfuscationMiddleware(400*time.Millisecond),
 			endpoints.PostSignUp,
-		) // TODO
+		)
 
 		{
 			auth := api.Group("auth")
@@ -47,12 +50,11 @@ func New(db *sql.DB, config *config.Config) *gin.Engine {
 			user.Use(middlewares.SessionCheckMiddleware)
 			user.Use(middlewares.UserAuthorizationMiddleware)
 
-			user.POST("confirm-email",
-				middlewares.TimingObfuscationMiddleware(400*time.Microsecond),
-			)
+			user.POST("confirm-email")
 
 			{
 				userSettings := api.Group("settings")
+				userSettings.Use(middlewares.VerifiedEmailAuthorizationMiddleware)
 				userSettings.POST("change-email")
 				userSettings.POST("enable-2fa")
 				userSettings.POST("disable-2fa")
