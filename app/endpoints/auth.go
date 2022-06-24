@@ -32,7 +32,7 @@ func PostLogin(c *gin.Context) {
 	var credentialsTO CredentialsTO
 	err := c.BindJSON(&credentialsTO)
 	if err != nil {
-		ginext.LogAndAbortWithError(c, http.StatusBadRequest, util.Wrap("PostLogin", "cannot bind to credentialsTO", err))
+		c.AbortWithError(http.StatusBadRequest, util.Wrap("PostLogin", "cannot bind to credentialsTO", err))
 		return
 	}
 
@@ -42,7 +42,7 @@ func PostLogin(c *gin.Context) {
 
 	user, err = models.AppUsers(models.AppUserWhere.Email.EQ(credentialsTO.Email)).One(ctx, tx)
 	if err != nil {
-		ginext.LogAndAbortWithError(c, http.StatusInternalServerError, util.Wrap("PostLogin", "user not found", err))
+		c.AbortWithError(http.StatusInternalServerError, util.Wrap("PostLogin", "user not found", err))
 		return
 	}
 	if user == nil {
@@ -71,7 +71,7 @@ func PostLogin(c *gin.Context) {
 	defer cancelTimeout()
 	err = session.Insert(ctx, tx, boil.Infer())
 	if err != nil {
-		ginext.LogAndAbortWithError(c, http.StatusInternalServerError, util.Wrap("PostLogin", "cannot insert session", err))
+		c.AbortWithError(http.StatusInternalServerError, util.Wrap("PostLogin", "cannot insert session", err))
 		return
 	}
 
@@ -91,18 +91,18 @@ func PostLogout(c *gin.Context) {
 	}
 
 	if userSession == nil {
-		ginext.LogAndAbortWithError(c, http.StatusBadRequest, util.Error("PostLogout", "logout without session present"))
+		c.AbortWithError(http.StatusBadRequest, util.Error("PostLogout", "logout without session present"))
 		return
 	}
 	ctx, cancelTimeout := db.DefaultQueryContext()
 	defer cancelTimeout()
 	rows, err := userSession.Delete(ctx, tx)
 	if err != nil {
-		ginext.LogAndAbortWithError(c, http.StatusInternalServerError, util.Wrap("PostLogout", "could not delete session", err))
+		c.AbortWithError(http.StatusInternalServerError, util.Wrap("PostLogout", "could not delete session", err))
 		return
 	}
 	if rows != 1 {
-		ginext.LogAndAbortWithError(c, http.StatusInternalServerError, util.Error("PostLogout", fmt.Sprintf("too many rows affected: %d", rows)))
+		c.AbortWithError(http.StatusInternalServerError, util.Error("PostLogout", fmt.Sprintf("too many rows affected: %d", rows)))
 		return
 	}
 

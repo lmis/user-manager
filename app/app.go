@@ -3,7 +3,6 @@ package app
 import (
 	"user-manager/app/endpoints"
 	"user-manager/app/middlewares"
-	ginext "user-manager/gin-extensions"
 	"user-manager/util"
 
 	"database/sql"
@@ -18,7 +17,7 @@ func recoveryHandler(c *gin.Context, requestErr interface{}) {
 	if !ok {
 		err = fmt.Errorf("%v", requestErr)
 	}
-	ginext.LogAndAbortWithError(c, http.StatusInternalServerError, util.Wrap("recoveryHandler", "recovered from panic", err))
+	c.AbortWithError(http.StatusInternalServerError, util.Wrap("recoveryHandler", "recovered from panic", err))
 }
 
 func New(db *sql.DB, environment string) *gin.Engine {

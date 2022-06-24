@@ -33,6 +33,10 @@ type SimpleLogger struct {
 	Topic string `json:"topic"`
 }
 
+func (logger *SimpleLogger) String() string {
+	return logger.Topic
+}
+
 func (logger *SimpleLogger) Info(format string, args ...interface{}) {
 	WriteLog(logger, "INFO", format, args...)
 }
@@ -80,7 +84,7 @@ func WriteLog(metadata interface{}, level string, format string, args ...interfa
 		}
 	}
 
-	log.Printf("%s:%s [%s]%v %s", fileName, lineNumber, level, metadata, message)
+	log.Printf("%s:%s [%s - %v] %s", fileName, lineNumber, level, metadata, message)
 }
 
 func SetLogJSON(enable bool) {

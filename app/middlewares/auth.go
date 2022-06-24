@@ -17,7 +17,7 @@ import (
 func SessionCheckMiddleware(c *gin.Context) {
 	sessionID, err := c.Request.Cookie("SESSION_ID")
 	if err != nil && err != http.ErrNoCookie {
-		ginext.LogAndAbortWithError(c, http.StatusInternalServerError, util.Wrap("SessionCheckMiddleware", "getting session cookie failed", err))
+		c.AbortWithError(http.StatusInternalServerError, util.Wrap("SessionCheckMiddleware", "getting session cookie failed", err))
 		return
 	}
 
@@ -37,7 +37,7 @@ func SessionCheckMiddleware(c *gin.Context) {
 		One(ctx, requestContext.Tx)
 
 	if err != nil {
-		ginext.LogAndAbortWithError(c, http.StatusInternalServerError, util.Wrap("SessionCheckMiddleware", "getting session failed", err))
+		c.AbortWithError(http.StatusInternalServerError, util.Wrap("SessionCheckMiddleware", "getting session failed", err))
 		return
 	}
 	if session != nil {

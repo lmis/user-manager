@@ -1,6 +1,7 @@
 package middlewares
 
 import (
+	"fmt"
 	"user-manager/db/generated/models"
 	ginext "user-manager/gin-extensions"
 	"user-manager/util"
@@ -33,6 +34,7 @@ func LoggerMiddleware(c *gin.Context) {
 	logger.Info("Finished request. Status: %d", c.Writer.Status())
 }
 
+// TODO: Correlation-ID
 type LogMetadata struct {
 	Topic        string          `json:"topic"`
 	Latency      time.Duration   `json:"latency,omitempty"`
@@ -44,6 +46,10 @@ type LogMetadata struct {
 	ErrorMessage string          `json:"errorMessage,omitempty"`
 	BodySize     int             `json:"bodySize,omitempty"`
 	Status       int             `json:"status,omitempty"`
+}
+
+func (m *LogMetadata) String() string {
+	return fmt.Sprintf("%s, %s %s (%d) | %s %d", m.Topic, m.Method, m.Path, m.Status, m.Role, m.UserID)
 }
 
 type RequestLogger struct {

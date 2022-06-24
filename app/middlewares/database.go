@@ -30,7 +30,7 @@ func DatabaseMiddleware(database *sql.DB) gin.HandlerFunc {
 			err = tx.Rollback()
 			if err != nil {
 				// If rollback doesn't work, log and forget
-				log.Err(err)
+				c.Error(util.Wrap("DatabaseMiddleware", "rollback failed", err))
 			}
 		}()
 		requestCtx.Tx = tx
@@ -40,7 +40,7 @@ func DatabaseMiddleware(database *sql.DB) gin.HandlerFunc {
 		if !c.IsAborted() {
 			log.Info("COMMIT")
 			if err := tx.Commit(); err != nil {
-				ginext.LogAndAbortWithError(c, http.StatusInternalServerError, util.Wrap("DatabaseMiddlware", "commit failed", err))
+				c.AbortWithError(http.StatusInternalServerError, util.Wrap("DatabaseMiddlware", "commit failed", err))
 			}
 		}
 	}

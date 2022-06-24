@@ -31,8 +31,3 @@ func GetRequestContext(c *gin.Context) *RequestContext {
 	}
 	return ctx
 }
-
-func LogAndAbortWithError(c *gin.Context, statusCode int, err error) {
-	GetRequestContext(c).Log.Err(err)
-	c.AbortWithError(statusCode, err)
-}
