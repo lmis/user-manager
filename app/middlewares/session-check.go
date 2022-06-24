@@ -1,6 +1,7 @@
 package middlewares
 
 import (
+	"database/sql"
 	"net/http"
 	"time"
 	"user-manager/db"
@@ -36,7 +37,7 @@ func SessionCheckMiddleware(c *gin.Context) {
 		qm.Load(models.UserSessionRels.AppUser)).
 		One(ctx, requestContext.Tx)
 
-	if err != nil {
+	if err != nil && err != sql.ErrNoRows {
 		c.AbortWithError(http.StatusInternalServerError, util.Wrap("SessionCheckMiddleware", "getting session failed", err))
 		return
 	}

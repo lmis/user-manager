@@ -1,6 +1,7 @@
 package endpoints
 
 import (
+	"database/sql"
 	"fmt"
 	"net/http"
 	"time"
@@ -43,13 +44,13 @@ func PostLogin(c *gin.Context) {
 
 	user, err = models.AppUsers(models.AppUserWhere.Email.EQ(credentialsTO.Email)).One(ctx, tx)
 	if err != nil {
-		c.AbortWithError(http.StatusInternalServerError, util.Wrap("PostLogin", "error finding user", err))
-		return
-	}
-	if user == nil {
-		// Avoid 401 etc, to keep browsers from throwing out basic auth
-		securityLog.Info("Failed login attempt")
-		c.JSON(http.StatusOK, loginResponseTO)
+		if err == sql.ErrNoRows {
+			// Avoid 401 etc, to keep browsers from throwing out basic auth
+			securityLog.Info("Failed login attempt")
+			c.JSON(http.StatusOK, loginResponseTO)
+		} else {
+			c.AbortWithError(http.StatusInternalServerError, util.Wrap("PostLogin", "error finding user", err))
+		}
 		return
 	}
 

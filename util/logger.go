@@ -30,6 +30,17 @@ type LogData struct {
 	FileName    string      `json:"fileName"`
 }
 
+const (
+	termCodeGreen   = "\033[0;32m"
+	termCodeWhite   = "\033[0;37m"
+	termCodeYellow  = "\033[0;33m"
+	termCodeRed     = "\033[0;31m"
+	termCodeBlue    = "\033[0;34m"
+	termCodeMagenta = "\033[0;35m"
+	termCodeCyan    = "\033[0;36m"
+	termCodeReset   = "\033[0m"
+)
+
 type SimpleLogger struct {
 	Topic string `json:"topic"`
 }
@@ -43,11 +54,12 @@ func (logger *SimpleLogger) Info(format string, args ...interface{}) {
 }
 
 func (logger *SimpleLogger) Warn(format string, args ...interface{}) {
-	WriteLog(logger, "WARN", format, args...)
+	WriteLog(logger, "WARN", termCodeYellow+fmt.Sprintf(format, args...)+termCodeReset)
 }
 
 func (logger *SimpleLogger) Err(e error) {
-	WriteLog(logger, "ERROR", e.Error())
+	WriteLog(logger, "ERROR", termCodeRed+e.Error()+termCodeReset)
+
 }
 
 func (logger *SimpleLogger) Recovery(p interface{}, stack []byte) {

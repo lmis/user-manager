@@ -45,7 +45,6 @@ func PostConfirmEmail(c *gin.Context) {
 		return
 	}
 
-	// TODO: token valid until?
 	if !user.EmailVerificationToken.Valid {
 		c.AbortWithError(http.StatusInternalServerError, util.Wrap("PostConfirmationEmail", "no verification token present on database", err))
 		return

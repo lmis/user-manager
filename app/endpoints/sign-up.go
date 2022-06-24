@@ -1,6 +1,7 @@
 package endpoints
 
 import (
+	"database/sql"
 	"net/http"
 	"user-manager/app/services"
 	"user-manager/db"
@@ -35,7 +36,7 @@ func PostSignUp(c *gin.Context) {
 	defer cancelTimeout()
 
 	user, err = models.AppUsers(models.AppUserWhere.Email.EQ(signUpTO.Email)).One(ctx, tx)
-	if err != nil {
+	if err != nil && err != sql.ErrNoRows {
 		c.AbortWithError(http.StatusInternalServerError, util.Wrap("PostSignup", "error finding user", err))
 		return
 	}

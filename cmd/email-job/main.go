@@ -77,15 +77,25 @@ func sendOneEmail(log util.Logger, database *sql.DB, config *config.Config) erro
 	if err != nil {
 		return util.Wrap("sendOneEmail", "issue beginning transaction", err)
 	}
+	defer func() {
+		log.Info("ROLLBACK Transaction")
+		err = tx.Rollback()
+		// TODO: wrap?
+		if err != nil {
+			panic(err)
+		}
+	}()
 
 	mail, err := models.MailQueues(
 		models.MailQueueWhere.Status.EQ(models.EmailStatusPENDING),
 		qm.Or2(qm.Expr(models.MailQueueWhere.Status.EQ(models.EmailStatusERROR), models.MailQueueWhere.NumberOfFailedAttempts.LT(maxNumFailedAttempts))),
-		qm.OrderBy(models.MailQueueColumns.Priority+"desc"),
+		qm.OrderBy(models.MailQueueColumns.Priority+" DESC"),
 	).One(ctx, tx)
 
-	// TODO: Does this crash the job if the queue is empty?
 	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil
+		}
 		return util.Wrap("sendOneEmail", "issue getting email from db", err)
 	}
 

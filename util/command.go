@@ -19,7 +19,7 @@ func Run(topic string, command func(Logger) error) {
 	}()
 
 	if err := command(log); err != nil {
-		log.Err(Wrap("main", "runMigrations returned error", err))
+		log.Err(Wrap("main", "command returned error", err))
 		log.Warn("Server exited abnormally")
 		exitCode = 1
 	}
