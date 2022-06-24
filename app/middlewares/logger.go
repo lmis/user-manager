@@ -82,7 +82,7 @@ func getMetadata(logger *RequestLogger) *LogMetadata {
 		Latency:      latency,
 	}
 	if authentication != nil {
-		metadata.UserID = authentication.UserID
+		metadata.UserID = int(authentication.UserID)
 		metadata.Role = authentication.Role
 	}
 	return &metadata
@@ -98,4 +98,7 @@ func (logger *RequestLogger) Warn(format string, args ...interface{}) {
 
 func (logger *RequestLogger) Err(e error) {
 	util.WriteLog(getMetadata(logger), "ERROR", e.Error())
+}
+func (logger *RequestLogger) Recovery(p interface{}, stack []byte) {
+	util.WriteLog(logger, "ERROR", fmt.Sprintf("panic: %v\n%v", p, string(stack)))
 }

@@ -1,16 +1,11 @@
 package main
 
-// TODO: Extract and reuse common parts  from server/main.go
-
 import (
 	"user-manager/db"
 	"user-manager/util"
 
-	"context"
 	"fmt"
 	"os"
-	"runtime/debug"
-	"time"
 
 	"database/sql"
 
@@ -18,27 +13,7 @@ import (
 )
 
 func main() {
-	util.SetLogJSON(false)
-	log := util.Log("SQL-BOILER")
-
-	exitCode := 0
-
-	defer func() {
-		if p := recover(); p != nil {
-			stack := string(debug.Stack())
-			log.Err(fmt.Errorf("panic: %v\n%v", p, stack))
-			exitCode = 1
-		}
-
-		log.Info("Done. ExitCode: %d", exitCode)
-		os.Exit(exitCode)
-	}()
-
-	err := generateSqlBoiler(log)
-	if err != nil {
-		exitCode = 1
-		log.Warn("Aborted")
-	}
+	util.Run("SQL-BOILER", generateSqlBoiler)
 }
 
 func generateSqlBoiler(log util.Logger) error {
@@ -47,7 +22,7 @@ func generateSqlBoiler(log util.Logger) error {
 		outputDir = os.Args[1]
 	}
 	if outputDir == "" {
-		return fmt.Errorf("no output directory provided as commandline argument")
+		return util.Errorf("generateSqlBoiler", "no output directory provided as commandline argument")
 	}
 
 	log.Info("Starting local postgres docker container")
@@ -59,57 +34,47 @@ func generateSqlBoiler(log util.Logger) error {
 	dbPassword := util.MakeRandomURLSafeB64(21)
 	cmd := fmt.Sprintf("docker run --name postgres-migration-container -p 5432:5432 -e POSTGRES_PASSWORD=%s -d postgres", dbPassword)
 	if err := util.RunShellCommand(cmd); err != nil {
-		return fmt.Errorf("failed to start local postgres")
+		return util.Wrap("generateSqlBoiler", "failed to start local postgres", err)
 	}
 
 	defer func() {
 		log.Info("Cleaning up local postgres docker container")
 		if err := util.RunShellCommand("docker rm -f postgres-migration-container"); err != nil {
-			panic(err)
+			panic(util.Wrap("generateSqlBoiler", "cleanup of local docker container failed", err))
 		}
 	}()
 
 	psqlInfo := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable", dbHost, dbPort, dbUser, dbPassword, dbName)
 	dbConnection, err := sql.Open("postgres", psqlInfo)
 	if err != nil {
-		return err
+		return util.Wrap("generateSqlBoiler", "cannot open db", err)
 	}
 	defer util.CloseOrPanic(dbConnection)
-	numAttempts := 10
-	sleepTime := 500 * time.Millisecond
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(numAttempts)*sleepTime+1*time.Second)
-	defer cancel()
-	log.Info("Pinging DB")
-	err = dbConnection.PingContext(ctx)
-	for attempts := 1; err != nil && attempts < numAttempts; attempts++ {
-		time.Sleep(sleepTime)
-		log.Info("Retry pinging DB")
-		err = dbConnection.PingContext(ctx)
-	}
+	err = util.CheckConnection(log, dbConnection)
 	if err != nil {
-		return err
+		return util.Wrap("generateSqlBoiler", "issue checking connection", err)
 	}
 	log.Info("Running migrations")
 	n, err := db.MigrateUp(dbConnection)
 	if err != nil {
-		return err
+		return util.Wrap("generateSqlBoiler", "issue migrating up", err)
 	}
 	log.Info("Applied %d migrations", n)
 
 	file, err := os.Create("/tmp/sqlboiler-config.toml")
 	if err != nil {
-		return err
+		return util.Wrap("generateSqlBoiler", "issue creating tmp file", err)
 	}
 	log.Info("Temporary file created in %s", file.Name())
 	defer func() {
 		err = file.Close()
 		if err != nil {
-			panic(err)
+			panic(util.Wrap("generateSqlBoiler", "issue closing temp file", err))
 		}
 		log.Info("Removing file %s", file.Name())
 		err = os.Remove(file.Name())
 		if err != nil {
-			panic(err)
+			panic(util.Wrap("generateSqlBoiler", "issue removing temp file", err))
 		}
 	}()
 
@@ -132,10 +97,10 @@ func generateSqlBoiler(log util.Logger) error {
     `, outputDir, dbName, dbHost, dbPort, dbUser, dbPassword)
 
 	if _, err := file.Write([]byte(toml)); err != nil {
-		return err
+		return util.Wrap("generateSqlBoiler", "issue writing to temp file", err)
 	}
 	if err := util.RunShellCommand(fmt.Sprintf("sqlboiler psql --config=%s", file.Name())); err != nil {
-		return err
+		return util.Wrap("generateSqlBoiler", "issue running sqlboiler", err)
 	}
 	log.Info("Generated models under %s", outputDir)
 	return nil

@@ -3,36 +3,26 @@ package app
 import (
 	"user-manager/app/endpoints"
 	"user-manager/app/middlewares"
-	"user-manager/util"
+	"user-manager/config"
 
 	"database/sql"
-	"fmt"
-	"net/http"
 
 	"github.com/gin-gonic/gin"
 )
 
-func recoveryHandler(c *gin.Context, requestErr interface{}) {
-	err, ok := requestErr.(error)
-	if !ok {
-		err = fmt.Errorf("%v", requestErr)
-	}
-	c.AbortWithError(http.StatusInternalServerError, util.Wrap("recoveryHandler", "recovered from panic", err))
-}
-
-func New(db *sql.DB, environment string) *gin.Engine {
+func New(db *sql.DB, config *config.Config) *gin.Engine {
 	if db == nil {
 		panic("Invalid gin engine construction: db is nil")
 	}
 
 	r := gin.New()
 	r.Use(middlewares.LoggerMiddleware)
-	r.Use(gin.CustomRecovery(recoveryHandler))
+	r.Use(middlewares.RecoveryMiddleware)
 
 	{
 		api := r.Group("api")
 		api.Use(middlewares.DatabaseMiddleware(db))
-		api.Use(middlewares.CsrfMiddleware(environment))
+		api.Use(middlewares.CsrfMiddleware(config))
 		api.GET("role", middlewares.SessionCheckMiddleware, endpoints.GetAuthRole)
 		api.POST("sign-up") // TODO
 

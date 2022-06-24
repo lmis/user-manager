@@ -5,6 +5,7 @@ import (
 	"user-manager/db"
 	"user-manager/db/generated/models"
 	"user-manager/domainmodel"
+	appuser "user-manager/domainmodel/id/appUser"
 	ginext "user-manager/gin-extensions"
 	"user-manager/util"
 
@@ -41,7 +42,7 @@ func SessionCheckMiddleware(c *gin.Context) {
 		return
 	}
 	if session != nil {
-		requestContext.Authentication = &domainmodel.Authentication{UserID: session.AppUserID, Role: session.R.AppUser.Role, UserSession: session}
+		requestContext.Authentication = &domainmodel.Authentication{UserID: appuser.ID(session.AppUserID), Role: session.R.AppUser.Role, UserSession: session}
 	}
 }
 

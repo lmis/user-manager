@@ -2,15 +2,16 @@ package middlewares
 
 import (
 	"net/http"
+	"user-manager/config"
 	"user-manager/util"
 
 	"github.com/gin-gonic/gin"
 )
 
-func CsrfMiddleware(environment string) gin.HandlerFunc {
+func CsrfMiddleware(config *config.Config) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		cookieName := "__Host-XSRF-Token"
-		if environment == "local" {
+		if config.IsLocalEnv() {
 			cookieName = "XSRF-Token"
 		}
 		cookie, err := c.Cookie(cookieName)

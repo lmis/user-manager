@@ -2,6 +2,7 @@ package db
 
 import (
 	"database/sql"
+	"user-manager/util"
 
 	migrate "github.com/rubenv/sql-migrate"
 )
@@ -51,6 +52,7 @@ func MigrateUp(db *sql.DB) (int, error) {
           CREATE TABLE mail_queue (
             mail_queue_id SERIAL PRIMARY KEY,
             email TEXT NOT NULL,
+            content TEXT NOT NULL,
             status EMAIL_STATUS NOT NULL,
             number_of_failed_attempts SMALLINT NOT NULL,
             priority SMALLINT NOT NULL,
@@ -69,5 +71,9 @@ func MigrateUp(db *sql.DB) (int, error) {
 		},
 	}
 
-	return migrate.Exec(db, "postgres", migrations, migrate.Up)
+	numApplied, err := migrate.Exec(db, "postgres", migrations, migrate.Up)
+	if err != nil {
+		return 0, util.Wrap("MigrateUp", "issue executing migration", err)
+	}
+	return numApplied, nil
 }
