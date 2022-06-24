@@ -34,7 +34,7 @@ func SuperAdminAuthorizationMiddleware(c *gin.Context) {
 func VerifiedEmailAuthorizationMiddleware(c *gin.Context) {
 	requestContext := ginext.GetRequestContext(c)
 	authentication := requestContext.Authentication
-	if !authentication.EmailVerified {
+	if !authentication.AppUser.EmailVerified {
 		requestContext.SecurityLog.Info("Email not verified")
 		c.AbortWithStatus(http.StatusForbidden)
 		return
@@ -67,10 +67,10 @@ func requireRole(requestContext *ginext.RequestContext, role models.UserRole) er
 		}
 	}
 
-	if authentication.Role != models.UserRoleUSER {
+	if authentication.AppUser.Role != models.UserRoleUSER {
 		return &AuthError{
 			http.StatusForbidden,
-			util.Errorf("requireRole", "wrong user role. required %s, received %s", models.UserRoleUSER, authentication.Role),
+			util.Errorf("requireRole", "wrong user role. required %s, received %s", models.UserRoleUSER, authentication.AppUser.Role),
 		}
 	}
 

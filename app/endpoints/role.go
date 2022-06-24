@@ -16,7 +16,7 @@ func GetAuthRole(c *gin.Context) {
 	requestContext := ginext.GetRequestContext(c)
 	authRole := AuthRoleTO{}
 	if requestContext.Authentication != nil {
-		authRole.Role = requestContext.Authentication.Role
+		authRole.Role = requestContext.Authentication.AppUser.Role
 	}
 	c.JSON(http.StatusOK, authRole)
 }

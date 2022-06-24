@@ -88,7 +88,7 @@ func PostLogout(c *gin.Context) {
 	authentication := requestContext.Authentication
 	var userSession *models.UserSession
 	if authentication != nil {
-		userSession = authentication.UserSession
+		userSession = &authentication.UserSession
 	}
 
 	if userSession == nil {

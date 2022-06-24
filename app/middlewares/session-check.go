@@ -6,7 +6,6 @@ import (
 	"user-manager/db"
 	"user-manager/db/generated/models"
 	"user-manager/domainmodel"
-	appuser "user-manager/domainmodel/id/appUser"
 	ginext "user-manager/gin-extensions"
 	"user-manager/util"
 
@@ -14,6 +13,7 @@ import (
 	"github.com/volatiletech/sqlboiler/v4/queries/qm"
 )
 
+// TODO: Refresh the session
 func SessionCheckMiddleware(c *gin.Context) {
 	sessionID, err := c.Request.Cookie("SESSION_ID")
 	if err != nil && err != http.ErrNoCookie {
@@ -42,10 +42,8 @@ func SessionCheckMiddleware(c *gin.Context) {
 	}
 	if session != nil {
 		requestContext.Authentication = &domainmodel.Authentication{
-			UserID:        appuser.ID(session.AppUserID),
-			Role:          session.R.AppUser.Role,
-			UserSession:   session,
-			EmailVerified: session.R.AppUser.EmailVerified,
+			UserSession: *session,
+			AppUser:     *session.R.AppUser,
 		}
 	}
 }

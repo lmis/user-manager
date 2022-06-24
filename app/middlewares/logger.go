@@ -31,7 +31,12 @@ func LoggerMiddleware(c *gin.Context) {
 	// Stop timer
 	logger.latency = time.Since(start)
 
-	logger.Info("Finished request. Status: %d", c.Writer.Status())
+	status := c.Writer.Status()
+	if status >= 400 {
+		securityLogger.Info("Request failed. Status: %d", status)
+	} else {
+		logger.Info("Finished request. Status: %d", status)
+	}
 }
 
 // TODO: Correlation-ID
@@ -77,8 +82,8 @@ func getMetadata(logger *RequestLogger) *LogMetadata {
 		Latency:      latency,
 	}
 	if authentication != nil {
-		metadata.UserID = int(authentication.UserID)
-		metadata.Role = authentication.Role
+		metadata.UserID = int(authentication.AppUser.AppUserID)
+		metadata.Role = authentication.AppUser.Role
 	}
 	return &metadata
 }
