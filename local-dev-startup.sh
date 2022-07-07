@@ -4,10 +4,42 @@ export DB_HOST=localhost
 export DB_PORT=5432
 export DB_USER=postgres
 export DB_PASSWORD=$(cat /dev/random | head -c 15 | base64)
+_DOCKER_POSTGRES_NAME=postgres-local-dev-$(cat /proc/sys/kernel/random/uuid)
 
-echo "start local db"
-docker run --name postgres-local-dev -p 5432:5432 -e POSTGRES_PASSWORD=$DB_PASSWORD -d postgres
+killIfExists() {
+    if [[ -n "$1" ]]
+    then
+      kill $1
+    fi
+}
 
+cleanup() {
+    echo "------ CLEANUP ------"
+    killIfExists $_APP_PID
+    killIfExists $_EMAILER_PID
+
+    sleep 1
+    docker rm $_DOCKER_POSTGRES_NAME -f > /dev/null
+}
+
+trap cleanup exit
+
+echo "------ START LOCAL DB ($_DOCKER_POSTGRES_NAME) ------"
+docker run --name $_DOCKER_POSTGRES_NAME -p 5432:5432 -e POSTGRES_PASSWORD=$DB_PASSWORD -d postgres > /dev/null
+
+echo "------ RUN MIGRATOR ------"
 go run cmd/migrator/main.go
-go run cmd/app/main.go &
-go run cmd/email-job/main.go &
+
+if [[ $? = 0 ]]
+then
+    echo "------ START APP ------"
+    go run cmd/app/main.go &
+    _APP_PID=$!
+    echo "------ START EMAILER ------"
+    go run cmd/email-job/main.go &
+    _EMAILER_PID=$!
+
+    sleep infinity
+else
+  echo "----- ABORTING -----"
+fi

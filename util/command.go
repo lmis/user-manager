@@ -16,6 +16,7 @@ func Run(topic string, command func(Logger) error) {
 			exitCode = 1
 		}
 		log.Info("Shutdown complete. ExitCode: %d", exitCode)
+		os.Exit(exitCode)
 	}()
 
 	if err := command(log); err != nil {
