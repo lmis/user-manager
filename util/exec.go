@@ -9,8 +9,19 @@ func RunShellCommand(command string) error {
 	log.Info("$ %s", command)
 	cmd := exec.Command("sh", "-c", command)
 
-	out, err := cmd.CombinedOutput()
-	log.Info("| %s", string(out))
+	out, err := cmd.Output()
+	outString := string(out)
+	if outString != "" {
+		log.Info("| %s", outString)
+	}
 
-	return err
+	if err != nil {
+		message := "error in executed command"
+		if e, ok := err.(*exec.ExitError); ok {
+			message += " (" + string(e.Stderr) + ")"
+		}
+		return Wrap("RunShellCommand", message, err)
+	}
+
+	return nil
 }

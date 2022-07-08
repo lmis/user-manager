@@ -25,6 +25,7 @@ func MigrateUp(db *sql.DB) (int, error) {
             password_reset_token TEXT,
             password_reset_token_valid_until TIMESTAMP WITH TIME ZONE,
             two_factor_token TEXT,
+            temprary_two_factor_token TEXT,
             password_hash TEXT NOT NULL,
             created_at TIMESTAMP WITH TIME ZONE NOT NULL
           );
@@ -68,6 +69,25 @@ func MigrateUp(db *sql.DB) (int, error) {
           DROP TABLE mail_queue;
           DROP TYPE EMAIL_STATUS;
           `,
+				},
+			},
+			{
+				Id: "003-two-factor-throttling",
+				Up: []string{
+					`
+          CREATE TABLE two_factor_throttling (
+            two_factor_throttling_id SERIAL PRIMARY KEY,
+				    app_user_id INTEGER UNIQUE REFERENCES app_user(app_user_id) NOT NULL,
+				    failed_attempts_since_last_success INTEGER NOT NULL,
+				    timeout_until TIMESTAMP WITH TIME ZONE,
+				    updated_at TIMESTAMP WITH TIME ZONE NOT NULL
+          );
+          `,
+				},
+				Down: []string{
+					`
+			    DROP TABLE two_facor_throwttling;
+			    `,
 				},
 			},
 		},

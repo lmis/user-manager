@@ -3,6 +3,7 @@ package app
 import (
 	"time"
 	"user-manager/app/endpoints"
+	authendpoints "user-manager/app/endpoints/auth"
 	"user-manager/app/middlewares"
 	"user-manager/config"
 
@@ -40,9 +41,9 @@ func New(db *sql.DB, config *config.Config) *gin.Engine {
 			auth := api.Group("auth")
 			auth.POST("login",
 				middlewares.TimingObfuscationMiddleware(400*time.Millisecond),
-				endpoints.PostLogin,
+				authendpoints.PostLogin,
 			)
-			auth.POST("logout", endpoints.PostLogout)
+			auth.POST("logout", authendpoints.PostLogout)
 		}
 
 		{

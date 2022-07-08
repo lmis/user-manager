@@ -32,14 +32,14 @@ func generateSqlBoiler(log util.Logger) error {
 	dbPort := "5432"
 	dbUser := "postgres"
 	dbPassword := util.MakeRandomURLSafeB64(21)
-	cmd := fmt.Sprintf("docker run --name postgres-migration-container -p 5432:5432 -e POSTGRES_PASSWORD=%s -d postgres", dbPassword)
+	cmd := fmt.Sprintf("docker run --name postgres-migration-container -p 5432:5432 -e POSTGRES_PASSWORD=%s -d postgres > /dev/null", dbPassword)
 	if err := util.RunShellCommand(cmd); err != nil {
 		return util.Wrap("generateSqlBoiler", "failed to start local postgres", err)
 	}
 
 	defer func() {
 		log.Info("Cleaning up local postgres docker container")
-		if err := util.RunShellCommand("docker rm -f postgres-migration-container"); err != nil {
+		if err := util.RunShellCommand("docker rm -f postgres-migration-container > /dev/null"); err != nil {
 			panic(util.Wrap("generateSqlBoiler", "cleanup of local docker container failed", err))
 		}
 	}()
