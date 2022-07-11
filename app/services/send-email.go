@@ -109,17 +109,15 @@ func enqueueBasicEmail(r *ginext.RequestContext,
 ) error {
 	var err error
 	translation := translations[language]
-	name := data["UserName"]
 	salutation := ""
-	if name == "" {
-		salutation = translation.SalutationAnonymous
-	} else {
-		salutation, err = executeTemplate(translation.Salutation, map[string]string{
-			"UserName": name,
-		})
+	_, ok := data["UserName"]
+	if ok {
+		salutation, err = executeTemplate(translation.Salutation, data)
 		if err != nil {
 			return util.Wrap("enqueueBasiceMail", "issue translating salutation", err)
 		}
+	} else {
+		salutation = translation.SalutationAnonymous
 	}
 	subject := ""
 	paragraphs := []string{}
@@ -156,13 +154,9 @@ func enqueueBasicEmail(r *ginext.RequestContext,
 func enqueueEmail(r *ginext.RequestContext, subject string, content string, address string, priority Priority) error {
 	tx := r.Tx
 	mail := models.MailQueue{
-		// Email                  string      `boil:"email" json:"email" toml:"email" yaml:"email"`
-		// Content                string      `boil:"content" json:"content" toml:"content" yaml:"content"`
-		// Status                 EmailStatus `boil:"status" json:"status" toml:"status" yaml:"status"`
-		// Priority               int16       `boil:"priority" json:"priority" toml:"priority" yaml:"priority"`
-		Email:   address,
-		Content: content,
-		// Subject: subject,
+		Email:    address,
+		Content:  content,
+		Subject:  subject,
 		Status:   models.EmailStatusPENDING,
 		Priority: int16(priority),
 	}
