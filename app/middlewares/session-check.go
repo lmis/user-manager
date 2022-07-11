@@ -6,7 +6,7 @@ import (
 	"time"
 	"user-manager/db"
 	"user-manager/db/generated/models"
-	"user-manager/domainmodel"
+	domainmodel "user-manager/domain-model"
 	ginext "user-manager/gin-extensions"
 	"user-manager/util"
 

@@ -16,9 +16,12 @@ func MigrateUp(db *sql.DB) (int, error) {
 				Up: []string{
 					`
           CREATE TYPE USER_ROLE AS ENUM ('USER', 'ADMIN');
+          CREATE TYPE USER_LANGUAGE AS ENUM ('EN', 'DE');
           CREATE TABLE app_user (
             app_user_id SERIAL PRIMARY KEY,
             role USER_ROLE NOT NULL,
+			language USER_LANGUAGE NOT NULL DEFAULT 'EN',
+		    user_name TEXT NOT NULL,
             email TEXT NOT NULL,
             email_verified BOOL NOT NULL,
             email_verification_token TEXT,
@@ -55,6 +58,7 @@ func MigrateUp(db *sql.DB) (int, error) {
           CREATE TABLE mail_queue (
             mail_queue_id SERIAL PRIMARY KEY,
             email TEXT NOT NULL,
+            subject TEXT NOT NULL,
             content TEXT NOT NULL,
             status EMAIL_STATUS NOT NULL,
             number_of_failed_attempts SMALLINT NOT NULL,

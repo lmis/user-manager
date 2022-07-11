@@ -16,6 +16,8 @@ import (
 )
 
 type SignUpTO struct {
+	UserName string `json:"userName"`
+	Language string `json:"language"`
 	Email    string `json:"email"`
 	Password []byte `json:"password"`
 }
@@ -59,8 +61,14 @@ func PostSignUp(c *gin.Context) {
 	}
 	user.PasswordHash = string(hash)
 
+	language := models.UserLanguage(signUpTO.Language)
+	if language.IsValid() != nil {
+		language = models.UserLanguageEN
+	}
 	user = &models.AppUser{
 		PasswordHash:           string(hash),
+		UserName:               signUpTO.UserName,
+		Language:               language,
 		Email:                  signUpTO.Email,
 		EmailVerificationToken: null.StringFrom(util.MakeRandomURLSafeB64(21)),
 		Role:                   models.UserRoleUSER,
@@ -75,7 +83,7 @@ func PostSignUp(c *gin.Context) {
 		return
 	}
 
-	err = services.SendVerificationEmail(requestContext, user.Email)
+	err = services.SendVerificationEmail(requestContext, user)
 	if err != nil {
 		c.AbortWithError(http.StatusInternalServerError, util.Wrap("PostSignup", "error sending verification email", err))
 		return

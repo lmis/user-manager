@@ -2,7 +2,7 @@ package ginext
 
 import (
 	"reflect"
-	"user-manager/domainmodel"
+	domainmodel "user-manager/domain-model"
 	"user-manager/util"
 
 	"database/sql"

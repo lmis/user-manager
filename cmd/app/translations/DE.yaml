@@ -1,0 +1,6 @@
+Salutation: "Hallo {{.UserName}}"
+SalutationAnonymous: "Hallo"
+VerificationEmail: 
+  - "Du hast dich für {{.ServiceName}} angemolden."
+  - "Um deine Email zu bestätigen, klicke bitte auf den folgenden Link {{.EmailVerificationTokenUrl}}"
+Footer: ""

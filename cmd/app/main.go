@@ -2,7 +2,9 @@ package main
 
 //go:generate go run ../generate-sqlboiler/main.go ../../db/generated/models
 import (
+	"embed"
 	"user-manager/app"
+	"user-manager/app/services"
 	"user-manager/config"
 	"user-manager/util"
 
@@ -19,6 +21,13 @@ import (
 	"github.com/gin-gonic/gin"
 	_ "github.com/lib/pq"
 )
+
+//go:embed translations/*
+var translationsFs embed.FS
+
+func init() {
+	services.TranslationsFS = translationsFs
+}
 
 func main() {
 	util.Run("LIFECYCLE", runServer)
