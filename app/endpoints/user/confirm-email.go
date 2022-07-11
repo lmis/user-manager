@@ -1,4 +1,4 @@
-package user
+package userendpoints
 
 import (
 	"fmt"
@@ -16,14 +16,16 @@ type EmailConfirmationTO struct {
 	Token string `json:"token"`
 }
 
+type EmailConfirmationStatus string
+
 const (
-	AlreadyConfirmed string = "already-confirmed"
-	NewlyConfirmed   string = "newly-confirmed"
-	InvalidToken     string = "invalid-token"
+	AlreadyConfirmed EmailConfirmationStatus = "already-confirmed"
+	NewlyConfirmed   EmailConfirmationStatus = "newly-confirmed"
+	InvalidToken     EmailConfirmationStatus = "invalid-token"
 )
 
 type EmailConfirmationResponseTO struct {
-	Status string `json:"status"`
+	Status EmailConfirmationStatus `json:"status"`
 }
 
 func PostConfirmEmail(c *gin.Context) {
