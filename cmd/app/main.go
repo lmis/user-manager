@@ -25,16 +25,17 @@ import (
 //go:embed translations/*
 var translationsFS embed.FS
 
-func init() {
-	emailservice.TranslationsFS = translationsFS
-}
-
 func main() {
 	util.Run("LIFECYCLE", runServer)
 }
 
 func runServer(log util.Logger) error {
 	log.Info("Starting up")
+
+	err := emailservice.Initialize(log, translationsFS)
+	if err != nil {
+		return util.Wrap("runServer", "cannot initialize email service", err)
+	}
 
 	var httpServer *http.Server
 	var dbConnection *sql.DB

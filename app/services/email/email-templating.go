@@ -15,7 +15,6 @@ import (
 )
 
 var baseTemplate *template.Template
-var TranslationsFS embed.FS
 var translations map[models.UserLanguage]translation = make(map[models.UserLanguage]translation)
 
 type Priority int
@@ -40,31 +39,34 @@ type translation struct {
 	Footer              string
 }
 
-func init() {
+func Initialize(log util.Logger, translationsFS embed.FS) error {
 	t, err := template.New("base").Parse(`
 	{{.Salutation}}
 
 	{{range .Paragraphs}}
+		{{- .}}
+	{{end}}
 
 	{{.Footer}}
 	`)
 	if err != nil {
-		panic(util.Wrap("send-email init", "base template cannot be parsed", err))
+		return util.Wrap("send-email init", "base template cannot be parsed", err)
 	}
 	baseTemplate = t
 
 	for _, lang := range models.AllUserLanguage() {
-		file, err := TranslationsFS.ReadFile(fmt.Sprintf("%s.yaml", lang))
+		file, err := translationsFS.ReadFile(fmt.Sprintf("translations/%s.yaml", lang))
 		if err != nil {
-			panic(util.Wrap("send-email init", fmt.Sprintf("%s translations cannot be read", lang), err))
+			return util.Wrap("send-email init", fmt.Sprintf("%s translations cannot be read", lang), err)
 		}
 		translation := translation{}
 		err = yaml.Unmarshal(file, translation)
 		if err != nil {
-			panic(util.Wrap("send-email init", fmt.Sprintf("%s translations cannot be parsed", lang), err))
+			return util.Wrap("send-email init", fmt.Sprintf("%s translations cannot be parsed", lang), err)
 		}
 		translations[lang] = translation
 	}
+	return nil
 }
 
 func executeTemplate(templateText string, data interface{}) (string, error) {
