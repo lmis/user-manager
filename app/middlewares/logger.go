@@ -39,18 +39,18 @@ func LoggerMiddleware(c *gin.Context) {
 	}
 }
 
-// TODO: Correlation-ID
 type LogMetadata struct {
-	Topic        string          `json:"topic"`
-	Latency      time.Duration   `json:"latency,omitempty"`
-	Path         string          `json:"path,omitempty"`
-	UserID       int             `json:"userID,omitempty"`
-	Role         models.UserRole `json:"role,omitempty"`
-	ClientIP     string          `json:"clientIP,omitempty"`
-	Method       string          `json:"method,omitempty"`
-	ErrorMessage string          `json:"errorMessage,omitempty"`
-	BodySize     int             `json:"bodySize,omitempty"`
-	Status       int             `json:"status,omitempty"`
+	Topic         string          `json:"topic"`
+	CorrelationId string          `json:"correlationId"`
+	Latency       time.Duration   `json:"latency,omitempty"`
+	Path          string          `json:"path,omitempty"`
+	UserID        int             `json:"userID,omitempty"`
+	Role          models.UserRole `json:"role,omitempty"`
+	ClientIP      string          `json:"clientIP,omitempty"`
+	Method        string          `json:"method,omitempty"`
+	ErrorMessage  string          `json:"errorMessage,omitempty"`
+	BodySize      int             `json:"bodySize,omitempty"`
+	Status        int             `json:"status,omitempty"`
 }
 
 func (m *LogMetadata) String() string {
@@ -72,14 +72,15 @@ func getMetadata(logger *RequestLogger) *LogMetadata {
 	path := c.FullPath()
 
 	metadata := LogMetadata{
-		Topic:        topic,
-		Path:         path,
-		ClientIP:     c.ClientIP(),
-		Method:       c.Request.Method,
-		Status:       c.Writer.Status(),
-		ErrorMessage: c.Errors.ByType(gin.ErrorTypePrivate).String(),
-		BodySize:     c.Writer.Size(),
-		Latency:      latency,
+		Topic:         topic,
+		CorrelationId: c.GetHeader("X-Correlation-Id"),
+		Path:          path,
+		ClientIP:      c.ClientIP(),
+		Method:        c.Request.Method,
+		Status:        c.Writer.Status(),
+		ErrorMessage:  c.Errors.ByType(gin.ErrorTypePrivate).String(),
+		BodySize:      c.Writer.Size(),
+		Latency:       latency,
 	}
 	if authentication != nil {
 		metadata.UserID = int(authentication.AppUser.AppUserID)

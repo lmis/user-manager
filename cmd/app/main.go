@@ -4,7 +4,7 @@ package main
 import (
 	"embed"
 	"user-manager/app"
-	"user-manager/app/services"
+	emailservice "user-manager/app/services/email"
 	"user-manager/config"
 	"user-manager/util"
 
@@ -23,10 +23,10 @@ import (
 )
 
 //go:embed translations/*
-var translationsFs embed.FS
+var translationsFS embed.FS
 
 func init() {
-	services.TranslationsFS = translationsFs
+	emailservice.TranslationsFS = translationsFS
 }
 
 func main() {
@@ -55,13 +55,13 @@ func runServer(log util.Logger) error {
 	defer util.CloseOrPanic(dbConnection)
 
 	httpServer = &http.Server{
-		Addr:         ":" + config.Port,
+		Addr:         ":" + config.AppPort,
 		Handler:      app.New(dbConnection, config),
 		ReadTimeout:  1 * time.Minute,
 		WriteTimeout: 1 * time.Minute,
 	}
 
-	log.Info("Starting http server on port %s", config.Port)
+	log.Info("Starting http server on port %s", config.AppPort)
 	httpServerError := make(chan error, 1)
 	go func() {
 		if err := httpServer.ListenAndServe(); err != nil {

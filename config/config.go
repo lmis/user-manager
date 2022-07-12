@@ -7,7 +7,9 @@ import (
 
 type Config struct {
 	DbInfo      DbInfo
-	Port        string
+	AppPort     string
+	AppUrl      string
+	ServiceName string
 	environment string
 }
 
@@ -31,10 +33,14 @@ func (conf *Config) IsStagingEnv() bool {
 	return conf.environment == "staging"
 }
 
+// TODO: Make this more strict with regards to missing env variables for non-local environments
 func GetConfig(log util.Logger) (*Config, error) {
+	environment := getEnvOrDefault(log, "ENVIRONMENT", "local")
 	config := &Config{
-		environment: getEnvOrDefault(log, "ENVIRONMENT", "local"),
-		Port:        getEnvOrDefault(log, "PORT", "8080"),
+		environment: environment,
+		AppPort:     getEnvOrDefault(log, "PORT", "8080"),
+		AppUrl:      getEnvOrDefault(log, "APP_URL", "http://localhost:8080/"),
+		ServiceName: getEnvOrDefault(log, "SERVICE_NAME", "TestApp"),
 		DbInfo: DbInfo{
 			DbName:   os.Getenv("DB_NAME"),
 			Host:     os.Getenv("DB_HOST"),

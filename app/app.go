@@ -23,6 +23,8 @@ func New(db *sql.DB, config *config.Config) *gin.Engine {
 	}
 
 	r := gin.New()
+	r.HandleMethodNotAllowed = true
+	r.Use(middlewares.RequestContextMiddleware(config))
 	r.Use(middlewares.LoggerMiddleware)
 	r.Use(middlewares.RecoveryMiddleware)
 
@@ -54,6 +56,7 @@ func New(db *sql.DB, config *config.Config) *gin.Engine {
 			user.Use(middlewares.UserAuthorizationMiddleware)
 
 			user.POST("confirm-email", userendpoints.PostConfirmEmail)
+			user.POST("re-trigger-confirmation-email", todo)
 
 			{
 				userSettings := api.Group("settings")

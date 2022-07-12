@@ -1,6 +1,11 @@
 Salutation: "Hallo {{.UserName}}"
 SalutationAnonymous: "Hallo"
 VerificationEmail: 
+  - "Email Bestätigung"
   - "Du hast dich für {{.ServiceName}} angemolden."
-  - "Um deine Email zu bestätigen, klicke bitte auf den folgenden Link {{.EmailVerificationTokenUrl}}"
+  - "Um deine Email zu bestätigen, klicke bitte auf den folgenden Link {{.AppUrl}}/email-verification?token={{urlquery .EmailVerificationToken}}"
+SignUpAttemptedEmail:
+  - "Anmeldeversuch"
+  - "Du hast dich versucht, ein weiteres mal mit dieser email für {{.ServiceName}} anzumelden."
+  - "Da du bereits ein Konto hast, kannst Du dieses email einfach igorieren und dich ganz normal einloggen."
 Footer: ""

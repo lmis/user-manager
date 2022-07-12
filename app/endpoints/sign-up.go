@@ -3,7 +3,7 @@ package endpoints
 import (
 	"database/sql"
 	"net/http"
-	"user-manager/app/services"
+	emailservice "user-manager/app/services/email"
 	"user-manager/db"
 	"user-manager/db/generated/models"
 	ginext "user-manager/gin-extensions"
@@ -44,7 +44,7 @@ func PostSignUp(c *gin.Context) {
 	}
 	if user != nil {
 		securityLog.Info("User already exists")
-		err = services.SendSignUpAttemptEmail(requestContext, user.Email)
+		err = emailservice.SendSignUpAttemptEmail(requestContext, user)
 		if err != nil {
 			c.AbortWithError(http.StatusInternalServerError, util.Wrap("PostSignup", "error sending signup attempted email", err))
 			return
@@ -59,20 +59,19 @@ func PostSignUp(c *gin.Context) {
 		c.AbortWithError(http.StatusInternalServerError, util.Wrap("PostSignup", "error hashing password", err))
 		return
 	}
-	user.PasswordHash = string(hash)
 
 	language := models.UserLanguage(signUpTO.Language)
 	if language.IsValid() != nil {
 		language = models.UserLanguageEN
 	}
 	user = &models.AppUser{
-		PasswordHash:           string(hash),
 		UserName:               signUpTO.UserName,
-		Language:               language,
 		Email:                  signUpTO.Email,
-		EmailVerificationToken: null.StringFrom(util.MakeRandomURLSafeB64(21)),
 		Role:                   models.UserRoleUSER,
 		EmailVerified:          false,
+		EmailVerificationToken: null.StringFrom(util.MakeRandomURLSafeB64(21)),
+		PasswordHash:           string(hash),
+		Language:               language,
 	}
 
 	ctx, cancelTimeout = db.DefaultQueryContext()
@@ -83,7 +82,7 @@ func PostSignUp(c *gin.Context) {
 		return
 	}
 
-	err = services.SendVerificationEmail(requestContext, user)
+	err = emailservice.SendVerificationEmail(requestContext, user)
 	if err != nil {
 		c.AbortWithError(http.StatusInternalServerError, util.Wrap("PostSignup", "error sending verification email", err))
 		return

@@ -1,8 +1,7 @@
-package services
+package emailservice
 
 import (
 	"embed"
-	_ "embed"
 	"fmt"
 	"strings"
 	"text/template"
@@ -37,6 +36,7 @@ type translation struct {
 	Salutation          string
 	SalutationAnonymous string
 	VerificationEmail   []string
+	SignUpAttemptEmail  []string
 	Footer              string
 }
 
@@ -65,26 +65,6 @@ func init() {
 		}
 		translations[lang] = translation
 	}
-}
-
-func SendVerificationEmail(r *ginext.RequestContext, user *models.AppUser) error {
-	lang := user.Language
-
-	data := map[string]string{
-		"EmailVerificationTokenUrl": "TODO",
-		"ServiceName":               "TestApp",
-	}
-	translation := translations[lang]
-	err := enqueueBasicEmail(r, lang, translation.VerificationEmail, data, user.Email, PriorityHigh)
-	if err != nil {
-		return util.Wrap("SendVerificationEmail", "error enqueuing basic email", err)
-	}
-	return nil
-}
-
-func SendSignUpAttemptEmail(r *ginext.RequestContext, email string) error {
-
-	return nil
 }
 
 func executeTemplate(templateText string, data interface{}) (string, error) {
@@ -143,26 +123,17 @@ func enqueueBasicEmail(r *ginext.RequestContext,
 		return util.Wrap("enqueueBasicEmail", "issue executing base template", err)
 	}
 
-	err = enqueueEmail(r, subject, writer.String(), address, priority)
-	if err != nil {
-		return util.Wrap("enqueueBasicEmail", "issue enqueueing email", err)
-	}
-
-	return nil
-}
-
-func enqueueEmail(r *ginext.RequestContext, subject string, content string, address string, priority Priority) error {
 	tx := r.Tx
 	mail := models.MailQueue{
 		Email:    address,
-		Content:  content,
+		Content:  writer.String(),
 		Subject:  subject,
 		Status:   models.EmailStatusPENDING,
 		Priority: int16(priority),
 	}
 	ctx, cancel := db.DefaultQueryContext()
 	defer cancel()
-	err := mail.Insert(ctx, tx, boil.Infer())
+	err = mail.Insert(ctx, tx, boil.Infer())
 
 	if err != nil {
 		return util.Wrap("enqueueEmail", "issue inserting email in db", err)
