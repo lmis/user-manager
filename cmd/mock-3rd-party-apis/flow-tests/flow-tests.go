@@ -10,16 +10,29 @@ import (
 	"user-manager/util"
 )
 
-func TestRoleBeforeSignup(client *http.Client, config *config.Config) error {
-	roleResponse, err := client.Get(config.AppUrl + "/api/role")
+func addCsrfHeaders(req *http.Request) {
+	req.Header.Add("X-CSRF-Token", "abcdef")
+	req.AddCookie(&http.Cookie{
+		Name:  "CSRF-Token",
+		Value: "abcdef",
+	})
+}
+
+func TestRoleBeforeSignup(config *config.Config) error {
+	req, err := http.NewRequest("GET", config.AppUrl+"/api/role", nil)
+	addCsrfHeaders(req)
 	if err != nil {
-		return util.Wrap("status code mismatch", err)
+		return util.Wrap("error building request", err)
+	}
+	roleResponse, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return util.Wrap("error making request", err)
 	}
 	if err = assertEq(roleResponse.StatusCode, 200); err != nil {
 		return util.Wrap("status code mismatch", err)
 	}
 	var role endpoints.AuthRoleTO
-	if err = readCloseAllInto(roleResponse.Body, role); err != nil {
+	if err = readCloseAllInto(roleResponse.Body, &role); err != nil {
 		return util.Wrap("issue reading into RoleTO", err)
 	}
 	if err = assertEq(role, endpoints.AuthRoleTO{Role: ""}); err != nil {

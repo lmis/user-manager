@@ -67,7 +67,8 @@ func startJob(log util.Logger) error {
 	}
 }
 
-func sendOneEmail(log util.Logger, database *sql.DB, config *config.Config) error {
+func sendOneEmail(log util.Logger, database *sql.DB, config *config.Config) (ret error) {
+	shouldCommit := false
 	var maxNumFailedAttempts int16 = 3
 	ctx, cancelTimeout := db.DefaultQueryContext()
 	defer cancelTimeout()
@@ -78,9 +79,16 @@ func sendOneEmail(log util.Logger, database *sql.DB, config *config.Config) erro
 		return util.Wrap("issue beginning transaction", err)
 	}
 	defer func() {
-		log.Info("ROLLBACK Transaction")
-		if err = tx.Rollback(); err != nil {
-			panic(util.Wrap("issue rolling back transaction", err))
+		if shouldCommit {
+			log.Info("COMMIT")
+			if err := tx.Commit(); err != nil {
+				ret = util.Wrap("issue committing to db", err)
+			}
+		} else {
+			log.Info("ROLLBACK Transaction")
+			if err = tx.Rollback(); err != nil {
+				ret = util.Wrap("issue rolling back transaction", err)
+			}
 		}
 	}()
 
@@ -126,10 +134,6 @@ func sendOneEmail(log util.Logger, database *sql.DB, config *config.Config) erro
 		return util.Wrap(fmt.Sprintf("wrong number of rows affected: %d", rows), err)
 	}
 
-	log.Info("COMMIT")
-	if err := tx.Commit(); err != nil {
-		return util.Wrap("issue committing to db", err)
-	}
-
+	shouldCommit = true
 	return nil
 }

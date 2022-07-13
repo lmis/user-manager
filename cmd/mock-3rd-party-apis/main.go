@@ -13,7 +13,7 @@ import (
 )
 
 func main() {
-	util.Run("MOCK 3rd-PARY APIS", startServer)
+	util.Run("MOCK 3RD-PARTY APIS", startServer)
 }
 
 type EmailTO struct {
@@ -48,11 +48,10 @@ func startServer(log util.Logger) error {
 	})
 
 	app.POST("/trigger-test/:n", func(c *gin.Context) {
-		client := http.DefaultClient
 		n := c.Param("n")
 		switch n {
 		case "1":
-			respondToTestRequest(c, flowtests.TestRoleBeforeSignup(client, config))
+			respondToTestRequest(c, flowtests.TestRoleBeforeSignup(config))
 			return
 		default:
 			c.Status(http.StatusNotFound)

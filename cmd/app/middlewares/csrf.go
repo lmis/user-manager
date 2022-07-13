@@ -10,9 +10,9 @@ import (
 
 func CsrfMiddleware(config *config.Config) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		cookieName := "__Host-XSRF-Token"
+		cookieName := "__Host-CSRF-Token"
 		if config.IsLocalEnv() {
-			cookieName = "XSRF-Token"
+			cookieName = "CSRF-Token"
 		}
 		cookie, err := c.Cookie(cookieName)
 		if err != nil && err != http.ErrNoCookie {

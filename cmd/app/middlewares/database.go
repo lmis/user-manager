@@ -26,21 +26,21 @@ func DatabaseMiddleware(database *sql.DB) gin.HandlerFunc {
 		}
 
 		defer func() {
-			log.Info("ROLLBACK")
-			if err = tx.Rollback(); err != nil {
-				// If rollback doesn't work, log and forget
-				c.Error(util.Wrap("rollback failed", err))
+			if !c.IsAborted() && c.Writer.Written() {
+				log.Info("COMMIT")
+				if err := tx.Commit(); err != nil {
+					c.AbortWithError(http.StatusInternalServerError, util.Wrap("commit failed", err))
+				}
+			} else {
+				log.Info("ROLLBACK")
+				if err = tx.Rollback(); err != nil {
+					// If rollback doesn't work, log and forget
+					c.AbortWithError(http.StatusInternalServerError, util.Wrap("rollback failed", err))
+				}
 			}
 		}()
 		requestCtx.Tx = tx
 
 		c.Next()
-
-		if !c.IsAborted() {
-			log.Info("COMMIT")
-			if err := tx.Commit(); err != nil {
-				c.AbortWithError(http.StatusInternalServerError, util.Wrap("commit failed", err))
-			}
-		}
 	}
 }

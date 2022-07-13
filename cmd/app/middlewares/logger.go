@@ -54,7 +54,7 @@ type LogMetadata struct {
 }
 
 func (m *LogMetadata) String() string {
-	return fmt.Sprintf("%s, %s %s (%d) | %s %d", m.Topic, m.Method, m.Path, m.Status, m.Role, m.UserID)
+	return fmt.Sprintf("%s, %s %s (%d) | u=(%s %d) e=%s", m.Topic, m.Method, m.Path, m.Status, m.Role, m.UserID, m.ErrorMessage)
 }
 
 type RequestLogger struct {
@@ -70,6 +70,10 @@ func getMetadata(logger *RequestLogger) *LogMetadata {
 	requestContext := ginext.GetRequestContext(c)
 	authentication := requestContext.Authentication
 	path := c.FullPath()
+	status := 0
+	if c.Writer.Written() {
+		status = c.Writer.Status()
+	}
 
 	metadata := LogMetadata{
 		Topic:         topic,
@@ -77,7 +81,7 @@ func getMetadata(logger *RequestLogger) *LogMetadata {
 		Path:          path,
 		ClientIP:      c.ClientIP(),
 		Method:        c.Request.Method,
-		Status:        c.Writer.Status(),
+		Status:        status,
 		ErrorMessage:  c.Errors.ByType(gin.ErrorTypePrivate).String(),
 		BodySize:      c.Writer.Size(),
 		Latency:       latency,
