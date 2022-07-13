@@ -26,7 +26,7 @@ func DatabaseMiddleware(database *sql.DB) gin.HandlerFunc {
 		}
 
 		defer func() {
-			if !c.IsAborted() && c.Writer.Written() {
+			if !c.IsAborted() {
 				log.Info("COMMIT")
 				if err := tx.Commit(); err != nil {
 					c.AbortWithError(http.StatusInternalServerError, util.Wrap("commit failed", err))

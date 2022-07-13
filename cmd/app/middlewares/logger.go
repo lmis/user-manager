@@ -32,6 +32,7 @@ func LoggerMiddleware(c *gin.Context) {
 	logger.latency = time.Since(start)
 
 	status := c.Writer.Status()
+	logger.status = status
 	if status >= 400 {
 		securityLogger.Info("Request failed. Status: %d", status)
 	} else {
@@ -61,19 +62,15 @@ type RequestLogger struct {
 	topic   string
 	context *gin.Context
 	latency time.Duration
+	status  int
 }
 
 func getMetadata(logger *RequestLogger) *LogMetadata {
 	topic := logger.topic
 	c := logger.context
-	latency := logger.latency
 	requestContext := ginext.GetRequestContext(c)
 	authentication := requestContext.Authentication
 	path := c.FullPath()
-	status := 0
-	if c.Writer.Written() {
-		status = c.Writer.Status()
-	}
 
 	metadata := LogMetadata{
 		Topic:         topic,
@@ -81,10 +78,10 @@ func getMetadata(logger *RequestLogger) *LogMetadata {
 		Path:          path,
 		ClientIP:      c.ClientIP(),
 		Method:        c.Request.Method,
-		Status:        status,
+		Status:        logger.status,
 		ErrorMessage:  c.Errors.ByType(gin.ErrorTypePrivate).String(),
 		BodySize:      c.Writer.Size(),
-		Latency:       latency,
+		Latency:       logger.latency,
 	}
 	if authentication != nil {
 		metadata.UserID = int(authentication.AppUser.AppUserID)
