@@ -1,16 +1,19 @@
 package util
 
-import "fmt"
+import (
+	"fmt"
+	"runtime"
+)
 
-func Error(funcName string, reason string) error {
-	return fmt.Errorf("%s: %s", funcName, reason)
+func Error(reason string) error {
+	counter, _, _, _ := runtime.Caller(1)
+	return fmt.Errorf("%s: %s", runtime.FuncForPC(counter).Name(), reason)
 }
-func Errorf(funcName string, format string, args ...interface{}) error {
-	return fmt.Errorf("%s: %s", funcName, fmt.Sprintf(format, args...))
+func Errorf(format string, args ...interface{}) error {
+	counter, _, _, _ := runtime.Caller(1)
+	return fmt.Errorf("%s: %s", runtime.FuncForPC(counter).Name(), fmt.Sprintf(format, args...))
 }
-func Wrap(funcName string, reason string, err error) error {
-	if err != nil {
-		return fmt.Errorf("%s: %s\n%w", funcName, reason, err)
-	}
-	return nil
+func Wrap(reason string, err error) error {
+	counter, _, _, _ := runtime.Caller(1)
+	return fmt.Errorf("%s: %s\n%w", runtime.FuncForPC(counter).Name(), reason, err)
 }

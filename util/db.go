@@ -9,7 +9,7 @@ import (
 func CloseOrPanic(db *sql.DB) {
 	err := db.Close()
 	if err != nil {
-		panic(Wrap("CloseOrPanic", "closing db failed", err))
+		panic(Wrap("closing db failed", err))
 	}
 }
 
@@ -26,7 +26,7 @@ func CheckConnection(log Logger, db *sql.DB) error {
 		err = db.PingContext(ctx)
 	}
 	if err != nil {
-		return Wrap("CheckConnection", "issue pinging db", err)
+		return Wrap("issue pinging db", err)
 	}
 
 	return nil

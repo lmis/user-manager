@@ -20,7 +20,7 @@ func RunShellCommand(command string) error {
 		if e, ok := err.(*exec.ExitError); ok {
 			message += " (" + string(e.Stderr) + ")"
 		}
-		return Wrap("RunShellCommand", message, err)
+		return Wrap(message, err)
 	}
 
 	return nil

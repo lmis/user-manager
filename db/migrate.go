@@ -54,7 +54,8 @@ func MigrateUp(db *sql.DB) (int, error) {
 					CREATE TYPE EMAIL_STATUS AS ENUM ('PENDING', 'SENT', 'ERROR');
 					CREATE TABLE mail_queue (
 						mail_queue_id               SERIAL                       PRIMARY KEY,
-						email                       TEXT                         NOT NULL,
+						from_address                TEXT                         NOT NULL,
+						to_address                  TEXT                         NOT NULL,
 						subject                     TEXT                         NOT NULL,
 						content                     TEXT                         NOT NULL,
 						status                      EMAIL_STATUS                 NOT NULL,
@@ -93,7 +94,7 @@ func MigrateUp(db *sql.DB) (int, error) {
 
 	numApplied, err := migrate.Exec(db, "postgres", migrations, migrate.Up)
 	if err != nil {
-		return 0, util.Wrap("MigrateUp", "issue executing migration", err)
+		return 0, util.Wrap("issue executing migration", err)
 	}
 	return numApplied, nil
 }

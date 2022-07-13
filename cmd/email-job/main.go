@@ -1,10 +1,11 @@
 package main
 
-// TODO: Extract and reuse common parts  from server/main.go
-
 //go:generate go run ../generate-sqlboiler/main.go ../../db/generated/models
 import (
-	"user-manager/config"
+	"bytes"
+	"encoding/json"
+	"net/http"
+	config "user-manager/cmd/email-job/config"
 	"user-manager/db"
 	"user-manager/db/generated/models"
 	"user-manager/util"
@@ -33,12 +34,12 @@ func startJob(log util.Logger) error {
 
 	config, err := config.GetConfig(log)
 	if err != nil {
-		return util.Wrap("startJob", "issue reading config", err)
+		return util.Wrap("issue reading config", err)
 	}
 
-	db, err = config.OpenDbConnection(log)
+	db, err = config.DbInfo.OpenDbConnection(log)
 	if err != nil {
-		return util.Wrap("startJob", "issue opening db connection", err)
+		return util.Wrap("issue opening db connection", err)
 	}
 	defer util.CloseOrPanic(db)
 
@@ -58,11 +59,10 @@ func startJob(log util.Logger) error {
 			if timeSinceLastEmailSent < minTimeBetweenSendingEmails {
 				time.Sleep(minTimeBetweenSendingEmails - timeSinceLastEmailSent)
 			}
-			err = sendOneEmail(log, db, config)
-			lastEmailSentAt = time.Now()
-			if err != nil {
-				return util.Wrap("startJob", "issue sending email", err)
+			if err = sendOneEmail(log, db, config); err != nil {
+				return util.Wrap("issue sending email", err)
 			}
+			lastEmailSentAt = time.Now()
 		}
 	}
 }
@@ -75,14 +75,12 @@ func sendOneEmail(log util.Logger, database *sql.DB, config *config.Config) erro
 	log.Info("BEGIN Transaction")
 	tx, err := database.BeginTx(ctx, nil)
 	if err != nil {
-		return util.Wrap("sendOneEmail", "issue beginning transaction", err)
+		return util.Wrap("issue beginning transaction", err)
 	}
 	defer func() {
 		log.Info("ROLLBACK Transaction")
-		err = tx.Rollback()
-		// TODO: wrap?
-		if err != nil {
-			panic(err)
+		if err = tx.Rollback(); err != nil {
+			panic(util.Wrap("issue rolling back transaction", err))
 		}
 	}()
 
@@ -96,40 +94,41 @@ func sendOneEmail(log util.Logger, database *sql.DB, config *config.Config) erro
 		if err == sql.ErrNoRows {
 			return nil
 		}
-		return util.Wrap("sendOneEmail", "issue getting email from db", err)
+		return util.Wrap("issue getting email from db", err)
 	}
 
-	// send
-	if config.IsLocalEnv() {
-		log.Info("%s: %s", mail.Email, mail.Content)
-	} else {
-		// address := "test-recipient@example.com" // TODO
-		// if (config.IsProdEnv()) {
-		// 	address = mail.Email
-		// }
-		// TODO: call some api
+	payload, err := json.Marshal(map[string]string{
+		"from":    mail.FromAddress,
+		"to":      mail.ToAddress,
+		"subject": mail.Subject,
+		"body":    mail.Content,
+	})
+	if err != nil {
+		return util.Wrap("issue marshalling payload for api call", err)
 	}
+	// TODO: how does this work in GCP?
+	_, err = http.Post(config.EmailApiUrl, "application/json", bytes.NewReader(payload))
 
 	// If sending the mail failed, log and continue
 	if err != nil {
 		mail.Status = models.EmailStatusERROR
 		mail.NumberOfFailedAttempts++
-		log.Warn(util.Wrap("sendOneEmail", "issue sending email", err).Error())
+		log.Warn(util.Wrap("issue sending email", err).Error())
 	} else {
 		mail.Status = models.EmailStatusSENT
 	}
 
 	rows, err := mail.Update(ctx, tx, boil.Infer())
 	if err != nil {
-		return util.Wrap("sendOneEmail", "issue updating email in db", err)
+		return util.Wrap("issue updating email in db", err)
 	}
 	if rows != 1 {
-		return util.Wrap("sendOneEmail", fmt.Sprintf("wrong number of rows affected: %d", rows), err)
+		return util.Wrap(fmt.Sprintf("wrong number of rows affected: %d", rows), err)
 	}
 
 	log.Info("COMMIT")
 	if err := tx.Commit(); err != nil {
-		return util.Wrap("sendOneEmail", "issue committing to db", err)
+		return util.Wrap("issue committing to db", err)
 	}
 
 	return nil

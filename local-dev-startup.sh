@@ -1,4 +1,11 @@
 #!/bin/sh
+export ENVIRONMENT=local
+export PORT=8080
+export APP_URL=http://localhost:8080
+export SERVICE_NAME=TestApp
+export EMAIL_FROM=test@example.com
+export EMAIL_API_URL=http://localhost:8081/mock-send-email
+export MOCK_API_PORT=8081
 export DB_NAME=postgres
 export DB_HOST=localhost
 export DB_PORT=5432
@@ -15,10 +22,13 @@ killIfExists() {
 
 cleanup() {
     echo "------ CLEANUP ------"
+    echo "------ KILLING PROCESSES ------"
     killIfExists $_APP_PID
     killIfExists $_EMAILER_PID
+    killIfExists $_MOCK_THIRD_PARTY_APIS
 
-    sleep 1
+    sleep 2
+    echo "------ REMOVING DOCKER CONTAINERS ------"
     docker rm $_DOCKER_POSTGRES_NAME -f > /dev/null
 }
 
@@ -32,6 +42,9 @@ go run cmd/migrator/main.go
 
 if [[ $? = 0 ]]
 then
+    echo "------ START MOCK EMAIL API ------"
+    go run cmd/mock-3rd-party-apis/main.go &
+    _MOCK_THIRD_PARTY_APIS=$!
     echo "------ START APP ------"
     go run cmd/app/main.go &
     _APP_PID=$!

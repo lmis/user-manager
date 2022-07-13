@@ -2,7 +2,7 @@ package main
 
 //go:generate go run ../generate-sqlboiler/main.go ../../db/generated/models
 import (
-	"user-manager/config"
+	"user-manager/cmd/migrator/config"
 	"user-manager/db"
 	"user-manager/util"
 
@@ -20,19 +20,19 @@ func runMigrations(log util.Logger) error {
 
 	config, err := config.GetConfig(log)
 	if err != nil {
-		return util.Wrap("runMigrations", "cannot read config", err)
+		return util.Wrap("cannot read config", err)
 	}
 
-	dbConnection, err = config.OpenDbConnection(log)
+	dbConnection, err = config.DbInfo.OpenDbConnection(log)
 	if err != nil {
-		return util.Wrap("runMigrations", "could not open db connection", err)
+		return util.Wrap("could not open db connection", err)
 	}
 	defer util.CloseOrPanic(dbConnection)
 
 	log.Info("Running migrations")
 	n, err := db.MigrateUp(dbConnection)
 	if err != nil {
-		return util.Wrap("runMigrations", "could not run migration", err)
+		return util.Wrap("could not run migration", err)
 	}
 	log.Info("Applied %d migrations", n)
 	return nil
