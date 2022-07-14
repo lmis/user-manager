@@ -12,7 +12,7 @@ func Run(topic string, command func(Logger) error) {
 
 	defer func() {
 		if p := recover(); p != nil {
-			log.Recovery(p, debug.Stack())
+			log.Err(WrapRecoveredPanic(p, debug.Stack()))
 			exitCode = 1
 		}
 		log.Info("Shutdown complete. ExitCode: %d", exitCode)

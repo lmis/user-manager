@@ -2,6 +2,7 @@ package middlewares
 
 import (
 	"fmt"
+	"net/http"
 	ginext "user-manager/cmd/app/gin-extensions"
 	"user-manager/db/generated/models"
 	"user-manager/util"
@@ -37,6 +38,13 @@ func LoggerMiddleware(c *gin.Context) {
 		securityLogger.Info("Request failed. Status: %d", status)
 	} else {
 		logger.Info("Finished request. Status: %d", status)
+	}
+
+	// Trigger alerts
+	if status == http.StatusInternalServerError {
+		if err := c.Errors.Last(); err != nil {
+			securityLogger.Err(err.Err)
+		}
 	}
 }
 
@@ -79,7 +87,7 @@ func getMetadata(logger *RequestLogger) *LogMetadata {
 		ClientIP:      c.ClientIP(),
 		Method:        c.Request.Method,
 		Status:        logger.status,
-		ErrorMessage:  c.Errors.ByType(gin.ErrorTypePrivate).String(),
+		ErrorMessage:  c.Errors.String(),
 		BodySize:      c.Writer.Size(),
 		Latency:       logger.latency,
 	}
@@ -100,7 +108,4 @@ func (logger *RequestLogger) Warn(format string, args ...interface{}) {
 
 func (logger *RequestLogger) Err(e error) {
 	util.WriteLog(getMetadata(logger), "ERROR", e.Error())
-}
-func (logger *RequestLogger) Recovery(p interface{}, stack []byte) {
-	util.WriteLog(logger, "ERROR", fmt.Sprintf("panic: %v\n%v", p, string(stack)))
 }

@@ -18,7 +18,6 @@ type Logger interface {
 	Info(format string, args ...interface{})
 	Warn(format string, args ...interface{})
 	Err(e error)
-	Recovery(p interface{}, stack []byte)
 }
 
 type LogData struct {
@@ -60,10 +59,6 @@ func (logger *SimpleLogger) Warn(format string, args ...interface{}) {
 func (logger *SimpleLogger) Err(e error) {
 	WriteLog(logger, "ERROR", termCodeRed+e.Error()+termCodeReset)
 
-}
-
-func (logger *SimpleLogger) Recovery(p interface{}, stack []byte) {
-	WriteLog(logger, "ERROR", fmt.Sprintf("panic: %v\n%v", p, string(stack)))
 }
 
 func Log(topic string) Logger {
