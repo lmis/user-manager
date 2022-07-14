@@ -60,7 +60,8 @@ func PostSignUp(c *gin.Context) {
 
 	language := models.UserLanguage(signUpTO.Language)
 	if language.IsValid() != nil {
-		language = models.UserLanguageEN
+		c.AbortWithError(http.StatusBadRequest, util.Errorf("unsupported language \"%s\"", language.String()))
+		return
 	}
 	user = &models.AppUser{
 		UserName:               signUpTO.UserName,

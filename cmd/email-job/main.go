@@ -8,6 +8,7 @@ import (
 	config "user-manager/cmd/email-job/config"
 	"user-manager/db"
 	"user-manager/db/generated/models"
+	emailapi "user-manager/third-party-models/email-api"
 	"user-manager/util"
 
 	"fmt"
@@ -105,12 +106,13 @@ func sendOneEmail(log util.Logger, database *sql.DB, config *config.Config) (ret
 		return util.Wrap("issue getting email from db", err)
 	}
 
-	payload, err := json.Marshal(map[string]string{
-		"from":    mail.FromAddress,
-		"to":      mail.ToAddress,
-		"subject": mail.Subject,
-		"body":    mail.Content,
+	payload, err := json.Marshal(emailapi.EmailTO{
+		From:    mail.FromAddress,
+		To:      mail.ToAddress,
+		Subject: mail.Subject,
+		Body:    mail.Content,
 	})
+
 	if err != nil {
 		return util.Wrap("issue marshalling payload for api call", err)
 	}

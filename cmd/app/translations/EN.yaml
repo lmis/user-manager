@@ -1,11 +1,11 @@
-Salutation: "Hello {{.UserName}}"
-SalutationAnonymous: "Hello"
-VerificationEmail: 
+salutation: "Hello {{.UserName}}"
+salutationAnonymous: "Hello"
+verificationEmail: 
   - "Email verification"
   - "You have registered for an account on {{.ServiceName}}."
   - "To verify your email address, please click on the following link {{.AppUrl}}/email-verification?token={{urlquery .EmailVerificationToken}}"
-SignUpAttemptedEmail:
+signUpAttemptedEmail:
   - "Signup attempt"
   - "You have tried to sign up for {{.ServiceName}} again."
   - "Since you already have an account, you can instead just log in normally and ignore this email."
-Footer: ""
+footer: ""

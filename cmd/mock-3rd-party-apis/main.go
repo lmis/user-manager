@@ -6,6 +6,7 @@ import (
 	"user-manager/cmd/app/middlewares"
 	config "user-manager/cmd/mock-3rd-party-apis/config"
 	flowtests "user-manager/cmd/mock-3rd-party-apis/flow-tests"
+	emailapi "user-manager/third-party-models/email-api"
 	"user-manager/util"
 
 	"github.com/gin-gonic/gin"
@@ -16,15 +17,8 @@ func main() {
 	util.Run("MOCK 3RD-PARTY APIS", startServer)
 }
 
-type EmailTO struct {
-	From    string `json:"from"`
-	To      string `json:"to"`
-	Subject string `json:"subject"`
-	Body    string `json:"body"`
-}
-
 func startServer(log util.Logger) error {
-	emails := make(map[string][]EmailTO)
+	emails := make(map[string][]emailapi.EmailTO)
 	log.Info("Starting up")
 	config, err := config.GetConfig(log)
 	if err != nil {
@@ -34,17 +28,18 @@ func startServer(log util.Logger) error {
 	app := gin.New()
 	app.Use(middlewares.RecoveryMiddleware)
 	app.POST("/mock-send-email", func(c *gin.Context) {
-		var email EmailTO
+		var email emailapi.EmailTO
 		if err := c.BindJSON(&email); err != nil {
 			c.AbortWithError(http.StatusBadRequest, util.Wrap("cannot bind to EmailTO", err))
 			return
 		}
 		m, ok := emails[email.To]
 		if !ok {
-			emails[email.To] = []EmailTO{email}
+			emails[email.To] = []emailapi.EmailTO{email}
 		} else {
 			emails[email.To] = append(m, email)
 		}
+		log.Info("Email received %v", email)
 	})
 
 	app.POST("/trigger-test/:n", func(c *gin.Context) {
@@ -52,10 +47,10 @@ func startServer(log util.Logger) error {
 		switch n {
 		case "1":
 			respondToTestRequest(c, flowtests.TestRoleBeforeSignup(config))
-			return
+		case "2":
+			respondToTestRequest(c, flowtests.TestSignUp(config))
 		default:
 			c.Status(http.StatusNotFound)
-			return
 		}
 	})
 

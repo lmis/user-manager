@@ -32,11 +32,11 @@ type baseTemplateData struct {
 }
 
 type translation struct {
-	Salutation          string
-	SalutationAnonymous string
-	VerificationEmail   []string
-	SignUpAttemptEmail  []string
-	Footer              string
+	Salutation          string   `yaml:"salutation"`
+	SalutationAnonymous string   `yaml:"salutationAnonymous"`
+	VerificationEmail   []string `yaml:"verificationEmail"`
+	SignUpAttemptEmail  []string `yaml:"signUpAttemptEmail"`
+	Footer              string   `yaml:"footer"`
 }
 
 func Initialize(log util.Logger, translationsFS embed.FS) error {
@@ -60,7 +60,7 @@ func Initialize(log util.Logger, translationsFS embed.FS) error {
 			return util.Wrap(fmt.Sprintf("%s translations cannot be read", lang), err)
 		}
 		translation := translation{}
-		if err = yaml.Unmarshal(file, translation); err != nil {
+		if err = yaml.Unmarshal(file, &translation); err != nil {
 			return util.Wrap(fmt.Sprintf("%s translations cannot be parsed", lang), err)
 		}
 		translations[lang] = translation
