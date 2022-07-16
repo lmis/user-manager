@@ -73,4 +73,8 @@ func PostConfirmEmail(c *gin.Context) {
 		c.AbortWithError(http.StatusInternalServerError, util.Wrap(fmt.Sprintf("wrong number of rows affected: %d", rows), err))
 		return
 	}
+
+	c.JSON(http.StatusOK, EmailConfirmationResponseTO{
+		Status: NewlyConfirmed,
+	})
 }

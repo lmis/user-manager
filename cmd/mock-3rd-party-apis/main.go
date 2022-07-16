@@ -48,7 +48,7 @@ func startServer(log util.Logger) error {
 		case "1":
 			respondToTestRequest(c, flowtests.TestRoleBeforeSignup(config))
 		case "2":
-			respondToTestRequest(c, flowtests.TestSignUp(config))
+			respondToTestRequest(c, flowtests.TestSignUp(config, emails))
 		default:
 			c.Status(http.StatusNotFound)
 		}

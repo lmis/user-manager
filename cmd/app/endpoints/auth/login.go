@@ -47,7 +47,7 @@ func PostLogin(c *gin.Context) {
 
 	user, err := models.AppUsers(
 		models.AppUserWhere.Email.EQ(credentialsTO.Email),
-		qm.Load(models.UserSessionRels.AppUser),
+		qm.Load(models.AppUserRels.TwoFactorThrottling),
 	).One(ctx, tx)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -125,6 +125,7 @@ func PostLogin(c *gin.Context) {
 		return
 	}
 
+	securityLog.Info("Login")
 	SetSessionCookie(c, sessionID)
 	loginResponseTO.LoggedIn = true
 	c.JSON(http.StatusOK, loginResponseTO)

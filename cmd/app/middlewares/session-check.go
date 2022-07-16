@@ -23,7 +23,6 @@ func SessionCheckMiddleware(c *gin.Context) {
 	}
 
 	if sessionID == nil {
-		c.Next()
 		return
 	}
 

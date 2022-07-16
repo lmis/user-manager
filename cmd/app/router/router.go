@@ -32,10 +32,8 @@ func New(db *sql.DB, config *config.Config) *gin.Engine {
 		api := r.Group("api")
 		api.Use(middlewares.CsrfMiddleware(config))
 		api.Use(middlewares.DatabaseMiddleware(db))
-		api.GET("role",
-			middlewares.SessionCheckMiddleware,
-			endpoints.GetAuthRole,
-		)
+		api.Use(middlewares.SessionCheckMiddleware)
+		api.GET("role", endpoints.GetAuthRole)
 		api.POST("sign-up",
 			middlewares.TimingObfuscationMiddleware(400*time.Millisecond),
 			endpoints.PostSignUp,
@@ -52,7 +50,6 @@ func New(db *sql.DB, config *config.Config) *gin.Engine {
 
 		{
 			user := api.Group("user")
-			user.Use(middlewares.SessionCheckMiddleware)
 			user.Use(middlewares.UserAuthorizationMiddleware)
 
 			user.POST("confirm-email", userendpoints.PostConfirmEmail)
@@ -69,8 +66,8 @@ func New(db *sql.DB, config *config.Config) *gin.Engine {
 			}
 		}
 		{
+			// TODO: Tests
 			admin := api.Group("admin")
-			admin.Use(middlewares.SessionCheckMiddleware)
 			admin.Use(middlewares.AdminAuthorizationMiddleware)
 
 			{

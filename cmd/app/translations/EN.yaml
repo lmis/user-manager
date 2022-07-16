@@ -3,7 +3,7 @@ salutationAnonymous: "Hello"
 verificationEmail: 
   - "Email verification"
   - "You have registered for an account on {{.ServiceName}}."
-  - "To verify your email address, please click on the following link {{.AppUrl}}/email-verification?token={{urlquery .EmailVerificationToken}}"
+  - "To verify your email address, please click on the following link {{.AppUrl}}/email-verification?token={{.EmailVerificationToken}}"
 signUpAttemptedEmail:
   - "Signup attempt"
   - "You have tried to sign up for {{.ServiceName}} again."

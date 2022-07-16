@@ -84,8 +84,8 @@ func enqueueBasicEmail(r *ginext.RequestContext,
 	language models.UserLanguage,
 	templates []string,
 	data map[string]string,
-	to string,
 	from string,
+	to string,
 	priority Priority,
 ) error {
 	var err error

@@ -14,6 +14,7 @@ import (
 func PostLogout(c *gin.Context) {
 	SetSessionCookie(c, "")
 	requestContext := ginext.GetRequestContext(c)
+	securityLog := requestContext.SecurityLog
 	tx := requestContext.Tx
 	authentication := requestContext.Authentication
 	var userSession *models.UserSession
@@ -22,9 +23,10 @@ func PostLogout(c *gin.Context) {
 	}
 
 	if userSession == nil {
-		c.AbortWithError(http.StatusBadRequest, util.Error("logout without session present"))
+		c.Status(http.StatusOK)
 		return
 	}
+
 	ctx, cancelTimeout := db.DefaultQueryContext()
 	defer cancelTimeout()
 	rows, err := userSession.Delete(ctx, tx)
@@ -37,5 +39,6 @@ func PostLogout(c *gin.Context) {
 		return
 	}
 
+	securityLog.Info("Logout")
 	c.Status(http.StatusOK)
 }

@@ -9,14 +9,17 @@ import (
 )
 
 type AuthRoleTO struct {
-	Role models.UserRole `json:"role"`
+	Role          models.UserRole `json:"role"`
+	EmailVerified bool            `json:"emailVerified"`
 }
 
 func GetAuthRole(c *gin.Context) {
 	requestContext := ginext.GetRequestContext(c)
+	authentication := requestContext.Authentication
 	authRole := AuthRoleTO{}
-	if requestContext.Authentication != nil {
-		authRole.Role = requestContext.Authentication.AppUser.Role
+	if authentication != nil {
+		authRole.Role = authentication.AppUser.Role
+		authRole.EmailVerified = authentication.AppUser.EmailVerified
 	}
 	c.JSON(http.StatusOK, authRole)
 }
