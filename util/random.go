@@ -10,7 +10,7 @@ func MakeRandomURLSafeB64(size int) string {
 
 	_, err := rand.Read(randomBytes)
 	if err != nil {
-		panic(err)
+		panic(Wrap("issue reading random bytes", err))
 	}
 	return b64.URLEncoding.EncodeToString(randomBytes)
 

@@ -1,12 +1,14 @@
 package router
 
 import (
+	"net/http"
 	"time"
 	config "user-manager/cmd/app/config"
 	"user-manager/cmd/app/endpoints"
 	authendpoints "user-manager/cmd/app/endpoints/auth"
 	userendpoints "user-manager/cmd/app/endpoints/user"
 	"user-manager/cmd/app/middlewares"
+	"user-manager/util"
 
 	"database/sql"
 
@@ -14,7 +16,9 @@ import (
 )
 
 func New(db *sql.DB, config *config.Config) *gin.Engine {
-	todo := func(c *gin.Context) {}
+	todo := func(c *gin.Context) {
+		c.AbortWithError(http.StatusInternalServerError, util.Errorf("todo endpoint"))
+	}
 	if db == nil {
 		panic("Invalid gin engine construction: db is nil")
 	}

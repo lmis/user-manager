@@ -99,13 +99,13 @@ func getMetadata(logger *RequestLogger) *LogMetadata {
 }
 
 func (logger *RequestLogger) Info(format string, args ...interface{}) {
-	util.WriteLog(getMetadata(logger), "INFO", format, args...)
+	util.WriteLog(getMetadata(logger), util.LOG_LEVEL_INFO, format, args...)
 }
 
 func (logger *RequestLogger) Warn(format string, args ...interface{}) {
-	util.WriteLog(getMetadata(logger), "WARN", format, args...)
+	util.WriteLog(getMetadata(logger), util.LOG_LEVEL_WARN, format, args...)
 }
 
 func (logger *RequestLogger) Err(e error) {
-	util.WriteLog(getMetadata(logger), "ERROR", e.Error())
+	util.WriteLog(getMetadata(logger), util.LOG_LEVEL_ERROR, "%s", e.Error())
 }

@@ -14,6 +14,14 @@ import (
 var logJson bool
 var out *log.Logger = log.New(os.Stdout, "", 0)
 
+type LogLevel string
+
+const (
+	LOG_LEVEL_INFO  LogLevel = "INFO"
+	LOG_LEVEL_WARN  LogLevel = "WARN"
+	LOG_LEVEL_ERROR LogLevel = "ERROR"
+)
+
 type Logger interface {
 	Info(format string, args ...interface{})
 	Warn(format string, args ...interface{})
@@ -21,7 +29,7 @@ type Logger interface {
 }
 
 type LogData struct {
-	Level       string      `json:"level"`
+	Level       LogLevel    `json:"level"`
 	Message     string      `json:"message"`
 	JsonPayload interface{} `json:"jsonPayload"`
 	Timestamp   time.Time   `json:"timestamp"`
@@ -49,15 +57,15 @@ func (logger *SimpleLogger) String() string {
 }
 
 func (logger *SimpleLogger) Info(format string, args ...interface{}) {
-	WriteLog(logger, "INFO", format, args...)
+	WriteLog(logger, LOG_LEVEL_INFO, format, args...)
 }
 
 func (logger *SimpleLogger) Warn(format string, args ...interface{}) {
-	WriteLog(logger, "WARN", termCodeYellow+fmt.Sprintf(format, args...)+termCodeReset)
+	WriteLog(logger, LOG_LEVEL_WARN, fmt.Sprintf(format, args...))
 }
 
 func (logger *SimpleLogger) Err(e error) {
-	WriteLog(logger, "ERROR", termCodeRed+e.Error()+termCodeReset)
+	WriteLog(logger, LOG_LEVEL_ERROR, "%s", e.Error())
 
 }
 
@@ -67,7 +75,7 @@ func Log(topic string) Logger {
 	}
 }
 
-func WriteLog(metadata interface{}, level string, format string, args ...interface{}) {
+func WriteLog(metadata interface{}, level LogLevel, format string, args ...interface{}) {
 	defer func() {
 		if p := recover(); p != nil {
 			log.Printf("Panic while printing log line. Level=%s format=%s", level, format)
@@ -96,7 +104,27 @@ func WriteLog(metadata interface{}, level string, format string, args ...interfa
 		}
 	}
 
-	log.Printf("%s:%s [%s - %v] %s", fileName, lineNumber, level, metadata, message)
+	colorStart := ""
+	colorEnd := ""
+	switch level {
+	case LOG_LEVEL_WARN:
+		colorStart = termCodeYellow
+	case LOG_LEVEL_ERROR:
+		colorStart = termCodeRed
+	}
+	if colorStart != "" {
+		colorEnd = termCodeReset
+	}
+	log.Printf(
+		"%s%s:%s [%s - %v] %s%s",
+		colorStart,
+		fileName,
+		lineNumber,
+		level,
+		metadata,
+		message,
+		colorEnd,
+	)
 }
 
 func SetLogJSON(enable bool) {
