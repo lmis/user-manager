@@ -1,7 +1,6 @@
 package ginext
 
 import (
-	"embed"
 	"reflect"
 	appconfig "user-manager/cmd/app/config"
 	domainmodel "user-manager/domain-model"
@@ -12,9 +11,12 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+const (
+	RequestContextKey = "ctx"
+)
+
 type RequestContext struct {
 	Config         *appconfig.Config
-	TranslationsFS embed.FS
 	Authentication *domainmodel.Authentication
 	Tx             *sql.Tx
 	Log            util.Logger
@@ -22,7 +24,7 @@ type RequestContext struct {
 }
 
 func GetRequestContext(c *gin.Context) *RequestContext {
-	val, ok := c.Get("ctx")
+	val, ok := c.Get(RequestContextKey)
 	if !ok {
 		panic(util.Error("missing request context"))
 	}

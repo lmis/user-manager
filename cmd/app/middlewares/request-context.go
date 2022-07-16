@@ -9,9 +9,8 @@ import (
 
 func RequestContextMiddleware(config *config.Config) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		ctx := &ginext.RequestContext{
+		c.Set(ginext.RequestContextKey, &ginext.RequestContext{
 			Config: config,
-		}
-		c.Set("ctx", ctx)
+		})
 	}
 }
