@@ -32,11 +32,13 @@ type baseTemplateData struct {
 }
 
 type translation struct {
-	Salutation          string   `yaml:"salutation"`
-	SalutationAnonymous string   `yaml:"salutationAnonymous"`
-	VerificationEmail   []string `yaml:"verificationEmail"`
-	SignUpAttemptEmail  []string `yaml:"signUpAttemptEmail"`
-	Footer              string   `yaml:"footer"`
+	Salutation              string   `yaml:"salutation"`
+	SalutationAnonymous     string   `yaml:"salutationAnonymous"`
+	VerificationEmail       []string `yaml:"verificationEmail"`
+	SignUpAttemptEmail      []string `yaml:"signUpAttemptEmail"`
+	ChangeVerificationEmail []string `yaml:"changeVerificationEmail"`
+	ChangeNotificationEmail []string `yaml:"changeNotificationEmail"`
+	Footer                  string   `yaml:"footer"`
 }
 
 func Initialize(log util.Logger, translationsFS embed.FS) error {

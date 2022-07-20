@@ -1,15 +1,13 @@
 package userendpoints
 
 import (
-	"fmt"
 	"net/http"
 	ginext "user-manager/cmd/app/gin-extensions"
-	"user-manager/db"
+	userservice "user-manager/cmd/app/services/user"
 	"user-manager/util"
 
 	"github.com/gin-gonic/gin"
 	"github.com/volatiletech/null/v8"
-	"github.com/volatiletech/sqlboiler/v4/boil"
 )
 
 type EmailConfirmationTO struct {
@@ -62,15 +60,8 @@ func PostConfirmEmail(c *gin.Context) {
 	user.EmailVerificationToken = null.StringFromPtr(nil)
 	user.EmailVerified = true
 
-	ctx, cancelTimeout := db.DefaultQueryContext()
-	defer cancelTimeout()
-	rows, err := user.Update(ctx, requestContext.Tx, boil.Infer())
-	if err != nil {
-		c.AbortWithError(http.StatusInternalServerError, util.Wrap("issue updating user in db", err))
-		return
-	}
-	if rows != 1 {
-		c.AbortWithError(http.StatusInternalServerError, util.Wrap(fmt.Sprintf("wrong number of rows affected: %d", rows), err))
+	if err := userservice.UpdateUser(requestContext, &user); err != nil {
+		c.AbortWithError(http.StatusInternalServerError, util.Wrap("issue persisting user", err))
 		return
 	}
 

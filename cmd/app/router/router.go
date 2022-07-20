@@ -7,6 +7,7 @@ import (
 	"user-manager/cmd/app/endpoints"
 	authendpoints "user-manager/cmd/app/endpoints/auth"
 	userendpoints "user-manager/cmd/app/endpoints/user"
+	usersettingsendpoints "user-manager/cmd/app/endpoints/user/settings"
 	"user-manager/cmd/app/middlewares"
 	"user-manager/util"
 
@@ -62,6 +63,7 @@ func New(db *sql.DB, config *config.Config) *gin.Engine {
 			{
 				userSettings := api.Group("settings")
 				userSettings.Use(middlewares.VerifiedEmailAuthorizationMiddleware)
+				userSettings.POST("confirm-email-change", usersettingsendpoints.PostConfirmEmailChange)
 				userSettings.POST("change-email", todo)
 				userSettings.POST("change-password", todo)
 				userSettings.POST("generate-temporary-2fa", todo)
