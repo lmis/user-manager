@@ -42,8 +42,8 @@ func SessionCheckMiddleware(c *gin.Context) {
 	}
 	if session != nil {
 		requestContext.Authentication = &domainmodel.Authentication{
-			UserSession: *session,
-			AppUser:     *session.R.AppUser,
+			UserSession: session,
+			AppUser:     session.R.AppUser,
 		}
 	}
 }

@@ -16,4 +16,8 @@ changeVerificationEmail:
   - "Neue Email Bestätigung"
   - "Du hast deine Email-addresse für {{.ServiceName}} zu {{.NewEmail}} geändert."
   - "Um diese Änderung zu bestätigen, klicke bitte auf den folgenden Link {{.AppUrl}}/email-verification?token={{.EmailVerificationToken}}"
+requestPasswordEmail: 
+  - "Passwort zurücksetzen"
+  - "Du hast dein Passwort für {{.ServiceName}} zurückgesetzt."
+  - "Bitte klicke auf den folgenden Link {{.AppUrl}}/password-reset?token={{.PasswordResetToken}} um ein neues Passwort zu setzen."
 footer: ""

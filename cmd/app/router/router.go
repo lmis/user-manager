@@ -16,10 +16,11 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+func todo(c *gin.Context) {
+	c.AbortWithError(http.StatusInternalServerError, util.Errorf("todo endpoint"))
+}
+
 func New(db *sql.DB, config *config.Config) *gin.Engine {
-	todo := func(c *gin.Context) {
-		c.AbortWithError(http.StatusInternalServerError, util.Errorf("todo endpoint"))
-	}
 	if db == nil {
 		panic("Invalid gin engine construction: db is nil")
 	}
@@ -35,53 +36,43 @@ func New(db *sql.DB, config *config.Config) *gin.Engine {
 
 	{
 		api := r.Group("api")
-		api.Use(middlewares.CsrfMiddleware(config))
-		api.Use(middlewares.DatabaseMiddleware(db))
-		api.Use(middlewares.SessionCheckMiddleware)
-		api.GET("role", endpoints.GetAuthRole)
-		api.POST("sign-up",
-			middlewares.TimingObfuscationMiddleware(400*time.Millisecond),
-			endpoints.PostSignUp,
-		)
+		api.Use(middlewares.CsrfMiddleware(config)).
+			Use(middlewares.DatabaseMiddleware(db)).
+			Use(middlewares.SessionCheckMiddleware).
+			GET("role", endpoints.GetAuthRole)
 
-		{
-			auth := api.Group("auth")
-			auth.POST("login",
-				middlewares.TimingObfuscationMiddleware(400*time.Millisecond),
-				authendpoints.PostLogin,
-			)
-			auth.POST("logout", authendpoints.PostLogout)
-		}
+		api.Group("auth").
+			Use(middlewares.TimingObfuscationMiddleware(400*time.Millisecond)).
+			POST("sign-up", authendpoints.PostSignUp).
+			POST("login", authendpoints.PostLogin).
+			POST("logout", authendpoints.PostLogout).
+			POST("request-password-reset", authendpoints.PostRequestPasswordReset).
+			POST("reset-password", authendpoints.PostResetPassword)
 
 		{
 			user := api.Group("user")
-			user.Use(middlewares.UserAuthorizationMiddleware)
+			user.Use(middlewares.UserAuthorizationMiddleware).
+				POST("confirm-email", userendpoints.PostConfirmEmail).
+				POST("re-trigger-confirmation-email", userendpoints.PostRetriggerConfirmationEmail)
 
-			user.POST("confirm-email", userendpoints.PostConfirmEmail)
-			user.POST("re-trigger-confirmation-email", todo)
-
-			{
-				userSettings := api.Group("settings")
-				userSettings.Use(middlewares.VerifiedEmailAuthorizationMiddleware)
-				userSettings.POST("confirm-email-change", usersettingsendpoints.PostConfirmEmailChange)
-				userSettings.POST("change-email", todo)
-				userSettings.POST("change-password", todo)
-				userSettings.POST("generate-temporary-2fa", todo)
-				userSettings.POST("enable-2fa", todo)
-				userSettings.POST("disable-2fa", todo)
-			}
+			user.Group("settings").
+				Use(middlewares.VerifiedEmailAuthorizationMiddleware).
+				POST("confirm-email-change", usersettingsendpoints.PostConfirmEmailChange).
+				POST("change-email", usersettingsendpoints.PostChangeEmail).
+				POST("change-password", todo).
+				POST("generate-temporary-2fa", todo).
+				POST("enable-2fa", todo).
+				POST("disable-2fa", todo)
 		}
 		{
 			// TODO: Tests
 			admin := api.Group("admin")
 			admin.Use(middlewares.AdminAuthorizationMiddleware)
 
-			{
-				superAdmin := api.Group("super")
-				admin.Use(middlewares.SuperAdminAuthorizationMiddleware)
-				superAdmin.POST("add-admin-user", todo)
-				superAdmin.POST("change-password", todo)
-			}
+			admin.Group("super").
+				Use(middlewares.SuperAdminAuthorizationMiddleware).
+				POST("add-admin-user", todo).
+				POST("change-password", todo)
 		}
 	}
 

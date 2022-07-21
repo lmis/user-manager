@@ -38,6 +38,7 @@ type translation struct {
 	SignUpAttemptEmail      []string `yaml:"signUpAttemptEmail"`
 	ChangeVerificationEmail []string `yaml:"changeVerificationEmail"`
 	ChangeNotificationEmail []string `yaml:"changeNotificationEmail"`
+	ResetPasswordEmail      []string `yaml:"resetPasswordEmail"`
 	Footer                  string   `yaml:"footer"`
 }
 

@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"time"
 	ginext "user-manager/cmd/app/gin-extensions"
+	sessionservice "user-manager/cmd/app/services/session"
 	"user-manager/db"
 	"user-manager/db/generated/models"
 	"user-manager/util"
@@ -126,7 +127,7 @@ func PostLogin(c *gin.Context) {
 	}
 
 	securityLog.Info("Login")
-	SetSessionCookie(c, sessionID)
+	sessionservice.SetSessionCookie(c, sessionID)
 	loginResponseTO.LoggedIn = true
 	c.JSON(http.StatusOK, loginResponseTO)
 }

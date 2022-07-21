@@ -5,6 +5,6 @@ import (
 )
 
 type Authentication struct {
-	UserSession models.UserSession
-	AppUser     models.AppUser
+	UserSession *models.UserSession
+	AppUser     *models.AppUser
 }

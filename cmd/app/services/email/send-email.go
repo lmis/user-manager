@@ -67,3 +67,19 @@ func SendChangeNotificationEmail(r *ginext.RequestContext, user *models.AppUser)
 	}
 	return nil
 }
+
+func SendResetPasswordEmail(r *ginext.RequestContext, user *models.AppUser) error {
+	config := r.Config
+	lang := user.Language
+	translation := translations[lang]
+
+	data := map[string]string{
+		"ServiceName":        config.ServiceName,
+		"AppUrl":             config.AppUrl,
+		"PasswordResetToken": user.PasswordResetToken.String,
+	}
+	if err := enqueueBasicEmail(r, lang, translation.ChangeNotificationEmail, data, config.EmailFrom, user.Email, PriorityHigh); err != nil {
+		return util.Wrap("error enqueuing basic email", err)
+	}
+	return nil
+}

@@ -66,7 +66,7 @@ func TestSignUp(config *config.Config, emails map[string][]emailapi.EmailTO) err
 	email := "test-user-1@example.com"
 	password := []byte("hunter12")
 	// Signup
-	resp, err := makeApiRequest("POST", config, "sign-up", endpoints.SignUpTO{
+	resp, err := makeApiRequest("POST", config, "sign-up", authendpoints.SignUpTO{
 		UserName: "test-user",
 		Language: "DE",
 		Email:    email,

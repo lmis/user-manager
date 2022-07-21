@@ -29,16 +29,16 @@ func PostChangeEmail(c *gin.Context) {
 	user.EmailVerificationToken = null.StringFrom(util.MakeRandomURLSafeB64(21))
 	user.NewEmail = null.StringFrom(changeEmailTO.NewEmail)
 
-	if err := userservice.UpdateUser(requestContext, &user); err != nil {
+	if err := userservice.UpdateUser(requestContext, user); err != nil {
 		c.AbortWithError(http.StatusInternalServerError, util.Wrap("issue persisting user", err))
 		return
 	}
 
-	if err := emailservice.SendChangeVerificationEmail(requestContext, &user); err != nil {
+	if err := emailservice.SendChangeVerificationEmail(requestContext, user); err != nil {
 		c.AbortWithError(http.StatusInternalServerError, util.Wrap("error sending change verification email", err))
 		return
 	}
-	if err := emailservice.SendChangeNotificationEmail(requestContext, &user); err != nil {
+	if err := emailservice.SendChangeNotificationEmail(requestContext, user); err != nil {
 		c.AbortWithError(http.StatusInternalServerError, util.Wrap("error sending change notification email", err))
 		return
 	}

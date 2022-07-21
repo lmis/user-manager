@@ -1,10 +1,15 @@
-package authendpoints
+package sessionservice
 
 import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 )
+
+func RemoveSessionCookie(c *gin.Context) {
+	SetSessionCookie(c, "")
+
+}
 
 func SetSessionCookie(c *gin.Context, sessionID string) {
 	maxAge := 60 * 60

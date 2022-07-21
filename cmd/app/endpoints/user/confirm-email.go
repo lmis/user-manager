@@ -60,7 +60,7 @@ func PostConfirmEmail(c *gin.Context) {
 	user.EmailVerificationToken = null.StringFromPtr(nil)
 	user.EmailVerified = true
 
-	if err := userservice.UpdateUser(requestContext, &user); err != nil {
+	if err := userservice.UpdateUser(requestContext, user); err != nil {
 		c.AbortWithError(http.StatusInternalServerError, util.Wrap("issue persisting user", err))
 		return
 	}

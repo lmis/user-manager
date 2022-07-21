@@ -1,4 +1,4 @@
-package endpoints
+package authendpoints
 
 import (
 	"database/sql"
@@ -22,13 +22,24 @@ type SignUpTO struct {
 	Password []byte `json:"password"`
 }
 
+type SignUpResponseTO struct {
+	InsecurePassword bool `json:"insecurePassword"`
+}
+
 func PostSignUp(c *gin.Context) {
 	requestContext := ginext.GetRequestContext(c)
 	tx := requestContext.Tx
 	securityLog := requestContext.SecurityLog
+	signUpResponseTO := SignUpResponseTO{}
 	var signUpTO SignUpTO
 	if err := c.BindJSON(&signUpTO); err != nil {
 		c.AbortWithError(http.StatusBadRequest, util.Wrap("cannot bind to signUpTO", err))
+		return
+	}
+
+	if len(signUpTO.Password) < 10 {
+		signUpResponseTO.InsecurePassword = true
+		c.JSON(http.StatusOK, signUpResponseTO)
 		return
 	}
 
@@ -85,5 +96,5 @@ func PostSignUp(c *gin.Context) {
 		return
 	}
 
-	c.Status(http.StatusOK)
+	c.JSON(http.StatusOK, signUpResponseTO)
 }

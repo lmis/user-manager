@@ -63,7 +63,7 @@ func PostConfirmEmailChange(c *gin.Context) {
 	user.Email = user.NewEmail.String
 	user.NewEmail = null.StringFromPtr(nil)
 
-	if err := userservice.UpdateUser(requestContext, &user); err != nil {
+	if err := userservice.UpdateUser(requestContext, user); err != nil {
 		c.AbortWithError(http.StatusInternalServerError, util.Wrap("issue persisting user", err))
 		return
 	}

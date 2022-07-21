@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	ginext "user-manager/cmd/app/gin-extensions"
+	sessionservice "user-manager/cmd/app/services/session"
 	"user-manager/db"
 	"user-manager/db/generated/models"
 	"user-manager/util"
@@ -12,14 +13,14 @@ import (
 )
 
 func PostLogout(c *gin.Context) {
-	SetSessionCookie(c, "")
+	sessionservice.RemoveSessionCookie(c)
 	requestContext := ginext.GetRequestContext(c)
 	securityLog := requestContext.SecurityLog
 	tx := requestContext.Tx
 	authentication := requestContext.Authentication
 	var userSession *models.UserSession
 	if authentication != nil {
-		userSession = &authentication.UserSession
+		userSession = authentication.UserSession
 	}
 
 	if userSession == nil {
