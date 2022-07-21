@@ -1,12 +1,12 @@
-package authendpoints
+package auth
 
 import (
 	"database/sql"
 	"net/http"
 	"time"
 	ginext "user-manager/cmd/app/gin-extensions"
-	emailservice "user-manager/cmd/app/services/email"
-	userservice "user-manager/cmd/app/services/user"
+	email_service "user-manager/cmd/app/services/email"
+	user_service "user-manager/cmd/app/services/user"
 	"user-manager/db"
 	"user-manager/db/generated/models"
 	"user-manager/util"
@@ -51,11 +51,11 @@ func PostRequestPasswordReset(c *gin.Context) {
 	user.PasswordResetToken = null.StringFrom(util.MakeRandomURLSafeB64(21))
 	user.PasswordResetTokenValidUntil = null.TimeFrom(time.Now().Add(1 * time.Hour))
 
-	if err := userservice.UpdateUser(requestContext, user); err != nil {
+	if err := user_service.UpdateUser(requestContext, user); err != nil {
 		c.AbortWithError(http.StatusInternalServerError, util.Wrap("issue persisting user", err))
 		return
 	}
-	if err := emailservice.SendResetPasswordEmail(requestContext, user); err != nil {
+	if err := email_service.SendResetPasswordEmail(requestContext, user); err != nil {
 		c.AbortWithError(http.StatusInternalServerError, util.Wrap("error sending password reset email", err))
 		return
 	}

@@ -9,11 +9,11 @@ import (
 	"net/http"
 	"strings"
 	"time"
-	"user-manager/cmd/app/endpoints"
-	authendpoints "user-manager/cmd/app/endpoints/auth"
-	userendpoints "user-manager/cmd/app/endpoints/user"
+	api_endpoint "user-manager/cmd/app/endpoints"
+	auth_endpoint "user-manager/cmd/app/endpoints/auth"
+	user_endpoint "user-manager/cmd/app/endpoints/user"
 	"user-manager/cmd/mock-3rd-party-apis/config"
-	emailapi "user-manager/third-party-models/email-api"
+	email_api "user-manager/third-party-models/email-api"
 	"user-manager/util"
 )
 
@@ -56,17 +56,17 @@ func TestRoleBeforeSignup(config *config.Config) error {
 	if err != nil {
 		return util.Wrap("error making role request", err)
 	}
-	if err = assertResponseEq(200, endpoints.AuthRoleTO{Role: "", EmailVerified: false}, resp); err != nil {
+	if err = assertResponseEq(200, api_endpoint.AuthRoleTO{Role: "", EmailVerified: false}, resp); err != nil {
 		return util.Wrap("response mismatch", err)
 	}
 	return nil
 }
 
-func TestSignUp(config *config.Config, emails map[string][]emailapi.EmailTO) error {
+func TestSignUp(config *config.Config, emails map[string][]email_api.EmailTO) error {
 	email := "test-user-1@example.com"
 	password := []byte("hunter12")
 	// Signup
-	resp, err := makeApiRequest("POST", config, "sign-up", authendpoints.SignUpTO{
+	resp, err := makeApiRequest("POST", config, "sign-up", auth_endpoint.SignUpTO{
 		UserName: "test-user",
 		Language: "DE",
 		Email:    email,
@@ -77,14 +77,14 @@ func TestSignUp(config *config.Config, emails map[string][]emailapi.EmailTO) err
 	}
 
 	// Login
-	resp, err = makeApiRequest("POST", config, "auth/login", authendpoints.CredentialsTO{
+	resp, err = makeApiRequest("POST", config, "auth/login", auth_endpoint.CredentialsTO{
 		Email:    email,
 		Password: password,
 	}, nil)
 	if err != nil {
 		return util.Wrap("error making login request", err)
 	}
-	if err = assertResponseEq(200, authendpoints.LoginResponseTO{LoggedIn: true}, resp); err != nil {
+	if err = assertResponseEq(200, auth_endpoint.LoginResponseTO{LoggedIn: true}, resp); err != nil {
 		return util.Wrap("login response mismatch", err)
 	}
 	var sessionCookie *http.Cookie
@@ -99,14 +99,14 @@ func TestSignUp(config *config.Config, emails map[string][]emailapi.EmailTO) err
 	}
 
 	// Check role
-	resp, err = makeApiRequest("GET", config, "role", authendpoints.CredentialsTO{
+	resp, err = makeApiRequest("GET", config, "role", auth_endpoint.CredentialsTO{
 		Email:    email,
 		Password: password,
 	}, sessionCookie)
 	if err != nil {
 		return util.Wrap("error making auth role request", err)
 	}
-	if err = assertResponseEq(200, endpoints.AuthRoleTO{Role: "USER"}, resp); err != nil {
+	if err = assertResponseEq(200, api_endpoint.AuthRoleTO{Role: "USER"}, resp); err != nil {
 		return util.Wrap("auth role response mismatch", err)
 	}
 
@@ -128,37 +128,37 @@ func TestSignUp(config *config.Config, emails map[string][]emailapi.EmailTO) err
 	}
 
 	// Confirm with token
-	resp, err = makeApiRequest("POST", config, "user/confirm-email", userendpoints.EmailConfirmationTO{
+	resp, err = makeApiRequest("POST", config, "user/confirm-email", user_endpoint.EmailConfirmationTO{
 		Token: token,
 	}, sessionCookie)
 	if err != nil {
 		return util.Wrap("error making confirm email call", err)
 	}
-	if err = assertResponseEq(200, userendpoints.EmailConfirmationResponseTO{Status: "newly-confirmed"}, resp); err != nil {
+	if err = assertResponseEq(200, user_endpoint.EmailConfirmationResponseTO{Status: "newly-confirmed"}, resp); err != nil {
 		return util.Wrap("confirm email response mismatch", err)
 	}
 
 	// Confirm again
-	resp, err = makeApiRequest("POST", config, "user/confirm-email", userendpoints.EmailConfirmationTO{
+	resp, err = makeApiRequest("POST", config, "user/confirm-email", user_endpoint.EmailConfirmationTO{
 		Token: token,
 	}, sessionCookie)
 
 	if err != nil {
 		return util.Wrap("error making second confirm email call", err)
 	}
-	if err = assertResponseEq(200, userendpoints.EmailConfirmationResponseTO{Status: "already-confirmed"}, resp); err != nil {
+	if err = assertResponseEq(200, user_endpoint.EmailConfirmationResponseTO{Status: "already-confirmed"}, resp); err != nil {
 		return util.Wrap("second confirm email response mismatch", err)
 	}
 
 	// Check role
-	resp, err = makeApiRequest("GET", config, "role", authendpoints.CredentialsTO{
+	resp, err = makeApiRequest("GET", config, "role", auth_endpoint.CredentialsTO{
 		Email:    email,
 		Password: password,
 	}, sessionCookie)
 	if err != nil {
 		return util.Wrap("error making auth role after confirmation request", err)
 	}
-	if err = assertResponseEq(200, endpoints.AuthRoleTO{Role: "USER", EmailVerified: true}, resp); err != nil {
+	if err = assertResponseEq(200, api_endpoint.AuthRoleTO{Role: "USER", EmailVerified: true}, resp); err != nil {
 		return util.Wrap("auth role after confirmation response mismatch", err)
 	}
 
@@ -172,14 +172,14 @@ func TestSignUp(config *config.Config, emails map[string][]emailapi.EmailTO) err
 	}
 
 	// Check role
-	resp, err = makeApiRequest("GET", config, "role", authendpoints.CredentialsTO{
+	resp, err = makeApiRequest("GET", config, "role", auth_endpoint.CredentialsTO{
 		Email:    email,
 		Password: password,
 	}, sessionCookie)
 	if err != nil {
 		return util.Wrap("error making auth role after logout request", err)
 	}
-	if err = assertResponseEq(200, endpoints.AuthRoleTO{Role: ""}, resp); err != nil {
+	if err = assertResponseEq(200, api_endpoint.AuthRoleTO{Role: ""}, resp); err != nil {
 		return util.Wrap("auth role after logout response mismatch", err)
 	}
 

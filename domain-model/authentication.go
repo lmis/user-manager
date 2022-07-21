@@ -1,4 +1,4 @@
-package domainmodel
+package domain_model
 
 import (
 	"user-manager/db/generated/models"

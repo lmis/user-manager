@@ -3,10 +3,10 @@ package main
 //go:generate go run ../generate-sqlboiler/main.go ../../db/generated/models
 import (
 	"net/http"
-	"user-manager/cmd/app/middlewares"
+	middleware "user-manager/cmd/app/middlewares"
 	config "user-manager/cmd/mock-3rd-party-apis/config"
-	flowtests "user-manager/cmd/mock-3rd-party-apis/flow-tests"
-	emailapi "user-manager/third-party-models/email-api"
+	flow_tests "user-manager/cmd/mock-3rd-party-apis/flow-tests"
+	email_api "user-manager/third-party-models/email-api"
 	"user-manager/util"
 
 	"github.com/gin-gonic/gin"
@@ -18,7 +18,7 @@ func main() {
 }
 
 func startServer(log util.Logger) error {
-	emails := make(map[string][]emailapi.EmailTO)
+	emails := make(map[string][]email_api.EmailTO)
 	log.Info("Starting up")
 	config, err := config.GetConfig(log)
 	if err != nil {
@@ -26,16 +26,16 @@ func startServer(log util.Logger) error {
 	}
 
 	app := gin.New()
-	app.Use(middlewares.RecoveryMiddleware)
+	app.Use(middleware.RecoveryMiddleware)
 	app.POST("/mock-send-email", func(c *gin.Context) {
-		var email emailapi.EmailTO
+		var email email_api.EmailTO
 		if err := c.BindJSON(&email); err != nil {
 			c.AbortWithError(http.StatusBadRequest, util.Wrap("cannot bind to EmailTO", err))
 			return
 		}
 		m, ok := emails[email.To]
 		if !ok {
-			emails[email.To] = []emailapi.EmailTO{email}
+			emails[email.To] = []email_api.EmailTO{email}
 		} else {
 			emails[email.To] = append(m, email)
 		}
@@ -46,9 +46,9 @@ func startServer(log util.Logger) error {
 		n := c.Param("n")
 		switch n {
 		case "1":
-			respondToTestRequest(c, flowtests.TestRoleBeforeSignup(config))
+			respondToTestRequest(c, flow_tests.TestRoleBeforeSignup(config))
 		case "2":
-			respondToTestRequest(c, flowtests.TestSignUp(config, emails))
+			respondToTestRequest(c, flow_tests.TestSignUp(config, emails))
 		default:
 			c.Status(http.StatusNotFound)
 		}

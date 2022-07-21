@@ -1,4 +1,4 @@
-package emailapi
+package email_api
 
 type EmailTO struct {
 	From    string `json:"from"`

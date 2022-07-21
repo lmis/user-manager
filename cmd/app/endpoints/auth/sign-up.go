@@ -1,11 +1,11 @@
-package authendpoints
+package auth
 
 import (
 	"database/sql"
 	"net/http"
 	ginext "user-manager/cmd/app/gin-extensions"
-	emailservice "user-manager/cmd/app/services/email"
-	passwordservice "user-manager/cmd/app/services/password"
+	email_service "user-manager/cmd/app/services/email"
+	password_service "user-manager/cmd/app/services/password"
 	"user-manager/db"
 	"user-manager/db/generated/models"
 	"user-manager/util"
@@ -43,7 +43,7 @@ func PostSignUp(c *gin.Context) {
 	}
 	if user != nil {
 		securityLog.Info("User already exists")
-		if err = emailservice.SendSignUpAttemptEmail(requestContext, user); err != nil {
+		if err = email_service.SendSignUpAttemptEmail(requestContext, user); err != nil {
 			c.AbortWithError(http.StatusInternalServerError, util.Wrap("error sending signup attempted email", err))
 			return
 		}
@@ -52,7 +52,7 @@ func PostSignUp(c *gin.Context) {
 		return
 	}
 
-	hash, err := passwordservice.Hash(signUpTO.Password)
+	hash, err := password_service.Hash(signUpTO.Password)
 	if err != nil {
 		c.AbortWithError(http.StatusInternalServerError, util.Wrap("error hashing password", err))
 		return
@@ -80,7 +80,7 @@ func PostSignUp(c *gin.Context) {
 		return
 	}
 
-	if err = emailservice.SendVerificationEmail(requestContext, user); err != nil {
+	if err = email_service.SendVerificationEmail(requestContext, user); err != nil {
 		c.AbortWithError(http.StatusInternalServerError, util.Wrap("error sending verification email", err))
 		return
 	}

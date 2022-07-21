@@ -1,4 +1,4 @@
-package middlewares
+package middleware
 
 import (
 	"database/sql"
@@ -7,7 +7,7 @@ import (
 	ginext "user-manager/cmd/app/gin-extensions"
 	"user-manager/db"
 	"user-manager/db/generated/models"
-	domainmodel "user-manager/domain-model"
+	domain_model "user-manager/domain-model"
 	"user-manager/util"
 
 	"github.com/gin-gonic/gin"
@@ -41,7 +41,7 @@ func SessionCheckMiddleware(c *gin.Context) {
 		return
 	}
 	if session != nil {
-		requestContext.Authentication = &domainmodel.Authentication{
+		requestContext.Authentication = &domain_model.Authentication{
 			UserSession: session,
 			AppUser:     session.R.AppUser,
 		}

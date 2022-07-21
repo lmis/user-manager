@@ -1,4 +1,4 @@
-package endpoints
+package api
 
 import (
 	"net/http"

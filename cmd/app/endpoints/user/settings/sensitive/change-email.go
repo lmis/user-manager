@@ -1,10 +1,10 @@
-package usersettingsendpoints
+package sensitive_settings
 
 import (
 	"net/http"
 	ginext "user-manager/cmd/app/gin-extensions"
-	emailservice "user-manager/cmd/app/services/email"
-	userservice "user-manager/cmd/app/services/user"
+	email_service "user-manager/cmd/app/services/email"
+	user_service "user-manager/cmd/app/services/user"
 	"user-manager/util"
 
 	"github.com/gin-gonic/gin"
@@ -29,22 +29,19 @@ func PostChangeEmail(c *gin.Context) {
 	user.EmailVerificationToken = null.StringFrom(util.MakeRandomURLSafeB64(21))
 	user.NewEmail = null.StringFrom(changeEmailTO.NewEmail)
 
-	if err := userservice.UpdateUser(requestContext, user); err != nil {
+	if err := user_service.UpdateUser(requestContext, user); err != nil {
 		c.AbortWithError(http.StatusInternalServerError, util.Wrap("issue persisting user", err))
 		return
 	}
 
-	if err := emailservice.SendChangeVerificationEmail(requestContext, user); err != nil {
+	if err := email_service.SendChangeVerificationEmail(requestContext, user); err != nil {
 		c.AbortWithError(http.StatusInternalServerError, util.Wrap("error sending change verification email", err))
 		return
 	}
-	if err := emailservice.SendChangeNotificationEmail(requestContext, user); err != nil {
+	if err := email_service.SendChangeNotificationEmail(requestContext, user); err != nil {
 		c.AbortWithError(http.StatusInternalServerError, util.Wrap("error sending change notification email", err))
 		return
 	}
 
-	c.JSON(http.StatusOK, EmailChangeConfirmationResponseTO{
-		Status: NewEmailConfirmed,
-		Email:  user.Email,
-	})
+	c.Status(http.StatusOK)
 }

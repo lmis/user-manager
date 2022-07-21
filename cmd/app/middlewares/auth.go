@@ -1,4 +1,4 @@
-package middlewares
+package middleware
 
 import (
 	ginext "user-manager/cmd/app/gin-extensions"

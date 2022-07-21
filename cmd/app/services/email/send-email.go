@@ -1,4 +1,4 @@
-package emailservice
+package email
 
 import (
 	ginext "user-manager/cmd/app/gin-extensions"

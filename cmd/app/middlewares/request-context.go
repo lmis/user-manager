@@ -1,4 +1,4 @@
-package middlewares
+package middleware
 
 import (
 	config "user-manager/cmd/app/config"

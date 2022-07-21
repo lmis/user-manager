@@ -1,12 +1,12 @@
-package authendpoints
+package auth
 
 import (
 	"database/sql"
 	"net/http"
 	"time"
 	ginext "user-manager/cmd/app/gin-extensions"
-	passwordservice "user-manager/cmd/app/services/password"
-	userservice "user-manager/cmd/app/services/user"
+	password_service "user-manager/cmd/app/services/password"
+	user_service "user-manager/cmd/app/services/user"
 	"user-manager/db"
 	"user-manager/db/generated/models"
 	"user-manager/util"
@@ -63,7 +63,7 @@ func PostResetPassword(c *gin.Context) {
 		return
 	}
 
-	hash, err := passwordservice.Hash(resetPasswordTO.NewPassword)
+	hash, err := password_service.Hash(resetPasswordTO.NewPassword)
 	if err != nil {
 		c.AbortWithError(http.StatusInternalServerError, util.Wrap("issue making password hash", err))
 	}
@@ -72,7 +72,7 @@ func PostResetPassword(c *gin.Context) {
 	user.PasswordResetTokenValidUntil = null.TimeFromPtr(nil)
 	user.PasswordHash = hash
 
-	if err := userservice.UpdateUser(requestContext, user); err != nil {
+	if err := user_service.UpdateUser(requestContext, user); err != nil {
 		c.AbortWithError(http.StatusInternalServerError, util.Wrap("issue persisting user", err))
 		return
 	}

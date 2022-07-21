@@ -1,9 +1,9 @@
-package userendpoints
+package user
 
 import (
 	"net/http"
 	ginext "user-manager/cmd/app/gin-extensions"
-	userservice "user-manager/cmd/app/services/user"
+	user_service "user-manager/cmd/app/services/user"
 	"user-manager/util"
 
 	"github.com/gin-gonic/gin"
@@ -60,7 +60,7 @@ func PostConfirmEmail(c *gin.Context) {
 	user.EmailVerificationToken = null.StringFromPtr(nil)
 	user.EmailVerified = true
 
-	if err := userservice.UpdateUser(requestContext, user); err != nil {
+	if err := user_service.UpdateUser(requestContext, user); err != nil {
 		c.AbortWithError(http.StatusInternalServerError, util.Wrap("issue persisting user", err))
 		return
 	}

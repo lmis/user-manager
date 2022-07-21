@@ -2,8 +2,8 @@ package ginext
 
 import (
 	"reflect"
-	appconfig "user-manager/cmd/app/config"
-	domainmodel "user-manager/domain-model"
+	"user-manager/cmd/app/config"
+	domain_model "user-manager/domain-model"
 	"user-manager/util"
 
 	"database/sql"
@@ -16,8 +16,8 @@ const (
 )
 
 type RequestContext struct {
-	Config         *appconfig.Config
-	Authentication *domainmodel.Authentication
+	Config         *config.Config
+	Authentication *domain_model.Authentication
 	Tx             *sql.Tx
 	Log            util.Logger
 	SecurityLog    util.Logger

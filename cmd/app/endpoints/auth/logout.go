@@ -1,10 +1,10 @@
-package authendpoints
+package auth
 
 import (
 	"fmt"
 	"net/http"
 	ginext "user-manager/cmd/app/gin-extensions"
-	sessionservice "user-manager/cmd/app/services/session"
+	session_service "user-manager/cmd/app/services/session"
 	"user-manager/db"
 	"user-manager/db/generated/models"
 	"user-manager/util"
@@ -13,7 +13,7 @@ import (
 )
 
 func PostLogout(c *gin.Context) {
-	sessionservice.RemoveSessionCookie(c)
+	session_service.RemoveSessionCookie(c)
 	requestContext := ginext.GetRequestContext(c)
 	securityLog := requestContext.SecurityLog
 	tx := requestContext.Tx
