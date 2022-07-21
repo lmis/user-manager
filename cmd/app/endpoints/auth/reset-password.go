@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"time"
 	ginext "user-manager/cmd/app/gin-extensions"
+	passwordservice "user-manager/cmd/app/services/password"
 	userservice "user-manager/cmd/app/services/user"
 	"user-manager/db"
 	"user-manager/db/generated/models"
@@ -12,7 +13,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/volatiletech/null/v8"
-	"golang.org/x/crypto/bcrypt"
 )
 
 type ResetPasswordTO struct {
@@ -24,9 +24,8 @@ type ResetPasswordTO struct {
 type ResetPasswordStatus string
 
 const (
-	Success          ResetPasswordStatus = "success"
-	InvalidToken     ResetPasswordStatus = "invalid-token"
-	InsecurePassword ResetPasswordStatus = "insecure-password"
+	Success      ResetPasswordStatus = "success"
+	InvalidToken ResetPasswordStatus = "invalid-token"
 )
 
 type ResetPasswordResponseTO struct {
@@ -42,11 +41,6 @@ func PostResetPassword(c *gin.Context) {
 	var resetPasswordTO ResetPasswordTO
 	if err := c.BindJSON(&resetPasswordTO); err != nil {
 		c.AbortWithError(http.StatusBadRequest, util.Wrap("cannot bind to resetPasswordTO", err))
-		return
-	}
-
-	if len(resetPasswordTO.NewPassword) < 10 {
-		c.JSON(http.StatusOK, ResetPasswordResponseTO{Status: InsecurePassword})
 		return
 	}
 
@@ -69,14 +63,14 @@ func PostResetPassword(c *gin.Context) {
 		return
 	}
 
-	hash, err := bcrypt.GenerateFromPassword(resetPasswordTO.NewPassword, bcrypt.DefaultCost)
+	hash, err := passwordservice.Hash(resetPasswordTO.NewPassword)
 	if err != nil {
 		c.AbortWithError(http.StatusInternalServerError, util.Wrap("issue making password hash", err))
 	}
 
 	user.PasswordResetToken = null.StringFromPtr(nil)
 	user.PasswordResetTokenValidUntil = null.TimeFromPtr(nil)
-	user.PasswordHash = string(hash)
+	user.PasswordHash = hash
 
 	if err := userservice.UpdateUser(requestContext, user); err != nil {
 		c.AbortWithError(http.StatusInternalServerError, util.Wrap("issue persisting user", err))

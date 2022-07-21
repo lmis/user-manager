@@ -5,6 +5,7 @@ import (
 	"net/http"
 	ginext "user-manager/cmd/app/gin-extensions"
 	emailservice "user-manager/cmd/app/services/email"
+	passwordservice "user-manager/cmd/app/services/password"
 	"user-manager/db"
 	"user-manager/db/generated/models"
 	"user-manager/util"
@@ -12,7 +13,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/volatiletech/null/v8"
 	"github.com/volatiletech/sqlboiler/v4/boil"
-	"golang.org/x/crypto/bcrypt"
 )
 
 type SignUpTO struct {
@@ -22,24 +22,13 @@ type SignUpTO struct {
 	Password []byte `json:"password"`
 }
 
-type SignUpResponseTO struct {
-	InsecurePassword bool `json:"insecurePassword"`
-}
-
 func PostSignUp(c *gin.Context) {
 	requestContext := ginext.GetRequestContext(c)
 	tx := requestContext.Tx
 	securityLog := requestContext.SecurityLog
-	signUpResponseTO := SignUpResponseTO{}
 	var signUpTO SignUpTO
 	if err := c.BindJSON(&signUpTO); err != nil {
 		c.AbortWithError(http.StatusBadRequest, util.Wrap("cannot bind to signUpTO", err))
-		return
-	}
-
-	if len(signUpTO.Password) < 10 {
-		signUpResponseTO.InsecurePassword = true
-		c.JSON(http.StatusOK, signUpResponseTO)
 		return
 	}
 
@@ -63,7 +52,7 @@ func PostSignUp(c *gin.Context) {
 		return
 	}
 
-	hash, err := bcrypt.GenerateFromPassword(signUpTO.Password, bcrypt.DefaultCost)
+	hash, err := passwordservice.Hash(signUpTO.Password)
 	if err != nil {
 		c.AbortWithError(http.StatusInternalServerError, util.Wrap("error hashing password", err))
 		return
@@ -80,7 +69,7 @@ func PostSignUp(c *gin.Context) {
 		Role:                   models.UserRoleUSER,
 		EmailVerified:          false,
 		EmailVerificationToken: null.StringFrom(util.MakeRandomURLSafeB64(21)),
-		PasswordHash:           string(hash),
+		PasswordHash:           hash,
 		Language:               language,
 	}
 
@@ -96,5 +85,5 @@ func PostSignUp(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, signUpResponseTO)
+	c.Status(http.StatusOK)
 }
