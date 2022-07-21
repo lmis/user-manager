@@ -4,8 +4,8 @@ import (
 	"database/sql"
 	"net/http"
 	ginext "user-manager/cmd/app/gin-extensions"
+	auth_service "user-manager/cmd/app/services/auth"
 	email_service "user-manager/cmd/app/services/email"
-	password_service "user-manager/cmd/app/services/password"
 	"user-manager/db"
 	"user-manager/db/generated/models"
 	"user-manager/util"
@@ -52,7 +52,7 @@ func PostSignUp(c *gin.Context) {
 		return
 	}
 
-	hash, err := password_service.Hash(signUpTO.Password)
+	hash, err := auth_service.Hash(signUpTO.Password)
 	if err != nil {
 		c.AbortWithError(http.StatusInternalServerError, util.Wrap("error hashing password", err))
 		return

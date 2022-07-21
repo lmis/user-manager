@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"time"
 	ginext "user-manager/cmd/app/gin-extensions"
-	password_service "user-manager/cmd/app/services/password"
+	auth_service "user-manager/cmd/app/services/auth"
 	user_service "user-manager/cmd/app/services/user"
 	"user-manager/db"
 	"user-manager/db/generated/models"
@@ -63,7 +63,7 @@ func PostResetPassword(c *gin.Context) {
 		return
 	}
 
-	hash, err := password_service.Hash(resetPasswordTO.NewPassword)
+	hash, err := auth_service.Hash(resetPasswordTO.NewPassword)
 	if err != nil {
 		c.AbortWithError(http.StatusInternalServerError, util.Wrap("issue making password hash", err))
 	}

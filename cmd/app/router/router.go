@@ -59,7 +59,7 @@ func New(db *sql.DB, config *config.Config) *gin.Engine {
 			settings := user.Group("settings")
 			settings.Use(middleware.VerifiedEmailAuthorizationMiddleware).
 				POST("confirm-email-change", user_settings_endpoint.PostConfirmEmailChange).
-				POST("generate-temporary-2fa", todo)
+				POST("generate-temporary-2fa", user_settings_endpoint.PostGenerateTemporarySecondFactor)
 			settings.Group("sensitive").
 				Use(middleware.RequireLoginCredentials).
 				POST("change-email", sensitive_user_settings_endpoint.PostChangeEmail).
