@@ -1,6 +1,6 @@
 module user-manager
 
-go 1.17
+go 1.18
 
 require (
 	github.com/caarlos0/env/v6 v6.9.3
@@ -13,6 +13,7 @@ require (
 	github.com/volatiletech/sqlboiler/v4 v4.11.0
 	github.com/volatiletech/strmangle v0.0.4
 	golang.org/x/crypto v0.0.0-20220525230936-793ad666bf5e
+	golang.org/x/exp v0.0.0-20220722155223-a9213eeb770e
 	gopkg.in/yaml.v2 v2.4.0
 )
 

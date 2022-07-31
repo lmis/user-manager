@@ -1,7 +1,6 @@
 package settings
 
 import (
-	"net/http"
 	ginext "user-manager/cmd/app/gin-extensions"
 	user_service "user-manager/cmd/app/services/user"
 	"user-manager/util"
@@ -27,36 +26,27 @@ type EmailChangeConfirmationResponseTO struct {
 	Email  string            `json:"email"`
 }
 
-func PostConfirmEmailChange(c *gin.Context) {
-	requestContext := ginext.GetRequestContext(c)
+func PostConfirmEmailChange(requestContext *ginext.RequestContext, request *EmailChangeConfirmationTO, _ *gin.Context) (*EmailChangeConfirmationResponseTO, error) {
 	securityLog := requestContext.SecurityLog
-	emailChangeConfirmationTO := EmailChangeConfirmationTO{}
-	if err := c.BindJSON(&emailChangeConfirmationTO); err != nil {
-		c.AbortWithError(http.StatusBadRequest, util.Wrap("cannot bind to emailChangeConfirmationTO", err))
-		return
-	}
 	user := requestContext.Authentication.AppUser
 
 	if !user.NewEmail.Valid {
-		c.JSON(http.StatusOK, EmailChangeConfirmationResponseTO{
+		return &EmailChangeConfirmationResponseTO{
 			Status: NoEmailChangeInProgress,
 			Email:  user.Email,
-		})
-		return
+		}, nil
 	}
 
 	if !user.EmailVerificationToken.Valid {
-		c.AbortWithError(http.StatusInternalServerError, util.Error("no verification token present on database"))
-		return
+		return nil, util.Error("no verification token present on database")
 	}
 
-	if emailChangeConfirmationTO.Token != user.EmailVerificationToken.String {
+	if request.Token != user.EmailVerificationToken.String {
 		securityLog.Info("Invalid email verification token")
-		c.JSON(http.StatusOK, EmailChangeConfirmationResponseTO{
+		return &EmailChangeConfirmationResponseTO{
 			Status: InvalidToken,
 			Email:  user.Email,
-		})
-		return
+		}, nil
 	}
 
 	user.EmailVerificationToken = null.StringFromPtr(nil)
@@ -64,12 +54,11 @@ func PostConfirmEmailChange(c *gin.Context) {
 	user.NewEmail = null.StringFromPtr(nil)
 
 	if err := user_service.UpdateUser(requestContext, user); err != nil {
-		c.AbortWithError(http.StatusInternalServerError, util.Wrap("issue persisting user", err))
-		return
+		return nil, util.Wrap("issue persisting user", err)
 	}
 
-	c.JSON(http.StatusOK, EmailChangeConfirmationResponseTO{
+	return &EmailChangeConfirmationResponseTO{
 		Status: NewEmailConfirmed,
 		Email:  user.Email,
-	})
+	}, nil
 }

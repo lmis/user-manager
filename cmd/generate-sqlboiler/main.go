@@ -1,7 +1,8 @@
 package main
 
 import (
-	"user-manager/db"
+	"path"
+	"user-manager/db/migrate"
 	"user-manager/util"
 
 	"fmt"
@@ -16,7 +17,7 @@ func main() {
 	util.Run("SQL-BOILER", generateSqlBoiler)
 }
 
-func generateSqlBoiler(log util.Logger) error {
+func generateSqlBoiler(log util.Logger, dir string) error {
 	outputDir := ""
 	if len(os.Args) > 1 {
 		outputDir = os.Args[1]
@@ -54,7 +55,7 @@ func generateSqlBoiler(log util.Logger) error {
 		return util.Wrap("issue checking connection", err)
 	}
 	log.Info("Running migrations")
-	n, err := db.MigrateUp(dbConnection)
+	n, err := migrate.MigrateUp(dbConnection, path.Join(dir, "../../db/migrate"))
 	if err != nil {
 		return util.Wrap("issue migrating up", err)
 	}
@@ -81,6 +82,7 @@ func generateSqlBoiler(log util.Logger) error {
     wipe     = true
     no-tests = true
     add-enum-types = true
+	add-soft-deletes = true
 
     [psql]
     dbname = "%s"

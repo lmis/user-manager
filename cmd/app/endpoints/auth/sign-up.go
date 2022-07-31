@@ -2,7 +2,6 @@ package auth
 
 import (
 	"database/sql"
-	"net/http"
 	ginext "user-manager/cmd/app/gin-extensions"
 	auth_service "user-manager/cmd/app/services/auth"
 	email_service "user-manager/cmd/app/services/email"
@@ -22,51 +21,39 @@ type SignUpTO struct {
 	Password []byte `json:"password"`
 }
 
-func PostSignUp(c *gin.Context) {
-	requestContext := ginext.GetRequestContext(c)
+func PostSignUp(requestContext *ginext.RequestContext, requestTO *SignUpTO, _ *gin.Context) error {
 	tx := requestContext.Tx
 	securityLog := requestContext.SecurityLog
-	var signUpTO SignUpTO
-	if err := c.BindJSON(&signUpTO); err != nil {
-		c.AbortWithError(http.StatusBadRequest, util.Wrap("cannot bind to signUpTO", err))
-		return
-	}
 
 	var user *models.AppUser
 	ctx, cancelTimeout := db.DefaultQueryContext()
 	defer cancelTimeout()
 
-	user, err := models.AppUsers(models.AppUserWhere.Email.EQ(signUpTO.Email)).One(ctx, tx)
+	user, err := models.AppUsers(models.AppUserWhere.Email.EQ(requestTO.Email)).One(ctx, tx)
 	if err != nil && err != sql.ErrNoRows {
-		c.AbortWithError(http.StatusInternalServerError, util.Wrap("error finding user", err))
-		return
+		return util.Wrap("error finding user", err)
 	}
 	if user != nil {
 		securityLog.Info("User already exists")
 		if err = email_service.SendSignUpAttemptEmail(requestContext, user); err != nil {
-			c.AbortWithError(http.StatusInternalServerError, util.Wrap("error sending signup attempted email", err))
-			return
+			return util.Wrap("error sending signup attempted email", err)
 		}
 
-		c.Status(http.StatusOK)
-		return
+		return nil
 	}
 
-	hash, err := auth_service.Hash(signUpTO.Password)
+	hash, err := auth_service.Hash(requestTO.Password)
 	if err != nil {
-		c.AbortWithError(http.StatusInternalServerError, util.Wrap("error hashing password", err))
-		return
+		return util.Wrap("error hashing password", err)
 	}
 
-	language := models.UserLanguage(signUpTO.Language)
+	language := models.UserLanguage(requestTO.Language)
 	if language.IsValid() != nil {
-		c.AbortWithError(http.StatusBadRequest, util.Errorf("unsupported language \"%s\"", language.String()))
-		return
+		return util.Errorf("unsupported language \"%s\"", language.String())
 	}
 	user = &models.AppUser{
-		UserName:               signUpTO.UserName,
-		Email:                  signUpTO.Email,
-		Role:                   models.UserRoleUSER,
+		UserName:               requestTO.UserName,
+		Email:                  requestTO.Email,
 		EmailVerified:          false,
 		EmailVerificationToken: null.StringFrom(util.MakeRandomURLSafeB64(21)),
 		PasswordHash:           hash,
@@ -75,15 +62,18 @@ func PostSignUp(c *gin.Context) {
 
 	ctx, cancelTimeout = db.DefaultQueryContext()
 	defer cancelTimeout()
+	if err = user.AddAppUserRoles(ctx, tx, true, &models.AppUserRole{Role: "USER"}); err != nil {
+		return util.Wrap("cannot insert user role", err)
+	}
+	ctx, cancelTimeout = db.DefaultQueryContext()
+	defer cancelTimeout()
 	if err = user.Insert(ctx, tx, boil.Infer()); err != nil {
-		c.AbortWithError(http.StatusInternalServerError, util.Wrap("cannot insert user", err))
-		return
+		return util.Wrap("cannot insert user", err)
 	}
 
 	if err = email_service.SendVerificationEmail(requestContext, user); err != nil {
-		c.AbortWithError(http.StatusInternalServerError, util.Wrap("error sending verification email", err))
-		return
+		return util.Wrap("error sending verification email", err)
 	}
 
-	c.Status(http.StatusOK)
+	return nil
 }

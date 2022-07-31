@@ -49,21 +49,21 @@ func LoggerMiddleware(c *gin.Context) {
 }
 
 type LogMetadata struct {
-	Topic         string          `json:"topic"`
-	CorrelationId string          `json:"correlationId"`
-	Latency       time.Duration   `json:"latency,omitempty"`
-	Path          string          `json:"path,omitempty"`
-	UserID        int             `json:"userID,omitempty"`
-	Role          models.UserRole `json:"role,omitempty"`
-	ClientIP      string          `json:"clientIP,omitempty"`
-	Method        string          `json:"method,omitempty"`
-	ErrorMessage  string          `json:"errorMessage,omitempty"`
-	BodySize      int             `json:"bodySize,omitempty"`
-	Status        int             `json:"status,omitempty"`
+	Topic         string            `json:"topic"`
+	CorrelationId string            `json:"correlationId"`
+	Latency       time.Duration     `json:"latency,omitempty"`
+	Path          string            `json:"path,omitempty"`
+	UserID        int               `json:"userID,omitempty"`
+	Roles         []models.UserRole `json:"role,omitempty"`
+	ClientIP      string            `json:"clientIP,omitempty"`
+	Method        string            `json:"method,omitempty"`
+	ErrorMessage  string            `json:"errorMessage,omitempty"`
+	BodySize      int               `json:"bodySize,omitempty"`
+	Status        int               `json:"status,omitempty"`
 }
 
 func (m *LogMetadata) String() string {
-	return fmt.Sprintf("%s, %s %s (%d) | u=(%s %d) e=%s", m.Topic, m.Method, m.Path, m.Status, m.Role, m.UserID, m.ErrorMessage)
+	return fmt.Sprintf("%s, %s %s (%d) | u=(%v %d) e=%s", m.Topic, m.Method, m.Path, m.Status, m.Roles, m.UserID, m.ErrorMessage)
 }
 
 type RequestLogger struct {
@@ -93,7 +93,7 @@ func getMetadata(logger *RequestLogger) *LogMetadata {
 	}
 	if authentication != nil {
 		metadata.UserID = int(authentication.AppUser.AppUserID)
-		metadata.Role = authentication.AppUser.Role
+		metadata.Roles = authentication.UserRoles
 	}
 	return &metadata
 }

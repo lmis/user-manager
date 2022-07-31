@@ -1,4 +1,4 @@
-package flowtests
+package end_to_end_test
 
 import (
 	"bytes"
@@ -13,6 +13,7 @@ import (
 	auth_endpoint "user-manager/cmd/app/endpoints/auth"
 	user_endpoint "user-manager/cmd/app/endpoints/user"
 	"user-manager/cmd/mock-3rd-party-apis/config"
+	"user-manager/db/generated/models"
 	email_api "user-manager/third-party-models/email-api"
 	"user-manager/util"
 )
@@ -56,7 +57,7 @@ func TestRoleBeforeSignup(config *config.Config) error {
 	if err != nil {
 		return util.Wrap("error making role request", err)
 	}
-	if err = assertResponseEq(200, api_endpoint.AuthRoleTO{Role: "", EmailVerified: false}, resp); err != nil {
+	if err = assertResponseEq(200, api_endpoint.AuthRoleTO{Roles: nil, EmailVerified: false}, resp); err != nil {
 		return util.Wrap("response mismatch", err)
 	}
 	return nil
@@ -77,14 +78,14 @@ func TestSignUp(config *config.Config, emails map[string][]email_api.EmailTO) er
 	}
 
 	// Login
-	resp, err = makeApiRequest("POST", config, "auth/login", auth_endpoint.CredentialsTO{
+	resp, err = makeApiRequest("POST", config, "auth/login", auth_endpoint.LoginTO{
 		Email:    email,
 		Password: password,
 	}, nil)
 	if err != nil {
 		return util.Wrap("error making login request", err)
 	}
-	if err = assertResponseEq(200, auth_endpoint.LoginResponseTO{LoggedIn: true}, resp); err != nil {
+	if err = assertResponseEq(200, auth_endpoint.LoginResponseTO{Status: auth_endpoint.LoggedIn}, resp); err != nil {
 		return util.Wrap("login response mismatch", err)
 	}
 	var sessionCookie *http.Cookie
@@ -99,14 +100,14 @@ func TestSignUp(config *config.Config, emails map[string][]email_api.EmailTO) er
 	}
 
 	// Check role
-	resp, err = makeApiRequest("GET", config, "role", auth_endpoint.CredentialsTO{
+	resp, err = makeApiRequest("GET", config, "role", auth_endpoint.LoginTO{
 		Email:    email,
 		Password: password,
 	}, sessionCookie)
 	if err != nil {
 		return util.Wrap("error making auth role request", err)
 	}
-	if err = assertResponseEq(200, api_endpoint.AuthRoleTO{Role: "USER"}, resp); err != nil {
+	if err = assertResponseEq(200, api_endpoint.AuthRoleTO{Roles: []models.UserRole{"USER"}}, resp); err != nil {
 		return util.Wrap("auth role response mismatch", err)
 	}
 
@@ -151,14 +152,14 @@ func TestSignUp(config *config.Config, emails map[string][]email_api.EmailTO) er
 	}
 
 	// Check role
-	resp, err = makeApiRequest("GET", config, "role", auth_endpoint.CredentialsTO{
+	resp, err = makeApiRequest("GET", config, "role", auth_endpoint.LoginTO{
 		Email:    email,
 		Password: password,
 	}, sessionCookie)
 	if err != nil {
 		return util.Wrap("error making auth role after confirmation request", err)
 	}
-	if err = assertResponseEq(200, api_endpoint.AuthRoleTO{Role: "USER", EmailVerified: true}, resp); err != nil {
+	if err = assertResponseEq(200, api_endpoint.AuthRoleTO{Roles: []models.UserRole{"USER"}, EmailVerified: true}, resp); err != nil {
 		return util.Wrap("auth role after confirmation response mismatch", err)
 	}
 
@@ -172,14 +173,14 @@ func TestSignUp(config *config.Config, emails map[string][]email_api.EmailTO) er
 	}
 
 	// Check role
-	resp, err = makeApiRequest("GET", config, "role", auth_endpoint.CredentialsTO{
+	resp, err = makeApiRequest("GET", config, "role", auth_endpoint.LoginTO{
 		Email:    email,
 		Password: password,
 	}, sessionCookie)
 	if err != nil {
 		return util.Wrap("error making auth role after logout request", err)
 	}
-	if err = assertResponseEq(200, api_endpoint.AuthRoleTO{Role: ""}, resp); err != nil {
+	if err = assertResponseEq(200, api_endpoint.AuthRoleTO{Roles: nil}, resp); err != nil {
 		return util.Wrap("auth role after logout response mismatch", err)
 	}
 
@@ -259,16 +260,4 @@ func readAllClose(reader io.ReadCloser) ([]byte, error) {
 	}
 
 	return body, nil
-}
-
-func readCloseAllInto(reader io.ReadCloser, target interface{}) error {
-	body, err := readAllClose(reader)
-	if err != nil {
-		return err
-	}
-
-	if err = json.Unmarshal(body, target); err != nil {
-		return util.Wrap("issue binding", err)
-	}
-	return nil
 }

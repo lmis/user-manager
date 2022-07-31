@@ -2,7 +2,6 @@ package auth
 
 import (
 	"database/sql"
-	"net/http"
 	"time"
 	ginext "user-manager/cmd/app/gin-extensions"
 	auth_service "user-manager/cmd/app/services/auth"
@@ -32,40 +31,30 @@ type ResetPasswordResponseTO struct {
 	Status ResetPasswordStatus `json:"status"`
 }
 
-func PostResetPassword(c *gin.Context) {
-	requestContext := ginext.GetRequestContext(c)
+func PostResetPassword(requestContext *ginext.RequestContext, requestTO *ResetPasswordTO, _ *gin.Context) (*ResetPasswordResponseTO, error) {
 	securityLog := requestContext.SecurityLog
 	tx := requestContext.Tx
 	securityLog.Info("Password reset requested")
-
-	var resetPasswordTO ResetPasswordTO
-	if err := c.BindJSON(&resetPasswordTO); err != nil {
-		c.AbortWithError(http.StatusBadRequest, util.Wrap("cannot bind to resetPasswordTO", err))
-		return
-	}
 
 	ctx, cancelTimeout := db.DefaultQueryContext()
 	defer cancelTimeout()
 
 	user, err := models.AppUsers(
-		models.AppUserWhere.Email.EQ(resetPasswordTO.Email),
-		models.AppUserWhere.PasswordResetToken.EQ(null.StringFrom(resetPasswordTO.Token)),
+		models.AppUserWhere.Email.EQ(requestTO.Email),
+		models.AppUserWhere.PasswordResetToken.EQ(null.StringFrom(requestTO.Token)),
 		models.AppUserWhere.PasswordResetTokenValidUntil.GT(null.TimeFrom(time.Now())),
 	).One(ctx, tx)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			securityLog.Info("Invalid password reset attempt")
-			c.JSON(http.StatusOK, ResetPasswordResponseTO{Status: InvalidToken})
-			return
-		} else {
-			c.AbortWithError(http.StatusInternalServerError, util.Wrap("error finding user", err))
+			return &ResetPasswordResponseTO{Status: InvalidToken}, nil
 		}
-		return
+		return nil, util.Wrap("error finding user", err)
 	}
 
-	hash, err := auth_service.Hash(resetPasswordTO.NewPassword)
+	hash, err := auth_service.Hash(requestTO.NewPassword)
 	if err != nil {
-		c.AbortWithError(http.StatusInternalServerError, util.Wrap("issue making password hash", err))
+		return nil, util.Wrap("issue making password hash", err)
 	}
 
 	user.PasswordResetToken = null.StringFromPtr(nil)
@@ -73,9 +62,8 @@ func PostResetPassword(c *gin.Context) {
 	user.PasswordHash = hash
 
 	if err := user_service.UpdateUser(requestContext, user); err != nil {
-		c.AbortWithError(http.StatusInternalServerError, util.Wrap("issue persisting user", err))
-		return
+		return nil, util.Wrap("issue persisting user", err)
 	}
 
-	c.JSON(http.StatusOK, ResetPasswordResponseTO{Status: Success})
+	return &ResetPasswordResponseTO{Status: Success}, nil
 }

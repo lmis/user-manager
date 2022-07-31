@@ -1,7 +1,6 @@
 package user
 
 import (
-	"net/http"
 	ginext "user-manager/cmd/app/gin-extensions"
 	email_service "user-manager/cmd/app/services/email"
 	user_service "user-manager/cmd/app/services/user"
@@ -17,28 +16,24 @@ type RetriggerConfirmationEmailResponseTO struct {
 	Sent bool `json:"sent"`
 }
 
-func PostRetriggerConfirmationEmail(c *gin.Context) {
-	requestContext := ginext.GetRequestContext(c)
+func PostRetriggerConfirmationEmail(requestContext *ginext.RequestContext, _ *gin.Context) (*RetriggerConfirmationEmailResponseTO, error) {
 	securityLog := requestContext.SecurityLog
 	user := requestContext.Authentication.AppUser
 
 	if user.EmailVerified {
 		securityLog.Info("Email already verified")
-		c.JSON(http.StatusOK, RetriggerConfirmationEmailResponseTO{Sent: false})
-		return
+		return &RetriggerConfirmationEmailResponseTO{Sent: false}, nil
 	}
 
 	user.EmailVerificationToken = null.StringFrom(util.MakeRandomURLSafeB64(21))
 
 	if err := user_service.UpdateUser(requestContext, user); err != nil {
-		c.AbortWithError(http.StatusInternalServerError, util.Wrap("issue persisting user", err))
-		return
+		return nil, util.Wrap("issue persisting user", err)
 	}
 
 	if err := email_service.SendVerificationEmail(requestContext, user); err != nil {
-		c.AbortWithError(http.StatusInternalServerError, util.Wrap("error sending verification email", err))
-		return
+		return nil, util.Wrap("error sending verification email", err)
 	}
 
-	c.JSON(http.StatusOK, RetriggerConfirmationEmailResponseTO{Sent: true})
+	return &RetriggerConfirmationEmailResponseTO{Sent: true}, nil
 }

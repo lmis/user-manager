@@ -5,6 +5,7 @@ import (
 )
 
 type Authentication struct {
+	UserRoles   []models.UserRole
 	UserSession *models.UserSession
 	AppUser     *models.AppUser
 }

@@ -28,7 +28,7 @@ func main() {
 	util.Run("EMAILER", startJob)
 }
 
-func startJob(log util.Logger) error {
+func startJob(log util.Logger, dir string) error {
 	log.Info("Starting up")
 
 	var db *sql.DB

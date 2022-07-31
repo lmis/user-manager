@@ -24,7 +24,7 @@ func main() {
 	util.Run("LIFECYCLE", runServer)
 }
 
-func runServer(log util.Logger) error {
+func runServer(log util.Logger, dir string) error {
 	log.Info("Starting up")
 
 	err := emailservice.Initialize(log, translationsFS)

@@ -5,7 +5,7 @@ import (
 	"net/http"
 	middleware "user-manager/cmd/app/middlewares"
 	config "user-manager/cmd/mock-3rd-party-apis/config"
-	flow_tests "user-manager/cmd/mock-3rd-party-apis/flow-tests"
+	e2e_test "user-manager/cmd/mock-3rd-party-apis/end-to-end-tests"
 	email_api "user-manager/third-party-models/email-api"
 	"user-manager/util"
 
@@ -17,7 +17,7 @@ func main() {
 	util.Run("MOCK 3RD-PARTY APIS", startServer)
 }
 
-func startServer(log util.Logger) error {
+func startServer(log util.Logger, dir string) error {
 	emails := make(map[string][]email_api.EmailTO)
 	log.Info("Starting up")
 	config, err := config.GetConfig(log)
@@ -46,9 +46,9 @@ func startServer(log util.Logger) error {
 		n := c.Param("n")
 		switch n {
 		case "1":
-			respondToTestRequest(c, flow_tests.TestRoleBeforeSignup(config))
+			respondToTestRequest(c, e2e_test.TestRoleBeforeSignup(config))
 		case "2":
-			respondToTestRequest(c, flow_tests.TestSignUp(config, emails))
+			respondToTestRequest(c, e2e_test.TestSignUp(config, emails))
 		default:
 			c.Status(http.StatusNotFound)
 		}

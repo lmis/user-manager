@@ -2,8 +2,9 @@ package main
 
 //go:generate go run ../generate-sqlboiler/main.go ../../db/generated/models
 import (
+	"path"
 	"user-manager/cmd/migrator/config"
-	"user-manager/db"
+	"user-manager/db/migrate"
 	"user-manager/util"
 
 	"database/sql"
@@ -15,7 +16,7 @@ func main() {
 	util.Run("MIGRATOR", runMigrations)
 }
 
-func runMigrations(log util.Logger) error {
+func runMigrations(log util.Logger, dir string) error {
 	var dbConnection *sql.DB
 
 	config, err := config.GetConfig(log)
@@ -30,7 +31,7 @@ func runMigrations(log util.Logger) error {
 	defer util.CloseOrPanic(dbConnection)
 
 	log.Info("Running migrations")
-	n, err := db.MigrateUp(dbConnection)
+	n, err := migrate.MigrateUp(dbConnection, path.Join(dir, "../../db/migrate"))
 	if err != nil {
 		return util.Wrap("could not run migration", err)
 	}

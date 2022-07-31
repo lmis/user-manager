@@ -2,7 +2,6 @@ package auth
 
 import (
 	"fmt"
-	"net/http"
 	ginext "user-manager/cmd/app/gin-extensions"
 	session_service "user-manager/cmd/app/services/session"
 	"user-manager/db"
@@ -12,9 +11,8 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func PostLogout(c *gin.Context) {
-	session_service.RemoveSessionCookie(c)
-	requestContext := ginext.GetRequestContext(c)
+func PostLogout(requestContext *ginext.RequestContext, c *gin.Context) error {
+	session_service.RemoveSessionCookie(c, models.UserSessionTypeLOGIN)
 	securityLog := requestContext.SecurityLog
 	tx := requestContext.Tx
 	authentication := requestContext.Authentication
@@ -24,22 +22,19 @@ func PostLogout(c *gin.Context) {
 	}
 
 	if userSession == nil {
-		c.Status(http.StatusOK)
-		return
+		return nil
 	}
 
 	ctx, cancelTimeout := db.DefaultQueryContext()
 	defer cancelTimeout()
 	rows, err := userSession.Delete(ctx, tx)
 	if err != nil {
-		c.AbortWithError(http.StatusInternalServerError, util.Wrap("could not delete session", err))
-		return
+		return util.Wrap("could not delete session", err)
 	}
 	if rows != 1 {
-		c.AbortWithError(http.StatusInternalServerError, util.Error(fmt.Sprintf("too many rows affected: %d", rows)))
-		return
+		return util.Error(fmt.Sprintf("too many rows affected: %d", rows))
 	}
 
 	securityLog.Info("Logout")
-	c.Status(http.StatusOK)
+	return nil
 }

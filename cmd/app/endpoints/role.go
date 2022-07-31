@@ -1,7 +1,6 @@
 package api
 
 import (
-	"net/http"
 	ginext "user-manager/cmd/app/gin-extensions"
 	"user-manager/db/generated/models"
 
@@ -9,17 +8,16 @@ import (
 )
 
 type AuthRoleTO struct {
-	Role          models.UserRole `json:"role"`
-	EmailVerified bool            `json:"emailVerified"`
+	Roles         []models.UserRole `json:"roles"`
+	EmailVerified bool              `json:"emailVerified"`
 }
 
-func GetAuthRole(c *gin.Context) {
-	requestContext := ginext.GetRequestContext(c)
+func GetAuthRole(requestContext *ginext.RequestContext, _ *gin.Context) (*AuthRoleTO, error) {
 	authentication := requestContext.Authentication
 	authRole := AuthRoleTO{}
 	if authentication != nil {
-		authRole.Role = authentication.AppUser.Role
+		authRole.Roles = authentication.UserRoles
 		authRole.EmailVerified = authentication.AppUser.EmailVerified
 	}
-	c.JSON(http.StatusOK, authRole)
+	return &authRole, nil
 }

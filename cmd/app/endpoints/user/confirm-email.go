@@ -1,7 +1,6 @@
 package user
 
 import (
-	"net/http"
 	ginext "user-manager/cmd/app/gin-extensions"
 	user_service "user-manager/cmd/app/services/user"
 	"user-manager/util"
@@ -26,46 +25,36 @@ type EmailConfirmationResponseTO struct {
 	Status EmailConfirmationStatus `json:"status"`
 }
 
-func PostConfirmEmail(c *gin.Context) {
-	requestContext := ginext.GetRequestContext(c)
+func PostConfirmEmail(requestContext *ginext.RequestContext, request *EmailConfirmationTO, _ *gin.Context) (*EmailConfirmationResponseTO, error) {
 	securityLog := requestContext.SecurityLog
-	emailConfirmationTO := EmailConfirmationTO{}
-	if err := c.BindJSON(&emailConfirmationTO); err != nil {
-		c.AbortWithError(http.StatusBadRequest, util.Wrap("cannot bind to emailConfirmationTO", err))
-		return
-	}
 	user := requestContext.Authentication.AppUser
 
 	if user.EmailVerified {
 		securityLog.Info("Email already verified")
-		c.JSON(http.StatusOK, EmailConfirmationResponseTO{
+		return &EmailConfirmationResponseTO{
 			Status: AlreadyConfirmed,
-		})
-		return
+		}, nil
 	}
 
 	if !user.EmailVerificationToken.Valid {
-		c.AbortWithError(http.StatusInternalServerError, util.Error("no verification token present on database"))
-		return
+		return nil, util.Error("no verification token present on database")
 	}
 
-	if emailConfirmationTO.Token != user.EmailVerificationToken.String {
+	if request.Token != user.EmailVerificationToken.String {
 		securityLog.Info("Invalid email verification token")
-		c.JSON(http.StatusOK, EmailConfirmationResponseTO{
+		return &EmailConfirmationResponseTO{
 			Status: InvalidToken,
-		})
-		return
+		}, nil
 	}
 
 	user.EmailVerificationToken = null.StringFromPtr(nil)
 	user.EmailVerified = true
 
 	if err := user_service.UpdateUser(requestContext, user); err != nil {
-		c.AbortWithError(http.StatusInternalServerError, util.Wrap("issue persisting user", err))
-		return
+		return nil, util.Wrap("issue persisting user", err)
 	}
 
-	c.JSON(http.StatusOK, EmailConfirmationResponseTO{
+	return &EmailConfirmationResponseTO{
 		Status: NewlyConfirmed,
-	})
+	}, nil
 }
