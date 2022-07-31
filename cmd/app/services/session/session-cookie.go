@@ -32,6 +32,9 @@ func GetSessionCookie(c *gin.Context, sessionType models.UserSessionType) (strin
 	if err != nil && err != http.ErrNoCookie {
 		return "", util.Wrap("issue reading cookie", err)
 	}
+	if cookie == nil {
+		return "", nil
+	}
 	return cookie.Value, nil
 }
 
