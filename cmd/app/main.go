@@ -1,6 +1,6 @@
 package main
 
-//go:generate go run ../generate-sqlboiler/main.go ../../db/generated/models
+//go:generate go run ../migrator/main.go generate ../../db/generated/models
 import (
 	"embed"
 	config "user-manager/cmd/app/config"
