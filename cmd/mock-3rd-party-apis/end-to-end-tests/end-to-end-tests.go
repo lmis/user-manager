@@ -67,13 +67,13 @@ func TestSignUp(config *config.Config, emails map[string][]email_api.EmailTO) er
 	email := "test-user-1@example.com"
 	password := []byte("hunter12")
 	// Signup
-	resp, err := makeApiRequest("POST", config, "sign-up", auth_endpoint.SignUpTO{
+	resp, err := makeApiRequest("POST", config, "auth/sign-up", auth_endpoint.SignUpTO{
 		UserName: "test-user",
 		Language: "DE",
 		Email:    email,
 		Password: password,
 	}, nil)
-	if err = assertResponseEq(200, nil, resp); err != nil {
+	if err = assertResponseEq(204, nil, resp); err != nil {
 		return util.Wrap("signup response mismatch", err)
 	}
 
@@ -90,7 +90,7 @@ func TestSignUp(config *config.Config, emails map[string][]email_api.EmailTO) er
 	}
 	var sessionCookie *http.Cookie
 	for _, cookie := range resp.Cookies() {
-		if cookie.Name == "SESSION_ID" {
+		if cookie.Name == "LOGIN_TOKEN" {
 			sessionCookie = cookie
 		}
 	}
@@ -168,7 +168,7 @@ func TestSignUp(config *config.Config, emails map[string][]email_api.EmailTO) er
 	if err != nil {
 		return util.Wrap("error making logout call", err)
 	}
-	if err = assertResponseEq(200, nil, resp); err != nil {
+	if err = assertResponseEq(204, nil, resp); err != nil {
 		return util.Wrap("logout response mismatch", err)
 	}
 

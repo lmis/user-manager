@@ -7,8 +7,6 @@ import (
 
 	"net/http"
 
-	"golang.org/x/exp/slices"
-
 	"github.com/gin-gonic/gin"
 )
 
@@ -22,8 +20,14 @@ func RequireRoleMiddleware(requiredRole models.UserRole) gin.HandlerFunc {
 			c.AbortWithError(http.StatusUnauthorized, util.Error("not authenticated"))
 		}
 
+		hasRole := false
 		receivedRoles := authentication.UserRoles
-		if slices.Contains(receivedRoles, requiredRole) {
+		for _, role := range receivedRoles {
+			if requiredRole == role {
+				hasRole = true
+			}
+		}
+		if !hasRole {
 			securityLog.Info("Not a %s: wrong role (%v)", requiredRole, receivedRoles)
 			c.AbortWithError(http.StatusUnauthorized, util.Errorf("wrong role. required %s, received %v", requiredRole, receivedRoles))
 		}

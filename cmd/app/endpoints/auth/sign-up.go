@@ -62,13 +62,14 @@ func PostSignUp(requestContext *ginext.RequestContext, requestTO *SignUpTO, _ *g
 
 	ctx, cancelTimeout = db.DefaultQueryContext()
 	defer cancelTimeout()
-	if err = user.AddAppUserRoles(ctx, tx, true, &models.AppUserRole{Role: "USER"}); err != nil {
-		return util.Wrap("cannot insert user role", err)
-	}
-	ctx, cancelTimeout = db.DefaultQueryContext()
-	defer cancelTimeout()
 	if err = user.Insert(ctx, tx, boil.Infer()); err != nil {
 		return util.Wrap("cannot insert user", err)
+	}
+
+	ctx, cancelTimeout = db.DefaultQueryContext()
+	defer cancelTimeout()
+	if err = user.AddAppUserRoles(ctx, tx, true, &models.AppUserRole{Role: "USER"}); err != nil {
+		return util.Wrap("cannot insert user role", err)
 	}
 
 	if err = email_service.SendVerificationEmail(requestContext, user); err != nil {

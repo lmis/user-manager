@@ -22,7 +22,8 @@ func WrapEndpoint[requestTO interface{}, responseTO interface{}](endpoint Endpoi
 		}
 		response, err := endpoint(requestContext, request, c)
 		if err != nil {
-			c.AbortWithError(http.StatusInternalServerError, util.Wrap("endpoint returned error", err))
+			c.AbortWithError(http.StatusInternalServerError, err)
+			return
 		}
 
 		c.JSON(http.StatusOK, response)
@@ -38,7 +39,8 @@ func WrapEndpointWithoutResponseBody[requestTO interface{}](endpoint EndpointWit
 			return
 		}
 		if err := endpoint(requestContext, request, c); err != nil {
-			c.AbortWithError(http.StatusInternalServerError, util.Wrap("endpoint returned error", err))
+			c.AbortWithError(http.StatusInternalServerError, err)
+			return
 		}
 
 		c.Status(http.StatusNoContent)
@@ -50,7 +52,8 @@ func WrapEndpointWithoutRequestBody[responseTO interface{}](endpoint EndpointWit
 		requestContext := GetRequestContext(c)
 		response, err := endpoint(requestContext, c)
 		if err != nil {
-			c.AbortWithError(http.StatusInternalServerError, util.Wrap("endpoint returned error", err))
+			c.AbortWithError(http.StatusInternalServerError, err)
+			return
 		}
 
 		c.JSON(http.StatusOK, response)
@@ -61,7 +64,8 @@ func WrapEndpointWithoutRequestOrResponseBody(endpoint EndpointWithoutRequestOrR
 	return func(c *gin.Context) {
 		requestContext := GetRequestContext(c)
 		if err := endpoint(requestContext, c); err != nil {
-			c.AbortWithError(http.StatusInternalServerError, util.Wrap("endpoint returned error", err))
+			c.AbortWithError(http.StatusInternalServerError, err)
+			return
 		}
 
 		c.Status(http.StatusNoContent)

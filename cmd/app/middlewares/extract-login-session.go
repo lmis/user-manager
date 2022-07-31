@@ -35,8 +35,7 @@ func ExtractLoginSession(c *gin.Context) {
 	session, err := models.UserSessions(models.UserSessionWhere.UserSessionID.EQ(sessionID),
 		models.UserSessionWhere.TimeoutAt.GT(time.Now()),
 		models.UserSessionWhere.UserSessionType.EQ(models.UserSessionTypeLOGIN),
-		qm.Load(models.UserSessionRels.AppUser),
-		qm.Load(models.AppUserRels.AppUserRoles)).
+		qm.Load(models.UserSessionRels.AppUser)).
 		One(ctx, requestContext.Tx)
 
 	if err != nil && err != sql.ErrNoRows {
@@ -44,7 +43,13 @@ func ExtractLoginSession(c *gin.Context) {
 		return
 	}
 	if session != nil {
-		appUserRoles := session.R.AppUser.R.AppUserRoles
+		appUserRoles, err := models.AppUserRoles(models.AppUserRoleWhere.AppUserID.EQ(session.AppUserID)).
+			All(ctx, requestContext.Tx)
+
+		if err != nil && err != sql.ErrNoRows {
+			c.AbortWithError(http.StatusInternalServerError, util.Wrap("getting session failed", err))
+			return
+		}
 		userRoles := make([]models.UserRole, len(appUserRoles))
 		for i, role := range appUserRoles {
 			userRoles[i] = role.Role

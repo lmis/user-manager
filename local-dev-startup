@@ -42,7 +42,7 @@ go run cmd/migrator/main.go
 
 if [[ $? = 0 ]]
 then
-    echo "------ START MOCK EMAIL API ------"
+    echo "------ START MOCK 3RD-PARTY API ------"
     go run cmd/mock-3rd-party-apis/main.go &
     _MOCK_THIRD_PARTY_APIS=$!
     echo "------ START APP ------"
