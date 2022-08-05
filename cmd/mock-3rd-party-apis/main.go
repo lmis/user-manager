@@ -5,7 +5,7 @@ import (
 	"net/http"
 	middleware "user-manager/cmd/app/middlewares"
 	config "user-manager/cmd/mock-3rd-party-apis/config"
-	e2e_test "user-manager/cmd/mock-3rd-party-apis/end-to-end-tests"
+	auth_endpoint_test "user-manager/cmd/mock-3rd-party-apis/endpoint-tests/auth"
 	email_api "user-manager/third-party-models/email-api"
 	"user-manager/util"
 
@@ -46,9 +46,9 @@ func startServer(log util.Logger, dir string) error {
 		n := c.Param("n")
 		switch n {
 		case "1":
-			respondToTestRequest(c, e2e_test.TestRoleBeforeSignup(config))
+			respondToTestRequest(c, auth_endpoint_test.TestRoleBeforeSignup(config))
 		case "2":
-			respondToTestRequest(c, e2e_test.TestSignUp(config, emails))
+			respondToTestRequest(c, auth_endpoint_test.TestSignUp(config, emails))
 		default:
 			c.Status(http.StatusNotFound)
 		}

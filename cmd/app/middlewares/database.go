@@ -30,12 +30,14 @@ func DatabaseMiddleware(database *sql.DB) gin.HandlerFunc {
 				log.Info("COMMIT")
 				if err := tx.Commit(); err != nil {
 					c.AbortWithError(http.StatusInternalServerError, util.Wrap("commit failed", err))
+					return
 				}
 			} else {
 				log.Info("ROLLBACK")
 				if err = tx.Rollback(); err != nil {
 					// If rollback doesn't work, log and forget
 					c.AbortWithError(http.StatusInternalServerError, util.Wrap("rollback failed", err))
+					return
 				}
 			}
 		}()

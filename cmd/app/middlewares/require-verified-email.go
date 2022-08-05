@@ -2,6 +2,7 @@ package middleware
 
 import (
 	ginext "user-manager/cmd/app/gin-extensions"
+	"user-manager/util"
 
 	"net/http"
 
@@ -13,7 +14,7 @@ func VerifiedEmailAuthorizationMiddleware(c *gin.Context) {
 	authentication := requestContext.Authentication
 	if !authentication.AppUser.EmailVerified {
 		requestContext.SecurityLog.Info("Email not verified")
-		c.AbortWithStatus(http.StatusForbidden)
+		c.AbortWithError(http.StatusForbidden, util.Errorf("email not verified"))
 		return
 	}
 }

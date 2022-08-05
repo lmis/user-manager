@@ -31,18 +31,16 @@ func main() {
 func startJob(log util.Logger, dir string) error {
 	log.Info("Starting up")
 
-	var db *sql.DB
-
 	config, err := config.GetConfig(log)
 	if err != nil {
 		return util.Wrap("issue reading config", err)
 	}
 
-	db, err = config.DbInfo.OpenDbConnection(log)
+	connection, err := config.DbInfo.OpenDbConnection(log)
 	if err != nil {
 		return util.Wrap("issue opening db connection", err)
 	}
-	defer util.CloseOrPanic(db)
+	defer db.CloseOrPanic(connection)
 
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, syscall.SIGTERM, syscall.SIGINT)
@@ -60,7 +58,7 @@ func startJob(log util.Logger, dir string) error {
 			if timeSinceLastEmailSent < minTimeBetweenSendingEmails {
 				time.Sleep(minTimeBetweenSendingEmails - timeSinceLastEmailSent)
 			}
-			if err = sendOneEmail(log, db, config); err != nil {
+			if err = sendOneEmail(log, connection, config); err != nil {
 				return util.Wrap("issue sending email", err)
 			}
 			lastEmailSentAt = time.Now()

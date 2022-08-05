@@ -1,13 +1,14 @@
 package auth
 
 import (
-	"database/sql"
+	"context"
 	ginext "user-manager/cmd/app/gin-extensions"
 	session_service "user-manager/cmd/app/services/session"
 	"user-manager/db"
 	"user-manager/db/generated/models"
 	app_user "user-manager/domain-model/id/appUser"
 	"user-manager/util"
+	"user-manager/util/slices"
 
 	"github.com/gin-gonic/gin"
 	"github.com/volatiletech/sqlboiler/v4/queries/qm"
@@ -35,30 +36,23 @@ func PostLogin(requestContext *ginext.RequestContext, requestTO *LoginTO, c *gin
 	tx := requestContext.Tx
 	securityLog := requestContext.SecurityLog
 
-	var user *models.AppUser
-	ctx, cancelTimeout := db.DefaultQueryContext()
-	defer cancelTimeout()
-
-	user, err := models.AppUsers(
-		models.AppUserWhere.Email.EQ(requestTO.Email),
-		qm.Load(models.AppUserRels.AppUserRoles),
-		qm.Load(models.AppUserRels.TwoFactorThrottling),
-	).One(ctx, tx)
+	user, err := db.Fetch(func(ctx context.Context) (*models.AppUser, error) {
+		return models.AppUsers(
+			models.AppUserWhere.Email.EQ(requestTO.Email),
+			qm.Load(models.AppUserRels.AppUserRoles),
+			qm.Load(models.AppUserRels.TwoFactorThrottling),
+		).One(ctx, tx)
+	})
 	if err != nil {
-		if err == sql.ErrNoRows {
-			securityLog.Info("Login attempt for non-existant user")
-			return &LoginResponseTO{InvalidCredentials}, nil
-		}
 		return nil, util.Wrap("error finding user", err)
 	}
-	hasOnlyUserRole := true
-	for _, role := range user.R.AppUserRoles {
-		if role.Role != models.UserRoleUSER {
-			hasOnlyUserRole = false
-		}
+	if user == nil {
+		securityLog.Info("Login attempt for non-existant user")
+		return &LoginResponseTO{InvalidCredentials}, nil
 	}
 
-	if !hasOnlyUserRole {
+	hasNonUserRole := slices.Any(user.R.AppUserRoles, func(role *models.AppUserRole) bool { return role.Role != models.UserRoleUSER })
+	if !hasNonUserRole {
 		securityLog.Info("Login attempt without second factor for non-user %s", user.AppUserID)
 		return &LoginResponseTO{InvalidCredentials}, nil
 	}

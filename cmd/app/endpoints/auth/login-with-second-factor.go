@@ -1,8 +1,7 @@
 package auth
 
 import (
-	"database/sql"
-	"fmt"
+	"context"
 	"time"
 	ginext "user-manager/cmd/app/gin-extensions"
 	session_service "user-manager/cmd/app/services/session"
@@ -34,22 +33,19 @@ func PostLoginWithSecondFactor(requestContext *ginext.RequestContext, requestTO 
 	tx := requestContext.Tx
 	securityLog := requestContext.SecurityLog
 
-	var user *models.AppUser
-	ctx, cancelTimeout := db.DefaultQueryContext()
-	defer cancelTimeout()
-
-	user, err := models.AppUsers(
-		models.AppUserWhere.Email.EQ(requestTO.Email),
-		qm.Load(models.AppUserRels.AppUserRoles),
-		qm.Load(models.AppUserRels.TwoFactorThrottling),
-	).One(ctx, tx)
+	user, err := db.Fetch(func(ctx context.Context) (*models.AppUser, error) {
+		return models.AppUsers(
+			models.AppUserWhere.Email.EQ(requestTO.Email),
+			qm.Load(models.AppUserRels.AppUserRoles),
+			qm.Load(models.AppUserRels.TwoFactorThrottling),
+		).One(ctx, tx)
+	})
 	if err != nil {
-		if err == sql.ErrNoRows {
-			securityLog.Info("Login attempt for non-existant user")
-			return &LoginWithSecondFactorResponseTO{}, nil
-		} else {
-			return nil, util.Wrap("error finding user", err)
-		}
+		return nil, util.Wrap("error finding user", err)
+	}
+	if user == nil {
+		securityLog.Info("Login attempt for non-existant user")
+		return &LoginWithSecondFactorResponseTO{}, nil
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), requestTO.Password); err != nil {
@@ -58,12 +54,12 @@ func PostLoginWithSecondFactor(requestContext *ginext.RequestContext, requestTO 
 	}
 
 	if requestTO.SecondFactor != "" {
-		ctx, cancelTimeout := db.DefaultQueryContext()
-		defer cancelTimeout()
-		throttling, err := models.TwoFactorThrottlings(
-			models.TwoFactorThrottlingWhere.AppUserID.EQ(user.AppUserID),
-		).One(ctx, tx)
-		if err != nil && err != sql.ErrNoRows {
+		throttling, err := db.Fetch(func(ctx context.Context) (*models.TwoFactorThrottling, error) {
+			return models.TwoFactorThrottlings(
+				models.TwoFactorThrottlingWhere.AppUserID.EQ(user.AppUserID),
+			).One(ctx, tx)
+		})
+		if err != nil {
 			return nil, util.Wrap("error loading throttling", err)
 		}
 
@@ -83,14 +79,8 @@ func PostLoginWithSecondFactor(requestContext *ginext.RequestContext, requestTO 
 				throttling.TimeoutUntil = null.TimeFrom(time.Now().Add(time.Minute * 3 * time.Duration(throttling.FailedAttemptsSinceLastSuccess)))
 			}
 		}
-		ctx, cancelTimeout = db.DefaultQueryContext()
-		defer cancelTimeout()
-		rows, err := throttling.Update(ctx, tx, boil.Infer())
-		if err != nil {
+		if err := db.ExecSingleMutation(func(ctx context.Context) (int64, error) { return throttling.Update(ctx, tx, boil.Infer()) }); err != nil {
 			return nil, util.Wrap("issue updating throttling in db", err)
-		}
-		if rows != 1 {
-			return nil, util.Wrap(fmt.Sprintf("wrong number of rows affected by throttling update: %d", rows), err)
 		}
 
 		if !tokenMatches {
@@ -117,15 +107,14 @@ func PostLoginWithSecondFactor(requestContext *ginext.RequestContext, requestTO 
 		if deviceSessionId == "" {
 			return &LoginWithSecondFactorResponseTO{}, nil
 		}
-		ctx, cancelTimeout := db.DefaultQueryContext()
-		defer cancelTimeout()
-		deviceSession, err := models.UserSessions(models.UserSessionWhere.UserSessionID.EQ(deviceSessionId),
-			models.UserSessionWhere.TimeoutAt.GT(time.Now()),
-			models.UserSessionWhere.UserSessionType.EQ(models.UserSessionTypeREMEMBER_DEVICE),
-		).
-			One(ctx, requestContext.Tx)
+		deviceSession, err := db.Fetch(func(ctx context.Context) (*models.UserSession, error) {
+			return models.UserSessions(models.UserSessionWhere.UserSessionID.EQ(deviceSessionId),
+				models.UserSessionWhere.TimeoutAt.GT(time.Now()),
+				models.UserSessionWhere.UserSessionType.EQ(models.UserSessionTypeREMEMBER_DEVICE),
+			).One(ctx, requestContext.Tx)
+		})
 
-		if err != nil && err != sql.ErrNoRows {
+		if err != nil {
 			return nil, util.Wrap("getting session failed", err)
 		}
 		if deviceSession == nil {

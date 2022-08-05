@@ -18,7 +18,7 @@ type DbInfo struct {
 func (dbInfo *DbInfo) OpenDbConnection(log util.Logger) (dbConnection *sql.DB, err error) {
 	defer func() {
 		if p := recover(); p != nil {
-			util.CloseOrPanic(dbConnection)
+			CloseOrPanic(dbConnection)
 			err = util.Errorf("panicked %s\n%s", p, debug.Stack())
 		}
 	}()
@@ -35,8 +35,8 @@ func (dbInfo *DbInfo) OpenDbConnection(log util.Logger) (dbConnection *sql.DB, e
 		return nil, util.Wrap("could not open db connection", err)
 	}
 
-	if err = util.CheckConnection(log, dbConnection); err != nil {
-		util.CloseOrPanic(dbConnection)
+	if err = CheckConnection(log, dbConnection); err != nil {
+		CloseOrPanic(dbConnection)
 		return nil, util.Wrap("could not check db connection", err)
 	}
 

@@ -1,7 +1,7 @@
 package auth
 
 import (
-	"database/sql"
+	"context"
 	"time"
 	ginext "user-manager/cmd/app/gin-extensions"
 	email_service "user-manager/cmd/app/services/email"
@@ -23,18 +23,17 @@ func PostRequestPasswordReset(requestContext *ginext.RequestContext, requestTO *
 	tx := requestContext.Tx
 	securityLog.Info("Password reset requested")
 
-	ctx, cancelTimeout := db.DefaultQueryContext()
-	defer cancelTimeout()
-
-	user, err := models.AppUsers(
-		models.AppUserWhere.Email.EQ(requestTO.Email),
-	).One(ctx, tx)
+	user, err := db.Fetch(func(ctx context.Context) (*models.AppUser, error) {
+		return models.AppUsers(
+			models.AppUserWhere.Email.EQ(requestTO.Email),
+		).One(ctx, tx)
+	})
 	if err != nil {
-		if err == sql.ErrNoRows {
-			securityLog.Info("Password reset attempt for non-existant email")
-			return nil
-		}
 		return util.Wrap("error finding user", err)
+	}
+	if user == nil {
+		securityLog.Info("Password reset attempt for non-existant email")
+		return nil
 	}
 
 	user.PasswordResetToken = null.StringFrom(util.MakeRandomURLSafeB64(21))

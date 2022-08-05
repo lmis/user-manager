@@ -4,6 +4,7 @@ import (
 	ginext "user-manager/cmd/app/gin-extensions"
 	"user-manager/db/generated/models"
 	"user-manager/util"
+	"user-manager/util/slices"
 
 	"net/http"
 
@@ -18,18 +19,14 @@ func RequireRoleMiddleware(requiredRole models.UserRole) gin.HandlerFunc {
 		if authentication == nil {
 			securityLog.Info("Not a %s: unauthenticated", requiredRole)
 			c.AbortWithError(http.StatusUnauthorized, util.Error("not authenticated"))
+			return
 		}
 
-		hasRole := false
 		receivedRoles := authentication.UserRoles
-		for _, role := range receivedRoles {
-			if requiredRole == role {
-				hasRole = true
-			}
-		}
-		if !hasRole {
+		if !slices.Contains(receivedRoles, requiredRole) {
 			securityLog.Info("Not a %s: wrong role (%v)", requiredRole, receivedRoles)
 			c.AbortWithError(http.StatusUnauthorized, util.Errorf("wrong role. required %s, received %v", requiredRole, receivedRoles))
+			return
 		}
 	}
 }

@@ -1,8 +1,8 @@
 package middleware
 
 import (
+	"context"
 	"database/sql"
-	"fmt"
 	"net/http"
 	"time"
 	ginext "user-manager/cmd/app/gin-extensions"
@@ -11,49 +11,42 @@ import (
 	"user-manager/db/generated/models"
 	domain_model "user-manager/domain-model"
 	"user-manager/util"
+	"user-manager/util/slices"
 
 	"github.com/gin-gonic/gin"
 	"github.com/volatiletech/sqlboiler/v4/boil"
-	"github.com/volatiletech/sqlboiler/v4/queries/qm"
 )
 
 func ExtractLoginSession(c *gin.Context) {
-	sessionID, err := session_service.GetSessionCookie(c, models.UserSessionTypeLOGIN)
+	sessionId, err := session_service.GetSessionCookie(c, models.UserSessionTypeLOGIN)
 	if err != nil {
 		c.AbortWithError(http.StatusInternalServerError, util.Wrap("getting session cookie failed", err))
 		return
 	}
 
-	if sessionID == "" {
+	if sessionId == "" {
 		return
 	}
 
 	requestContext := ginext.GetRequestContext(c)
-	ctx, cancelTimeout := db.DefaultQueryContext()
-	defer cancelTimeout()
 
-	session, err := models.UserSessions(models.UserSessionWhere.UserSessionID.EQ(sessionID),
-		models.UserSessionWhere.TimeoutAt.GT(time.Now()),
-		models.UserSessionWhere.UserSessionType.EQ(models.UserSessionTypeLOGIN),
-		qm.Load(models.UserSessionRels.AppUser)).
-		One(ctx, requestContext.Tx)
+	session, err := session_service.FetchSession(requestContext, sessionId, models.UserSessionTypeLOGIN)
 
 	if err != nil && err != sql.ErrNoRows {
 		c.AbortWithError(http.StatusInternalServerError, util.Wrap("getting session failed", err))
 		return
 	}
 	if session != nil {
-		appUserRoles, err := models.AppUserRoles(models.AppUserRoleWhere.AppUserID.EQ(session.AppUserID)).
-			All(ctx, requestContext.Tx)
+		appUserRoles, err := db.Fetch(func(ctx context.Context) (models.AppUserRoleSlice, error) {
+			return models.AppUserRoles(models.AppUserRoleWhere.AppUserID.EQ(session.AppUserID)).
+				All(ctx, requestContext.Tx)
+		})
 
-		if err != nil && err != sql.ErrNoRows {
+		if err != nil {
 			c.AbortWithError(http.StatusInternalServerError, util.Wrap("getting session failed", err))
 			return
 		}
-		userRoles := make([]models.UserRole, len(appUserRoles))
-		for i, role := range appUserRoles {
-			userRoles[i] = role.Role
-		}
+		userRoles := slices.Map(appUserRoles, func(role *models.AppUserRole) models.UserRole { return role.Role })
 
 		requestContext.Authentication = &domain_model.Authentication{
 			UserSession: session,
@@ -63,15 +56,8 @@ func ExtractLoginSession(c *gin.Context) {
 
 		session.TimeoutAt = time.Now().Add(session_service.LoginSessionDuriation)
 
-		ctx, cancelTimeout = db.DefaultQueryContext()
-		defer cancelTimeout()
-		rows, err := session.Update(ctx, requestContext.Tx, boil.Infer())
-		if err != nil {
+		if err := db.ExecSingleMutation(func(ctx context.Context) (int64, error) { return session.Update(ctx, requestContext.Tx, boil.Infer()) }); err != nil {
 			c.AbortWithError(http.StatusInternalServerError, util.Wrap("issue updating session in db", err))
-			return
-		}
-		if rows != 1 {
-			c.AbortWithError(http.StatusInternalServerError, util.Wrap(fmt.Sprintf("wrong number of rows affected: %d", rows), err))
 			return
 		}
 	}

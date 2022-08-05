@@ -33,17 +33,17 @@ func runMigrator(log util.Logger, dir string) error {
 }
 
 func applyMigrations(dbInfo *db.DbInfo, log util.Logger, dir string) error {
-	db, err := dbInfo.OpenDbConnection(log)
+	connection, err := dbInfo.OpenDbConnection(log)
 	if err != nil {
 		return util.Wrap("could not open db connection", err)
 	}
-	defer util.CloseOrPanic(db)
+	defer db.CloseOrPanic(connection)
 
 	log.Info("Running migrations")
 	sql_migrate.SetTable("migrations")
 
 	migrations := &sql_migrate.EmbedFileSystemMigrationSource{FileSystem: migrationsFS, Root: "migrations"}
-	numApplied, err := sql_migrate.Exec(db, "postgres", migrations, sql_migrate.Up)
+	numApplied, err := sql_migrate.Exec(connection, "postgres", migrations, sql_migrate.Up)
 	if err != nil {
 		return util.Wrap("issue executing migration", err)
 	}
@@ -89,7 +89,7 @@ func generateSqlBoiler(log util.Logger, dir string) error {
 	if err != nil {
 		return util.Wrap("cannot open db", err)
 	}
-	defer util.CloseOrPanic(dbConnection)
+	defer db.CloseOrPanic(dbConnection)
 
 	log.Info("Running migrations")
 	if err = applyMigrations(dbInfo, log, dir); err != nil {

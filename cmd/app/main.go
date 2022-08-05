@@ -6,12 +6,11 @@ import (
 	config "user-manager/cmd/app/config"
 	"user-manager/cmd/app/router"
 	emailservice "user-manager/cmd/app/services/email"
+	"user-manager/db"
 	"user-manager/util"
 
 	"net/http"
 	"time"
-
-	"database/sql"
 
 	"github.com/gin-gonic/gin"
 	_ "github.com/lib/pq"
@@ -32,8 +31,6 @@ func runServer(log util.Logger, dir string) error {
 		return util.Wrap("cannot initialize email service", err)
 	}
 
-	var dbConnection *sql.DB
-
 	config, err := config.GetConfig()
 	if err != nil {
 		return util.Wrap("cannot read config", err)
@@ -43,15 +40,15 @@ func runServer(log util.Logger, dir string) error {
 		gin.SetMode(gin.ReleaseMode)
 	}
 
-	dbConnection, err = config.DbInfo.OpenDbConnection(log)
+	connection, err := config.DbInfo.OpenDbConnection(log)
 	if err != nil {
 		return util.Wrap("could not open db connection", err)
 	}
-	defer util.CloseOrPanic(dbConnection)
+	defer db.CloseOrPanic(connection)
 
 	if err = util.RunHttpServer(log, &http.Server{
 		Addr:         ":" + config.AppPort,
-		Handler:      router.New(dbConnection, config),
+		Handler:      router.New(connection, config),
 		ReadTimeout:  1 * time.Minute,
 		WriteTimeout: 1 * time.Minute,
 	}); err != nil {

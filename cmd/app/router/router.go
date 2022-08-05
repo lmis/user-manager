@@ -49,7 +49,7 @@ func New(db *sql.DB, config *config.Config) *gin.Engine {
 			POST("sign-up", ginext.WrapEndpointWithoutResponseBody(auth.PostSignUp)).
 			POST("login", ginext.WrapEndpoint(auth.PostLogin)).
 			POST("login-with-second-factor", ginext.WrapEndpoint(auth.PostLoginWithSecondFactor)).
-			POST("logout", ginext.WrapEndpointWithoutRequestOrResponseBody(auth.PostLogout)).
+			POST("logout", ginext.WrapEndpointWithoutResponseBody(auth.PostLogout)).
 			POST("request-password-reset", ginext.WrapEndpointWithoutResponseBody(auth.PostRequestPasswordReset)).
 			POST("reset-password", ginext.WrapEndpoint(auth.PostResetPassword))
 

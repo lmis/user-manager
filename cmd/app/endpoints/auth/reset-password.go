@@ -1,7 +1,7 @@
 package auth
 
 import (
-	"database/sql"
+	"context"
 	"time"
 	ginext "user-manager/cmd/app/gin-extensions"
 	auth_service "user-manager/cmd/app/services/auth"
@@ -36,20 +36,19 @@ func PostResetPassword(requestContext *ginext.RequestContext, requestTO *ResetPa
 	tx := requestContext.Tx
 	securityLog.Info("Password reset requested")
 
-	ctx, cancelTimeout := db.DefaultQueryContext()
-	defer cancelTimeout()
-
-	user, err := models.AppUsers(
-		models.AppUserWhere.Email.EQ(requestTO.Email),
-		models.AppUserWhere.PasswordResetToken.EQ(null.StringFrom(requestTO.Token)),
-		models.AppUserWhere.PasswordResetTokenValidUntil.GT(null.TimeFrom(time.Now())),
-	).One(ctx, tx)
+	user, err := db.Fetch(func(ctx context.Context) (*models.AppUser, error) {
+		return models.AppUsers(
+			models.AppUserWhere.Email.EQ(requestTO.Email),
+			models.AppUserWhere.PasswordResetToken.EQ(null.StringFrom(requestTO.Token)),
+			models.AppUserWhere.PasswordResetTokenValidUntil.GT(null.TimeFrom(time.Now())),
+		).One(ctx, tx)
+	})
 	if err != nil {
-		if err == sql.ErrNoRows {
-			securityLog.Info("Invalid password reset attempt")
-			return &ResetPasswordResponseTO{Status: InvalidToken}, nil
-		}
 		return nil, util.Wrap("error finding user", err)
+	}
+	if user == nil {
+		securityLog.Info("Invalid password reset attempt")
+		return &ResetPasswordResponseTO{Status: InvalidToken}, nil
 	}
 
 	hash, err := auth_service.Hash(requestTO.NewPassword)

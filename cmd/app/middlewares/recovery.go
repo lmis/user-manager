@@ -19,6 +19,7 @@ func RecoveryMiddleware(c *gin.Context) {
 				return
 			}
 			c.AbortWithError(http.StatusInternalServerError, util.WrapRecoveredPanic(p, debug.Stack()))
+			return
 		}
 	}()
 	c.Next()

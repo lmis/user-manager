@@ -1,7 +1,7 @@
 package auth
 
 import (
-	"database/sql"
+	"context"
 	ginext "user-manager/cmd/app/gin-extensions"
 	auth_service "user-manager/cmd/app/services/auth"
 	email_service "user-manager/cmd/app/services/email"
@@ -25,12 +25,10 @@ func PostSignUp(requestContext *ginext.RequestContext, requestTO *SignUpTO, _ *g
 	tx := requestContext.Tx
 	securityLog := requestContext.SecurityLog
 
-	var user *models.AppUser
-	ctx, cancelTimeout := db.DefaultQueryContext()
-	defer cancelTimeout()
-
-	user, err := models.AppUsers(models.AppUserWhere.Email.EQ(requestTO.Email)).One(ctx, tx)
-	if err != nil && err != sql.ErrNoRows {
+	user, err := db.Fetch(func(ctx context.Context) (*models.AppUser, error) {
+		return models.AppUsers(models.AppUserWhere.Email.EQ(requestTO.Email)).One(ctx, tx)
+	})
+	if err != nil {
 		return util.Wrap("error finding user", err)
 	}
 	if user != nil {
@@ -60,7 +58,7 @@ func PostSignUp(requestContext *ginext.RequestContext, requestTO *SignUpTO, _ *g
 		Language:               language,
 	}
 
-	ctx, cancelTimeout = db.DefaultQueryContext()
+	ctx, cancelTimeout := db.DefaultQueryContext()
 	defer cancelTimeout()
 	if err = user.Insert(ctx, tx, boil.Infer()); err != nil {
 		return util.Wrap("cannot insert user", err)
