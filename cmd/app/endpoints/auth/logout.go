@@ -35,7 +35,7 @@ func PostLogout(requestContext *ginext.RequestContext, request LogoutTO, c *gin.
 	}
 	if sudoSessionId != "" {
 		session_service.RemoveSessionCookie(c, models.UserSessionTypeSUDO)
-		sudoSession, err := session_service.FetchSession(requestContext, sudoSessionId, models.UserSessionTypeSUDO)
+		sudoSession, err := session_service.FetchSessionAndUser(requestContext, sudoSessionId, models.UserSessionTypeSUDO)
 		if err != nil {
 			return util.Wrap("issue getting sudo session", err)
 		}
@@ -50,7 +50,7 @@ func PostLogout(requestContext *ginext.RequestContext, request LogoutTO, c *gin.
 		}
 		if deviceSessionId != "" {
 			session_service.RemoveSessionCookie(c, models.UserSessionTypeREMEMBER_DEVICE)
-			deviceSession, err := session_service.FetchSession(requestContext, sudoSessionId, models.UserSessionTypeREMEMBER_DEVICE)
+			deviceSession, err := session_service.FetchSessionAndUser(requestContext, sudoSessionId, models.UserSessionTypeREMEMBER_DEVICE)
 			if err != nil {
 				return util.Wrap("issue getting device session", err)
 			}

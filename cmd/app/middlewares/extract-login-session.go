@@ -30,10 +30,10 @@ func ExtractLoginSession(c *gin.Context) {
 
 	requestContext := ginext.GetRequestContext(c)
 
-	session, err := session_service.FetchSession(requestContext, sessionId, models.UserSessionTypeLOGIN)
+	session, err := session_service.FetchSessionAndUser(requestContext, sessionId, models.UserSessionTypeLOGIN)
 
 	if err != nil && err != sql.ErrNoRows {
-		c.AbortWithError(http.StatusInternalServerError, util.Wrap("getting session failed", err))
+		c.AbortWithError(http.StatusInternalServerError, util.Wrap("fetching session failed", err))
 		return
 	}
 	if session != nil {
@@ -43,7 +43,7 @@ func ExtractLoginSession(c *gin.Context) {
 		})
 
 		if err != nil {
-			c.AbortWithError(http.StatusInternalServerError, util.Wrap("getting session failed", err))
+			c.AbortWithError(http.StatusInternalServerError, util.Wrap("fetching app user roles failed", err))
 			return
 		}
 		userRoles := slices.Map(appUserRoles, func(role *models.AppUserRole) models.UserRole { return role.Role })

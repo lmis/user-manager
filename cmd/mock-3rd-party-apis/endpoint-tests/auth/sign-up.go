@@ -15,7 +15,7 @@ import (
 )
 
 func TestSignUp(config *config.Config, emails map[string][]email_api.EmailTO) error {
-	email := "test-user-1@example.com"
+	email := "test-user-" + util.MakeRandomURLSafeB64(3) + "@example.com"
 	password := []byte("hunter12")
 	// Signup
 	resp, err := test_util.MakeApiRequest("POST", config, "auth/sign-up", auth_endpoint.SignUpTO{
@@ -118,7 +118,7 @@ func TestSignUp(config *config.Config, emails map[string][]email_api.EmailTO) er
 	}
 
 	// Logout
-	resp, err = test_util.MakeApiRequest("POST", config, "auth/logout", nil, sessionCookie)
+	resp, err = test_util.MakeApiRequest("POST", config, "auth/logout", auth_endpoint.LogoutTO{}, sessionCookie)
 	if err != nil {
 		return util.Wrap("error making logout call", err)
 	}

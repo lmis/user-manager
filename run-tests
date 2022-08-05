@@ -1,0 +1,19 @@
+#!/bin/sh
+_MOCK_API=localhost:8081
+
+
+_TEST_NUMBER=1
+_EXIT_CODE=0
+while [ $_EXIT_CODE -eq 0 ]
+do
+  echo Running test $_TEST_NUMBER
+  curl $_MOCK_API/trigger-test/$_TEST_NUMBER --data {} --fail-with-body --silent
+  _EXIT_CODE=$?
+  if [ $_EXIT_CODE -eq 0 ]
+  then
+    echo Test $_TEST_NUMBER passed
+  else
+    echo -e '\n'^^^^ Test $_TEST_NUMBER failed
+  fi
+  _TEST_NUMBER=$(( $_TEST_NUMBER + 1 ))
+done

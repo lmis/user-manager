@@ -52,8 +52,8 @@ func PostLogin(requestContext *ginext.RequestContext, requestTO *LoginTO, c *gin
 	}
 
 	hasNonUserRole := slices.Any(user.R.AppUserRoles, func(role *models.AppUserRole) bool { return role.Role != models.UserRoleUSER })
-	if !hasNonUserRole {
-		securityLog.Info("Login attempt without second factor for non-user %s", user.AppUserID)
+	if hasNonUserRole {
+		securityLog.Info("Login attempt without second factor for non-user %d", user.AppUserID)
 		return &LoginResponseTO{InvalidCredentials}, nil
 	}
 

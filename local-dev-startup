@@ -35,7 +35,7 @@ cleanup() {
 trap cleanup exit
 
 echo "------ START LOCAL DB ($_DOCKER_POSTGRES_NAME) ------"
-docker run --name $_DOCKER_POSTGRES_NAME -p 5432:5432 -e POSTGRES_PASSWORD=$DB_PASSWORD -d postgres > /dev/null
+docker run --name $_DOCKER_POSTGRES_NAME -p $DB_PORT:$DB_PORT -e POSTGRES_PASSWORD=$DB_PASSWORD -d postgres > /dev/null
 
 echo "------ RUN MIGRATOR ------"
 go run cmd/migrator/main.go

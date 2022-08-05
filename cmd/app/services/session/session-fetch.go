@@ -10,13 +10,12 @@ import (
 	"github.com/volatiletech/sqlboiler/v4/queries/qm"
 )
 
-func FetchSession(requestContext *ginext.RequestContext, sessionId string, sessionType models.UserSessionType) (*models.UserSession, error) {
+func FetchSessionAndUser(requestContext *ginext.RequestContext, sessionId string, sessionType models.UserSessionType) (*models.UserSession, error) {
 	return db.Fetch(func(ctx context.Context) (*models.UserSession, error) {
 		return models.UserSessions(models.UserSessionWhere.UserSessionID.EQ(sessionId),
 			models.UserSessionWhere.TimeoutAt.GT(time.Now()),
 			models.UserSessionWhere.UserSessionType.EQ(sessionType),
-			qm.Load(models.UserSessionRels.AppUser),
-			qm.Load(models.AppUserRels.AppUserRoles)).
+			qm.Load(models.UserSessionRels.AppUser)).
 			One(ctx, requestContext.Tx)
 	})
 }

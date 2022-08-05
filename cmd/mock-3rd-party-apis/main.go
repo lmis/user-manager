@@ -42,6 +42,9 @@ func startServer(log util.Logger, dir string) error {
 		log.Info("Email received %v", email)
 	})
 
+	app.GET("/number-of-tests", func(c *gin.Context) {
+		c.String(http.StatusOK, "2")
+	})
 	app.POST("/trigger-test/:n", func(c *gin.Context) {
 		n := c.Param("n")
 		switch n {
@@ -66,9 +69,7 @@ func startServer(log util.Logger, dir string) error {
 
 func respondToTestRequest(c *gin.Context, err error) {
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, map[string]string{
-			"error": err.Error(),
-		})
+		c.String(http.StatusInternalServerError, err.Error())
 	} else {
 		c.Status(http.StatusNoContent)
 	}

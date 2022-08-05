@@ -28,7 +28,7 @@ func RequireSudoMode(c *gin.Context) {
 		return
 	}
 
-	session, err := session_service.FetchSession(requestContext, sudoSessionId, models.UserSessionTypeSUDO)
+	session, err := session_service.FetchSessionAndUser(requestContext, sudoSessionId, models.UserSessionTypeSUDO)
 	if err != nil {
 		c.AbortWithError(http.StatusInternalServerError, util.Wrap("getting sudo session failed", err))
 		return
