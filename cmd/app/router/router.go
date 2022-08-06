@@ -42,7 +42,7 @@ func New(db *sql.DB, config *config.Config) *gin.Engine {
 		api.Use(middleware.CsrfMiddleware(config)).
 			Use(middleware.DatabaseMiddleware(db)).
 			Use(middleware.ExtractLoginSession).
-			GET("role", ginext.WrapEndpointWithoutRequestBody(api_endpoint.GetAuthRole))
+			GET("user", ginext.WrapEndpointWithoutRequestBody(api_endpoint.GetUser))
 
 		api.Group("auth").
 			Use(middleware.TimingObfuscationMiddleware(400*time.Millisecond)).
@@ -62,7 +62,7 @@ func New(db *sql.DB, config *config.Config) *gin.Engine {
 			settings := user.Group("settings")
 			settings.Use(middleware.VerifiedEmailAuthorizationMiddleware).
 				POST("sudo", ginext.WrapEndpoint(user_settings_endpoint.PostSudo)).
-				POST("language", todo).
+				POST("language", ginext.WrapEndpointWithoutResponseBody(user_settings_endpoint.PostLanguage)).
 				POST("confirm-email-change", ginext.WrapEndpoint(user_settings_endpoint.PostConfirmEmailChange)).
 				POST("generate-temporary-2fa", todo)
 			settings.Group("sensitive").

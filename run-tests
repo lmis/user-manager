@@ -1,28 +1,30 @@
 #!/bin/sh
 _MOCK_API=localhost:8081
 
+echo Resetting test state
+curl $_MOCK_API/tests/reset --fail-with-body --silent
 
 _TEST_NUMBER=0
 _DONE=0
 while [ $_DONE -eq 0 ]
 do
-  _TEST_DESCRIPTION=$(curl $_MOCK_API/test/$_TEST_NUMBER --fail-with-body --silent)
+  _TEST_DESCRIPTION=$(curl $_MOCK_API/tests/$_TEST_NUMBER --fail-with-body --silent)
   _EXIT_CODE=$?
   if [ $_EXIT_CODE -eq 0 ]
   then 
     echo Running \"$_TEST_DESCRIPTION\"
-    curl $_MOCK_API/trigger-test/$_TEST_NUMBER --data {} --fail-with-body --silent
+    curl $_MOCK_API/tests/$_TEST_NUMBER/trigger --data {} --fail-with-body --silent
     _EXIT_CODE=$?
     if [ $_EXIT_CODE -eq 0 ]
     then
       echo Test passed
-      _TEST_NUMBER=$(( $_TEST_NUMBER + 1 ))
     else
       echo -e '\n'^^^^ Test \"$_TEST_DESCRIPTION\" failed
       _DONE=1
     fi
+    _TEST_NUMBER=$(( $_TEST_NUMBER + 1 ))
   else
       _DONE=1
   fi
 done
-echo Done running tests
+echo Done running $_TEST_NUMBER tests

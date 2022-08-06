@@ -13,14 +13,6 @@ To run the endpoint tests, run `run-tests` while a local instance is running.
 ## API
 
 #### Current Endpoints
-##### GET    /api/role
-Returns information on the current user and their roles
-```golang
-type AuthRoleTO struct {
-	Roles         []models.UserRole `json:"roles"`
-	EmailVerified bool              `json:"emailVerified"`
-}
-```
 ##### POST   /api/auth/sign-up
 Accepts sign-up data and creates a user account
 ```golang
@@ -95,6 +87,16 @@ type ResetPasswordResponseTO struct {
 	Status ResetPasswordStatus `json:"status"`
 }
 ```
+
+##### GET    /api/user
+Returns information on the current user and their roles
+```golang
+type UserTO struct {
+	Roles         []models.UserRole   `json:"roles"`
+	EmailVerified bool                `json:"emailVerified"`
+	Language      models.UserLanguage `json:"language"`
+}
+```
 ##### POST   /api/user/confirm-email
 Accepts an email confirmation token
 ```golang
@@ -121,17 +123,56 @@ type RetriggerConfirmationEmailResponseTO struct {
 	Sent bool `json:"sent"`
 }
 ```
-#### Future endpoints
-##### POST   /api/user/settings/sudo
-Creates a short-lived 'sudo' session which allows adjusting sensitive settings
+
 ##### POST   /api/user/settings/language
 Allows users to set their language choice
+```golang
+type LanguageTO struct {
+	Language models.UserLanguage `json:"language"`
+}
+```
+##### POST   /api/user/settings/sudo
+Creates a short-lived 'sudo' session which allows adjusting sensitive settings
+```golang
+type SudoTO struct {
+	Password []byte `json:"password"`
+}
+
+type SudoResponseTO struct {
+	Success bool `json:"success"`
+}
+```
 ##### POST   /api/user/settings/confirm-email-change
 Completes an email change flow, by accepting the token sent to the new email
-##### POST   /api/user/settings/generate-temporary-2fa
-Generates and stores a secret to be used when users enable 2FA
+```golang
+type EmailChangeConfirmationTO struct {
+	Token string `json:"token"`
+}
+
+type EmailChangeStatus string
+
+const (
+	NoEmailChangeInProgress EmailChangeStatus = "no-change-in-progress"
+	InvalidToken            EmailChangeStatus = "invalid-token"
+	NewEmailConfirmed       EmailChangeStatus = "new-email-confirmed"
+)
+
+type EmailChangeConfirmationResponseTO struct {
+	Status EmailChangeStatus `json:"status"`
+	Email  string            `json:"email"`
+}
+```
 ##### POST   /api/user/settings/sensitive/change-email
 Allows user to set a new email for login and communcation
+```golang
+type ChangeEmailTO struct {
+	NewEmail string `json:"newEmail"`
+}
+```
+
+#### Future endpoints
+##### POST   /api/user/settings/generate-temporary-2fa
+Generates and stores a secret to be used when users enable 2FA
 ##### POST   /api/user/settings/sensitive/change-password
 Allows users to change their password
 ##### POST   /api/user/settings/sensitive/2fa
@@ -143,7 +184,8 @@ The following HTTP-only cookies may be set by the application `LOGIN_TOKEN`, `DE
 An application must send the same value both in the cookie `CSRF-Token` (local environment) or `__Host-CSRF-Token` as well as on the `X-CSRF-Token` header
 
 ### Roles
-Access to endpoints under `/api/user` requires a valid `LOGIN_TOKEN` (obtained via login endpoint with correct credentials).
+Access to the endpoint `GET /api/user` requires no authentication but may return an empty struct.
+Access to endpoints under `/api/user/` requires a valid `LOGIN_TOKEN` (obtained via login endpoint with correct credentials).
 Access to endpoints under `/api/user/settings` require the user's email adress to be verified.
 Access to endpoints under `/api/user/settings/sensitive` require a valid `SUDO_TOKEN` obtained via the sudo enpoint.
 

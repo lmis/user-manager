@@ -44,17 +44,25 @@ func startServer(log util.Logger, dir string) error {
 		log.Info("Email received %v", email)
 	})
 
+	testUser := mock_util.TestUser{
+		Email:    "test-user-" + util.MakeRandomURLSafeB64(3) + "@example.com",
+		Password: []byte("hunter12"),
+	}
 	tests := []mock_util.FunctionalTest{
 		{
 			Description: "Role before sign-up",
-			Test:        functional_tests.TestRoleBeforeSignup,
+			Test:        functional_tests.TestUserEndpointBeforeSignup,
 		},
 		{
 			Description: "Sign-up",
 			Test:        functional_tests.TestSignUp,
 		},
+		{
+			Description: "CSRF",
+			Test:        functional_tests.TestCallWithMismatchingCsrfTokens,
+		},
 	}
-	app.GET("/test/:n", func(c *gin.Context) {
+	app.GET("/tests/:n", func(c *gin.Context) {
 		n := c.Param("n")
 		testNumber, err := strconv.Atoi(n)
 		if err != nil || testNumber < 0 || testNumber >= len(tests) {
@@ -63,14 +71,20 @@ func startServer(log util.Logger, dir string) error {
 		}
 		c.String(http.StatusOK, tests[testNumber].Description)
 	})
-	app.POST("/trigger-test/:n", func(c *gin.Context) {
+	app.POST("/tests/reset", func(c *gin.Context) {
+		testUser = mock_util.TestUser{
+			Email:    "test-user-" + util.MakeRandomURLSafeB64(3) + "@example.com",
+			Password: []byte("hunter12"),
+		}
+	})
+	app.POST("/tests/:n/trigger", func(c *gin.Context) {
 		n := c.Param("n")
 		testNumber, err := strconv.Atoi(n)
 		if err != nil || testNumber < 0 || testNumber >= len(tests) {
 			c.Status(http.StatusNotFound)
 			return
 		}
-		if err := tests[testNumber].Test(config, emails); err != nil {
+		if err := tests[testNumber].Test(config, emails, &testUser); err != nil {
 			c.String(http.StatusBadRequest, err.Error())
 			return
 		}

@@ -11,9 +11,14 @@ import (
 	"user-manager/util"
 )
 
+type TestUser struct {
+	Email    string
+	Password []byte
+}
+
 type FunctionalTest struct {
 	Description string
-	Test        func(*config.Config, Emails) error
+	Test        func(*config.Config, Emails, *TestUser) error
 }
 
 func MakeApiRequest(method string, config *config.Config, subpath string, payload interface{}, sessionCookie *http.Cookie) (*http.Response, error) {
@@ -36,7 +41,7 @@ func MakeApiRequest(method string, config *config.Config, subpath string, payloa
 	}
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return nil, util.Wrap("error making signup request", err)
+		return nil, util.Wrap("error making request", err)
 	}
 	return resp, nil
 

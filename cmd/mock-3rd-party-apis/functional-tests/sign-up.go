@@ -13,9 +13,9 @@ import (
 	"user-manager/util"
 )
 
-func TestSignUp(config *config.Config, emails mock_util.Emails) error {
-	email := "test-user-" + util.MakeRandomURLSafeB64(3) + "@example.com"
-	password := []byte("hunter12")
+func TestSignUp(config *config.Config, emails mock_util.Emails, testUser *mock_util.TestUser) error {
+	email := testUser.Email
+	password := testUser.Password
 	// Signup
 	resp, err := mock_util.MakeApiRequest("POST", config, "auth/sign-up", auth_endpoint.SignUpTO{
 		UserName: "test-user",
@@ -52,15 +52,12 @@ func TestSignUp(config *config.Config, emails mock_util.Emails) error {
 		return util.Error("session cookie not found")
 	}
 
-	// Check role
-	resp, err = mock_util.MakeApiRequest("GET", config, "role", auth_endpoint.LoginTO{
-		Email:    email,
-		Password: password,
-	}, sessionCookie)
+	// Check user
+	resp, err = mock_util.MakeApiRequest("GET", config, "user", nil, sessionCookie)
 	if err != nil {
-		return util.Wrap("error making auth role request", err)
+		return util.Wrap("error making user request", err)
 	}
-	if err = mock_util.AssertResponseEq(200, api_endpoint.AuthRoleTO{Roles: []models.UserRole{"USER"}}, resp); err != nil {
+	if err = mock_util.AssertResponseEq(200, api_endpoint.UserTO{Roles: []models.UserRole{"USER"}, Language: "DE"}, resp); err != nil {
 		return util.Wrap("auth role response mismatch", err)
 	}
 
@@ -104,16 +101,13 @@ func TestSignUp(config *config.Config, emails mock_util.Emails) error {
 		return util.Wrap("second confirm email response mismatch", err)
 	}
 
-	// Check role
-	resp, err = mock_util.MakeApiRequest("GET", config, "role", auth_endpoint.LoginTO{
-		Email:    email,
-		Password: password,
-	}, sessionCookie)
+	// Check user
+	resp, err = mock_util.MakeApiRequest("GET", config, "user", nil, sessionCookie)
 	if err != nil {
-		return util.Wrap("error making auth role after confirmation request", err)
+		return util.Wrap("error making user after confirmation request", err)
 	}
-	if err = mock_util.AssertResponseEq(200, api_endpoint.AuthRoleTO{Roles: []models.UserRole{"USER"}, EmailVerified: true}, resp); err != nil {
-		return util.Wrap("auth role after confirmation response mismatch", err)
+	if err = mock_util.AssertResponseEq(200, api_endpoint.UserTO{Roles: []models.UserRole{"USER"}, EmailVerified: true, Language: "DE"}, resp); err != nil {
+		return util.Wrap("user after confirmation response mismatch", err)
 	}
 
 	// Logout
@@ -125,16 +119,13 @@ func TestSignUp(config *config.Config, emails mock_util.Emails) error {
 		return util.Wrap("logout response mismatch", err)
 	}
 
-	// Check role
-	resp, err = mock_util.MakeApiRequest("GET", config, "role", auth_endpoint.LoginTO{
-		Email:    email,
-		Password: password,
-	}, sessionCookie)
+	// Check user
+	resp, err = mock_util.MakeApiRequest("GET", config, "user", nil, sessionCookie)
 	if err != nil {
-		return util.Wrap("error making auth role after logout request", err)
+		return util.Wrap("error making user after logout request", err)
 	}
-	if err = mock_util.AssertResponseEq(200, api_endpoint.AuthRoleTO{Roles: nil}, resp); err != nil {
-		return util.Wrap("auth role after logout response mismatch", err)
+	if err = mock_util.AssertResponseEq(200, api_endpoint.UserTO{Roles: nil}, resp); err != nil {
+		return util.Wrap("user after logout response mismatch", err)
 	}
 
 	return nil
