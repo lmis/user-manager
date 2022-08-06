@@ -3,9 +3,11 @@ package main
 //go:generate go run ../generate-sqlboiler/main.go ../../db/generated/models
 import (
 	"net/http"
+	"strconv"
 	middleware "user-manager/cmd/app/middlewares"
 	config "user-manager/cmd/mock-3rd-party-apis/config"
-	auth_endpoint_test "user-manager/cmd/mock-3rd-party-apis/endpoint-tests/auth"
+	functional_tests "user-manager/cmd/mock-3rd-party-apis/functional-tests"
+	mock_util "user-manager/cmd/mock-3rd-party-apis/util"
 	email_api "user-manager/third-party-models/email-api"
 	"user-manager/util"
 
@@ -18,7 +20,7 @@ func main() {
 }
 
 func startServer(log util.Logger, dir string) error {
-	emails := make(map[string][]email_api.EmailTO)
+	emails := make(mock_util.Emails)
 	log.Info("Starting up")
 	config, err := config.GetConfig(log)
 	if err != nil {
@@ -42,19 +44,37 @@ func startServer(log util.Logger, dir string) error {
 		log.Info("Email received %v", email)
 	})
 
-	app.GET("/number-of-tests", func(c *gin.Context) {
-		c.String(http.StatusOK, "2")
+	tests := []mock_util.FunctionalTest{
+		{
+			Description: "Role before sign-up",
+			Test:        functional_tests.TestRoleBeforeSignup,
+		},
+		{
+			Description: "Sign-up",
+			Test:        functional_tests.TestSignUp,
+		},
+	}
+	app.GET("/test/:n", func(c *gin.Context) {
+		n := c.Param("n")
+		testNumber, err := strconv.Atoi(n)
+		if err != nil || testNumber < 0 || testNumber >= len(tests) {
+			c.Status(http.StatusNotFound)
+			return
+		}
+		c.String(http.StatusOK, tests[testNumber].Description)
 	})
 	app.POST("/trigger-test/:n", func(c *gin.Context) {
 		n := c.Param("n")
-		switch n {
-		case "1":
-			respondToTestRequest(c, auth_endpoint_test.TestRoleBeforeSignup(config))
-		case "2":
-			respondToTestRequest(c, auth_endpoint_test.TestSignUp(config, emails))
-		default:
+		testNumber, err := strconv.Atoi(n)
+		if err != nil || testNumber < 0 || testNumber >= len(tests) {
 			c.Status(http.StatusNotFound)
+			return
 		}
+		if err := tests[testNumber].Test(config, emails); err != nil {
+			c.String(http.StatusBadRequest, err.Error())
+			return
+		}
+		c.Status(http.StatusNoContent)
 	})
 
 	if err = util.RunHttpServer(log, &http.Server{
@@ -65,12 +85,4 @@ func startServer(log util.Logger, dir string) error {
 	}
 
 	return nil
-}
-
-func respondToTestRequest(c *gin.Context, err error) {
-	if err != nil {
-		c.String(http.StatusInternalServerError, err.Error())
-	} else {
-		c.Status(http.StatusNoContent)
-	}
 }

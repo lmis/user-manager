@@ -10,8 +10,6 @@ import (
 	"github.com/volatiletech/null/v8"
 )
 
-type RetriggerConfirmationEmailStatus string
-
 type RetriggerConfirmationEmailResponseTO struct {
 	Sent bool `json:"sent"`
 }

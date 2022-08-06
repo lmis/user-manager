@@ -1,4 +1,4 @@
-package test_util
+package util
 
 import (
 	"bytes"
@@ -10,6 +10,11 @@ import (
 	"user-manager/cmd/mock-3rd-party-apis/config"
 	"user-manager/util"
 )
+
+type FunctionalTest struct {
+	Description string
+	Test        func(*config.Config, Emails) error
+}
 
 func MakeApiRequest(method string, config *config.Config, subpath string, payload interface{}, sessionCookie *http.Cookie) (*http.Response, error) {
 	req, err := http.NewRequest(method, fmt.Sprintf("%s/api/%s", config.AppUrl, subpath), nil)

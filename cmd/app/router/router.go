@@ -61,7 +61,7 @@ func New(db *sql.DB, config *config.Config) *gin.Engine {
 
 			settings := user.Group("settings")
 			settings.Use(middleware.VerifiedEmailAuthorizationMiddleware).
-				POST("sudo", todo).
+				POST("sudo", ginext.WrapEndpoint(user_settings_endpoint.PostSudo)).
 				POST("language", todo).
 				POST("confirm-email-change", ginext.WrapEndpoint(user_settings_endpoint.PostConfirmEmailChange)).
 				POST("generate-temporary-2fa", todo)
@@ -72,7 +72,6 @@ func New(db *sql.DB, config *config.Config) *gin.Engine {
 				POST("2fa", todo)
 		}
 		{
-			// TODO: Tests
 			admin := api.Group("admin")
 			admin.Use(middleware.RequireRoleMiddleware(models.UserRoleADMIN))
 

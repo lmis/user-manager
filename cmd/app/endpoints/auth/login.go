@@ -24,7 +24,7 @@ type LoginResponseStatus string
 
 const (
 	LoggedIn             LoginResponseStatus = "logged-in"
-	SecondFactorRequired LoginResponseStatus = "second-factor-allowed"
+	SecondFactorRequired LoginResponseStatus = "second-factor-required"
 	InvalidCredentials   LoginResponseStatus = "invalid-credentials"
 )
 
