@@ -2,7 +2,7 @@
 _MOCK_API=localhost:8081
 
 echo Resetting test state
-curl $_MOCK_API/tests/reset --fail-with-body --silent
+curl $_MOCK_API/tests/reset --data {} --fail-with-body --silent
 
 _TEST_NUMBER=0
 _DONE=0

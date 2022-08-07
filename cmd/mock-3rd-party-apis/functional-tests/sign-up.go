@@ -10,7 +10,9 @@ import (
 	"user-manager/cmd/mock-3rd-party-apis/config"
 	mock_util "user-manager/cmd/mock-3rd-party-apis/util"
 	"user-manager/db/generated/models"
+	email_api "user-manager/third-party-models/email-api"
 	"user-manager/util"
+	"user-manager/util/slices"
 )
 
 func TestSignUp(config *config.Config, emails mock_util.Emails, testUser *mock_util.TestUser) error {
@@ -58,7 +60,18 @@ func TestSignUp(config *config.Config, emails mock_util.Emails, testUser *mock_u
 		return util.Wrap("error making user request", err)
 	}
 	if err = mock_util.AssertResponseEq(200, api_endpoint.UserTO{Roles: []models.UserRole{"USER"}, Language: "DE"}, resp); err != nil {
-		return util.Wrap("auth role response mismatch", err)
+		return util.Wrap("user resonse mismatch", err)
+	}
+
+	// Confirm with invalid token
+	resp, err = mock_util.MakeApiRequest("POST", config, "user/confirm-email", user_endpoint.EmailConfirmationTO{
+		Token: "invalid",
+	}, sessionCookie)
+	if err != nil {
+		return util.Wrap("error making confirm email with invalid token call", err)
+	}
+	if err = mock_util.AssertResponseEq(200, user_endpoint.EmailConfirmationResponseTO{Status: user_endpoint.InvalidToken}, resp); err != nil {
+		return util.Wrap("confirm email with invalid token response mismatch", err)
 	}
 
 	// Grab token from email
@@ -126,6 +139,34 @@ func TestSignUp(config *config.Config, emails mock_util.Emails, testUser *mock_u
 	}
 	if err = mock_util.AssertResponseEq(200, api_endpoint.UserTO{Roles: nil}, resp); err != nil {
 		return util.Wrap("user after logout response mismatch", err)
+	}
+
+	// Signup again with same user
+	resp, err = mock_util.MakeApiRequest("POST", config, "auth/sign-up", auth_endpoint.SignUpTO{
+		UserName: "same-email-different-user",
+		Language: "EN",
+		Email:    email,
+		Password: []byte("another-bad-password"),
+	}, nil)
+	if err != nil {
+		return util.Wrap("issue making second auth/sign-up call", err)
+	}
+	if err = mock_util.AssertResponseEq(204, nil, resp); err != nil {
+		return util.Wrap("signup response mismatch", err)
+	}
+
+	// Grab email
+	receivedNotificationEmail := false
+	for i := 0; !receivedNotificationEmail && i < 10; i++ {
+		if slices.Any(emails[email], func(email *email_api.EmailTO) bool { return email.Subject == "Anmeldeversuch" }) {
+			receivedNotificationEmail = true
+		} else {
+			time.Sleep(500 * time.Millisecond)
+		}
+	}
+
+	if !receivedNotificationEmail {
+		return util.Error("notification email not received")
 	}
 
 	return nil

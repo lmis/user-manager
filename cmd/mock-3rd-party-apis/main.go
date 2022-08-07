@@ -21,6 +21,10 @@ func main() {
 
 func startServer(log util.Logger, dir string) error {
 	emails := make(mock_util.Emails)
+	testUser := mock_util.TestUser{
+		Email:    "test-user-" + util.MakeRandomURLSafeB64(3) + "@example.com",
+		Password: []byte("hunter12"),
+	}
 	log.Info("Starting up")
 	config, err := config.GetConfig(log)
 	if err != nil {
@@ -37,17 +41,13 @@ func startServer(log util.Logger, dir string) error {
 		}
 		m, ok := emails[email.To]
 		if !ok {
-			emails[email.To] = []email_api.EmailTO{email}
+			emails[email.To] = []*email_api.EmailTO{&email}
 		} else {
-			emails[email.To] = append(m, email)
+			emails[email.To] = append(m, &email)
 		}
 		log.Info("Email received %v", email)
 	})
 
-	testUser := mock_util.TestUser{
-		Email:    "test-user-" + util.MakeRandomURLSafeB64(3) + "@example.com",
-		Password: []byte("hunter12"),
-	}
 	tests := []mock_util.FunctionalTest{
 		{
 			Description: "Role before sign-up",
@@ -60,6 +60,10 @@ func startServer(log util.Logger, dir string) error {
 		{
 			Description: "CSRF",
 			Test:        functional_tests.TestCallWithMismatchingCsrfTokens,
+		},
+		{
+			Description: "Bad login",
+			Test:        functional_tests.TestBadLogin,
 		},
 	}
 	app.GET("/tests/:n", func(c *gin.Context) {

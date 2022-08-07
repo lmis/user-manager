@@ -35,7 +35,7 @@ type translation struct {
 	Salutation              string   `yaml:"salutation"`
 	SalutationAnonymous     string   `yaml:"salutationAnonymous"`
 	VerificationEmail       []string `yaml:"verificationEmail"`
-	SignUpAttemptEmail      []string `yaml:"signUpAttemptEmail"`
+	SignUpAttemptedEmail    []string `yaml:"signUpAttemptedEmail"`
 	ChangeVerificationEmail []string `yaml:"changeVerificationEmail"`
 	ChangeNotificationEmail []string `yaml:"changeNotificationEmail"`
 	ResetPasswordEmail      []string `yaml:"resetPasswordEmail"`
@@ -105,6 +105,9 @@ func enqueueBasicEmail(r *ginext.RequestContext,
 	}
 	subject := ""
 	paragraphs := []string{}
+	if len(templates) < 2 {
+		return util.Errorf("invalid template")
+	}
 	for i, t := range templates {
 		p, err := executeTemplate(t, data)
 		if err != nil {
