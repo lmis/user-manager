@@ -29,7 +29,7 @@ func ExecSingleMutation(query func(ctx context.Context) (int64, error)) error {
 	if err != nil {
 		return err
 	}
-	if rows != 1 {
+	if rows > 1 {
 		return util.Error(fmt.Sprintf("too many rows affected: %d", rows))
 	}
 	return nil

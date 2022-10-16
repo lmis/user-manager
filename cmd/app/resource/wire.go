@@ -19,12 +19,17 @@ func InitializeLoginResource(c *gin.Context) *LoginResource {
 	return &LoginResource{}
 }
 
-func InitializeRetriggerConfirmationEmailResource(c *gin.Context) *RetriggerConfirmationEmailResource {
-	wire.Build(ProvideRetriggerConfirmationEmailResource, injector.AllDependencies)
-	return &RetriggerConfirmationEmailResource{}
+func InitializeSignUpResource(c *gin.Context) *SignUpResource {
+	wire.Build(ProvideSignUpResource, injector.AllDependencies)
+	return &SignUpResource{}
 }
 
 func InitializeUserInfoResource(c *gin.Context) *UserInfoResource {
 	wire.Build(ProvideUserInfoResource, injector.AllDependencies)
 	return &UserInfoResource{}
+}
+
+func InitializeLogoutResource(c *gin.Context) *LogoutResource {
+	wire.Build(ProvideLogoutResource, injector.AllDependencies)
+	return &LogoutResource{}
 }

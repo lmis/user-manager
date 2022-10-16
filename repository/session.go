@@ -46,9 +46,18 @@ func (r *SessionRepository) UpdateSessionTimeout(sessionId domain_model.UserSess
 	return nil
 }
 
-func (r *SessionRepository) GetSessionAndUser(sessionId string, sessionType domain_model.UserSessionType) (nullable.Nullable[*domain_model.UserSession], error) {
+func (r *SessionRepository) Delete(sessionId domain_model.UserSessionID) error {
+	if err := db.ExecSingleMutation(func(ctx context.Context) (int64, error) {
+		return (&models.UserSession{UserSessionID: string(sessionId)}).Delete(ctx, r.tx)
+	}); err != nil {
+		return util.Wrap("issue while deleting session", err)
+	}
+	return nil
+}
+
+func (r *SessionRepository) GetSessionAndUser(sessionId domain_model.UserSessionID, sessionType domain_model.UserSessionType) (nullable.Nullable[*domain_model.UserSession], error) {
 	session, err := db.Fetch(func(ctx context.Context) (*models.UserSession, error) {
-		return models.UserSessions(models.UserSessionWhere.UserSessionID.EQ(sessionId),
+		return models.UserSessions(models.UserSessionWhere.UserSessionID.EQ(string(sessionId)),
 			models.UserSessionWhere.TimeoutAt.GT(time.Now()),
 			models.UserSessionWhere.UserSessionType.EQ(models.UserSessionType(sessionType)),
 			qm.Load(models.UserSessionRels.AppUser)).

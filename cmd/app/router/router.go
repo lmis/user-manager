@@ -53,17 +53,15 @@ func registerSuperAdminGroup(superAdmin *gin.RouterGroup) {
 
 func registerAuthGroup(auth *gin.RouterGroup) {
 	middleware.RegisterTimingObfuscationMiddleware(auth, 400*time.Millisecond)
-	// auth.POST("sign-up", ginext.WrapEndpointWithoutResponseBody(auth.PostSignUp)).
-	// 	POST("login", ginext.WrapEndpoint(auth.PostLogin)).
-	// 	POST("login-with-second-factor", ginext.WrapEndpoint(auth.PostLoginWithSecondFactor)).
-	// 	POST("logout", ginext.WrapEndpointWithoutResponseBody(auth.PostLogout)).
+	resource.RegisterLoginResource(auth)
+	resource.RegisterLogoutResource(auth)
 	// 	POST("request-password-reset", ginext.WrapEndpointWithoutResponseBody(auth.PostRequestPasswordReset)).
 	// 	POST("reset-password", ginext.WrapEndpoint(auth.PostResetPassword))
 }
 
 func registerUserGroup(user *gin.RouterGroup) {
 	middleware.RegisterRequireRoleMiddlware(user, domain_model.USER_ROLE_USER)
-	resource.RegisterRetriggerConfirmationEmailResource(user)
+	resource.RegisterSignUpResource(user)
 	resource.RegisterEmailConfirmationResource(user)
 
 	registerSettingsGroup(user.Group("settings"))

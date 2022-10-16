@@ -46,9 +46,9 @@ type LoginTO struct {
 type LoginResponseStatus string
 
 const (
-	LoggedIn             LoginResponseStatus = "logged-in"
-	SecondFactorRequired LoginResponseStatus = "second-factor-required"
-	InvalidCredentials   LoginResponseStatus = "invalid-credentials"
+	LOGIN_RESPONSE_LOGGED_IN           LoginResponseStatus = "logged-in"
+	LOGIN_RESPONSE_2FA_REQUIRED        LoginResponseStatus = "second-factor-required"
+	LOGIN_RESPONSE_INVALID_CREDENTIALS LoginResponseStatus = "invalid-credentials"
 )
 
 type LoginResponseTO struct {
@@ -64,7 +64,7 @@ func (r *LoginResource) Login(requestTO *LoginTO) (*LoginResponseTO, error) {
 	}
 	if maybeUser.IsEmpty() {
 		securityLog.Info("Login attempt for non-existant user")
-		return &LoginResponseTO{InvalidCredentials}, nil
+		return &LoginResponseTO{LOGIN_RESPONSE_INVALID_CREDENTIALS}, nil
 	}
 
 	user := maybeUser.OrPanic()
@@ -72,16 +72,16 @@ func (r *LoginResource) Login(requestTO *LoginTO) (*LoginResponseTO, error) {
 	hasNonUserRole := slices.Any(user.UserRoles, func(role domain_model.UserRole) bool { return role != domain_model.USER_ROLE_USER })
 	if hasNonUserRole {
 		securityLog.Info("Login attempt without second factor for non-user %d", user.AppUserID)
-		return &LoginResponseTO{InvalidCredentials}, nil
+		return &LoginResponseTO{LOGIN_RESPONSE_INVALID_CREDENTIALS}, nil
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), requestTO.Password); err != nil {
 		securityLog.Info("Password mismatch for user %s", user.AppUserID)
-		return &LoginResponseTO{InvalidCredentials}, nil
+		return &LoginResponseTO{LOGIN_RESPONSE_INVALID_CREDENTIALS}, nil
 	}
 
 	if user.TwoFactorToken.IsPresent {
-		return &LoginResponseTO{SecondFactorRequired}, nil
+		return &LoginResponseTO{LOGIN_RESPONSE_2FA_REQUIRED}, nil
 	}
 
 	securityLog.Info("Login")
@@ -91,7 +91,7 @@ func (r *LoginResource) Login(requestTO *LoginTO) (*LoginResponseTO, error) {
 	}
 
 	r.sessionCookieService.SetSessionCookie(nullable.Of(sessionId), domain_model.USER_SESSION_TYPE_LOGIN)
-	return &LoginResponseTO{LoggedIn}, nil
+	return &LoginResponseTO{LOGIN_RESPONSE_LOGGED_IN}, nil
 }
 
 type LoginWithSecondFactorTO struct {

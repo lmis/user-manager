@@ -31,15 +31,15 @@ func (s *SessionCookieService) SetSessionCookie(sessionID nullable.Nullable[stri
 	s.ctx.SetSameSite(http.SameSiteStrictMode)
 }
 
-func (s *SessionCookieService) GetSessionCookie(sessionType domain_model.UserSessionType) (nullable.Nullable[string], error) {
+func (s *SessionCookieService) GetSessionCookie(sessionType domain_model.UserSessionType) (nullable.Nullable[domain_model.UserSessionID], error) {
 	cookie, err := s.ctx.Request.Cookie(s.getCookieName(sessionType))
 	if err != nil {
 		if err == http.ErrNoCookie {
-			return nullable.Empty[string](), nil
+			return nullable.Empty[domain_model.UserSessionID](), nil
 		}
-		return nullable.Empty[string](), util.Wrap("issue reading cookie", err)
+		return nullable.Empty[domain_model.UserSessionID](), util.Wrap("issue reading cookie", err)
 	}
-	return nullable.Of(cookie.Value), nil
+	return nullable.Of(domain_model.UserSessionID(cookie.Value)), nil
 }
 
 func (s *SessionCookieService) getCookieName(sessionType domain_model.UserSessionType) string {

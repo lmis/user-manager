@@ -35,7 +35,7 @@ func InitializeLoginResource(c *gin.Context) *LoginResource {
 	return loginResource
 }
 
-func InitializeRetriggerConfirmationEmailResource(c *gin.Context) *RetriggerConfirmationEmailResource {
+func InitializeSignUpResource(c *gin.Context) *SignUpResource {
 	tx := injector.ProvideTx(c)
 	userRepository := repository.ProvideUserRepository(tx)
 	mailQueueRepository := repository.ProvideMailQueueRepository(tx)
@@ -43,14 +43,25 @@ func InitializeRetriggerConfirmationEmailResource(c *gin.Context) *RetriggerConf
 	v := injector.ProvideTranslations()
 	template := injector.ProvideBaseTemplate()
 	mailQueueService := service.ProvideMailQueueService(mailQueueRepository, config, v, template)
+	authService := service.ProvideAuthService()
 	securityLog := injector.ProvideSecurityLog(c)
 	nullable := injector.ProvideUserSession(c)
-	retriggerConfirmationEmailResource := ProvideRetriggerConfirmationEmailResource(userRepository, mailQueueService, securityLog, nullable)
-	return retriggerConfirmationEmailResource
+	signUpResource := ProvideSignUpResource(userRepository, mailQueueService, authService, securityLog, nullable)
+	return signUpResource
 }
 
 func InitializeUserInfoResource(c *gin.Context) *UserInfoResource {
 	nullable := injector.ProvideUserSession(c)
 	userInfoResource := ProvideUserInfoResource(nullable)
 	return userInfoResource
+}
+
+func InitializeLogoutResource(c *gin.Context) *LogoutResource {
+	securityLog := injector.ProvideSecurityLog(c)
+	sessionCookieService := service.ProvideSessionCookieService(c)
+	tx := injector.ProvideTx(c)
+	sessionRepository := repository.ProvideSessionRepository(tx)
+	nullable := injector.ProvideUserSession(c)
+	logoutResource := ProvideLogoutResource(securityLog, sessionCookieService, sessionRepository, nullable)
+	return logoutResource
 }

@@ -19,7 +19,7 @@ func TestBadLogin(config *config.Config, emails mock_util.Emails, testUser *mock
 	if err != nil {
 		return util.Wrap("error making login with wrong email request", err)
 	}
-	if err = mock_util.AssertResponseEq(200, resource.LoginResponseTO{Status: resource.InvalidCredentials}, resp); err != nil {
+	if err = mock_util.AssertResponseEq(200, resource.LoginResponseTO{Status: resource.LOGIN_RESPONSE_INVALID_CREDENTIALS}, resp); err != nil {
 		return util.Wrap("login with wrong email response mismatch", err)
 	}
 	for _, cookie := range resp.Cookies() {
@@ -36,7 +36,7 @@ func TestBadLogin(config *config.Config, emails mock_util.Emails, testUser *mock
 	if err != nil {
 		return util.Wrap("error making login with wrong password request", err)
 	}
-	if err = mock_util.AssertResponseEq(200, resource.LoginResponseTO{Status: resource.InvalidCredentials}, resp); err != nil {
+	if err = mock_util.AssertResponseEq(200, resource.LoginResponseTO{Status: resource.LOGIN_RESPONSE_INVALID_CREDENTIALS}, resp); err != nil {
 		return util.Wrap("login with wrong password response mismatch", err)
 	}
 	for _, cookie := range resp.Cookies() {
