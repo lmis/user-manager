@@ -7,20 +7,21 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-type Endpoint[requestTO interface{}, responseTO interface{}] func(requestContext *RequestContext, request requestTO, c *gin.Context) (responseTO, error)
-type EndpointWithoutResponseBody[requestTO interface{}] func(requestContext *RequestContext, request requestTO, c *gin.Context) error
-type EndpointWithoutRequestBody[responseTO interface{}] func(requestContext *RequestContext, c *gin.Context) (responseTO, error)
-type EndpointWithoutRequestOrResponseBody func(requestContext *RequestContext, c *gin.Context) error
+type ResourceInitializer[T interface{}] func(*gin.Context) T
 
-func WrapEndpoint[requestTO interface{}, responseTO interface{}](endpoint Endpoint[requestTO, responseTO]) gin.HandlerFunc {
+type Endpoint[T interface{}, requestTO interface{}, responseTO interface{}] func(T, requestTO) (responseTO, error)
+type EndpointWithoutResponseBody[T interface{}, requestTO interface{}] func(T, requestTO) error
+type EndpointWithoutRequestBody[T interface{}, responseTO interface{}] func(T) (responseTO, error)
+type EndpointWithoutRequestOrResponseBody[T interface{}] func(T) error
+
+func WrapEndpoint[T interface{}, requestTO interface{}, responseTO interface{}](initialzeResource ResourceInitializer[T], endpoint Endpoint[T, requestTO, responseTO]) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		requestContext := GetRequestContext(c)
 		var request requestTO
 		if err := c.BindJSON(&request); err != nil {
 			c.AbortWithError(http.StatusBadRequest, util.Wrap("cannot bind to request TO", err))
 			return
 		}
-		response, err := endpoint(requestContext, request, c)
+		response, err := endpoint(initialzeResource(c), request)
 		if err != nil {
 			c.AbortWithError(http.StatusInternalServerError, err)
 			return
@@ -30,15 +31,14 @@ func WrapEndpoint[requestTO interface{}, responseTO interface{}](endpoint Endpoi
 	}
 }
 
-func WrapEndpointWithoutResponseBody[requestTO interface{}](endpoint EndpointWithoutResponseBody[requestTO]) gin.HandlerFunc {
+func WrapEndpointWithoutResponseBody[T interface{}, requestTO interface{}](initializeResource ResourceInitializer[T], endpoint EndpointWithoutResponseBody[T, requestTO]) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		requestContext := GetRequestContext(c)
 		var request requestTO
 		if err := c.BindJSON(&request); err != nil {
 			c.AbortWithError(http.StatusBadRequest, util.Wrap("cannot bind to request TO", err))
 			return
 		}
-		if err := endpoint(requestContext, request, c); err != nil {
+		if err := endpoint(initializeResource(c), request); err != nil {
 			c.AbortWithError(http.StatusInternalServerError, err)
 			return
 		}
@@ -47,10 +47,9 @@ func WrapEndpointWithoutResponseBody[requestTO interface{}](endpoint EndpointWit
 	}
 }
 
-func WrapEndpointWithoutRequestBody[responseTO interface{}](endpoint EndpointWithoutRequestBody[responseTO]) gin.HandlerFunc {
+func WrapEndpointWithoutRequestBody[T interface{}, responseTO interface{}](initializeResource ResourceInitializer[T], endpoint EndpointWithoutRequestBody[T, responseTO]) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		requestContext := GetRequestContext(c)
-		response, err := endpoint(requestContext, c)
+		response, err := endpoint(initializeResource(c))
 		if err != nil {
 			c.AbortWithError(http.StatusInternalServerError, err)
 			return
@@ -60,10 +59,9 @@ func WrapEndpointWithoutRequestBody[responseTO interface{}](endpoint EndpointWit
 	}
 }
 
-func WrapEndpointWithoutRequestOrResponseBody(endpoint EndpointWithoutRequestOrResponseBody) gin.HandlerFunc {
+func WrapEndpointWithoutRequestOrResponseBody[T interface{}](initializeResource ResourceInitializer[T], endpoint EndpointWithoutRequestOrResponseBody[T]) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		requestContext := GetRequestContext(c)
-		if err := endpoint(requestContext, c); err != nil {
+		if err := endpoint(initializeResource(c)); err != nil {
 			c.AbortWithError(http.StatusInternalServerError, err)
 			return
 		}

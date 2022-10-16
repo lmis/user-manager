@@ -1,16 +1,11 @@
 package functional_tests
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
-	auth_endpoint "user-manager/cmd/app/endpoints/auth"
-	user_settings_endpoint "user-manager/cmd/app/endpoints/user/settings"
+	"user-manager/cmd/app/resource"
 	"user-manager/cmd/mock-3rd-party-apis/config"
 	mock_util "user-manager/cmd/mock-3rd-party-apis/util"
-	"user-manager/db/generated/models"
 	"user-manager/util"
 )
 
@@ -38,14 +33,14 @@ func TestCallWithMismatchingCsrfTokens(config *config.Config, emails mock_util.E
 	}
 
 	// Login (with matching CSRF tokens)
-	resp, err = mock_util.MakeApiRequest("POST", config, "auth/login", auth_endpoint.LoginTO{
+	resp, err = mock_util.MakeApiRequest("POST", config, "auth/login", resource.LoginTO{
 		Email:    email,
 		Password: password,
 	}, nil)
 	if err != nil {
 		return util.Wrap("error making login request", err)
 	}
-	if err = mock_util.AssertResponseEq(200, auth_endpoint.LoginResponseTO{Status: auth_endpoint.LoggedIn}, resp); err != nil {
+	if err = mock_util.AssertResponseEq(200, resource.LoginResponseTO{Status: resource.LoggedIn}, resp); err != nil {
 		return util.Wrap("login response mismatch", err)
 	}
 	var sessionCookie *http.Cookie
@@ -63,27 +58,28 @@ func TestCallWithMismatchingCsrfTokens(config *config.Config, emails mock_util.E
 	if err != nil {
 		return util.Wrap("error building language request", err)
 	}
-	b, err := json.Marshal(&user_settings_endpoint.LanguageTO{Language: models.UserLanguageDE})
-	if err != nil {
-		return util.Wrap("issue marshalling language json", err)
-	}
-	req.Header.Add("Content-Type", "application/json")
-	req.Body = io.NopCloser(bytes.NewReader(b))
+	panic("todo")
+	// b, err := json.Marshal(&resource.LanguageTO{Language: models.UserLanguageDE})
+	// if err != nil {
+	// 	return util.Wrap("issue marshalling language json", err)
+	// }
+	// req.Header.Add("Content-Type", "application/json")
+	// req.Body = io.NopCloser(bytes.NewReader(b))
 
-	req.Header.Add("X-CSRF-Token", "abcdef")
-	req.AddCookie(&http.Cookie{
-		Name:  "CSRF-Token",
-		Value: "other",
-	})
-	req.AddCookie(sessionCookie)
+	// req.Header.Add("X-CSRF-Token", "abcdef")
+	// req.AddCookie(&http.Cookie{
+	// 	Name:  "CSRF-Token",
+	// 	Value: "other",
+	// })
+	// req.AddCookie(sessionCookie)
 
-	resp, err = http.DefaultClient.Do(req)
+	// resp, err = http.DefaultClient.Do(req)
 
-	if err != nil {
-		return util.Wrap("error making language request", err)
-	}
-	if err = mock_util.AssertResponseEq(400, nil, resp); err != nil {
-		return util.Wrap("language response mismatch", err)
-	}
-	return nil
+	// if err != nil {
+	// 	return util.Wrap("error making language request", err)
+	// }
+	// if err = mock_util.AssertResponseEq(400, nil, resp); err != nil {
+	// 	return util.Wrap("language response mismatch", err)
+	// }
+	// return nil
 }

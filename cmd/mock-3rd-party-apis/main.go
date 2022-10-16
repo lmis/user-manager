@@ -4,7 +4,7 @@ package main
 import (
 	"net/http"
 	"strconv"
-	middleware "user-manager/cmd/app/middlewares"
+	"user-manager/cmd/app/middleware"
 	config "user-manager/cmd/mock-3rd-party-apis/config"
 	functional_tests "user-manager/cmd/mock-3rd-party-apis/functional-tests"
 	mock_util "user-manager/cmd/mock-3rd-party-apis/util"

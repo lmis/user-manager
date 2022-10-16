@@ -1,30 +1,29 @@
 package ginext
 
 import (
+	"database/sql"
 	"reflect"
-	"user-manager/cmd/app/config"
 	domain_model "user-manager/domain-model"
 	"user-manager/util"
-
-	"database/sql"
+	"user-manager/util/nullable"
 
 	"github.com/gin-gonic/gin"
 )
 
 const (
-	RequestContextKey = "ctx"
+	REQUEST_CONTEXT_KEY = "ctx"
 )
 
 type RequestContext struct {
-	Config         *config.Config
-	Authentication *domain_model.Authentication
-	Tx             *sql.Tx
-	Log            util.Logger
-	SecurityLog    util.Logger
+	Config      *domain_model.Config
+	UserSession nullable.Nullable[*domain_model.UserSession]
+	Tx          *sql.Tx
+	Log         domain_model.Log
+	SecurityLog domain_model.SecurityLog
 }
 
 func GetRequestContext(c *gin.Context) *RequestContext {
-	val, ok := c.Get(RequestContextKey)
+	val, ok := c.Get(REQUEST_CONTEXT_KEY)
 	if !ok {
 		panic(util.Error("missing request context"))
 	}

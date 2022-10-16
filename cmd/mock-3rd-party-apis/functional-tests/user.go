@@ -1,7 +1,7 @@
 package functional_tests
 
 import (
-	api_endpoint "user-manager/cmd/app/endpoints"
+	"user-manager/cmd/app/resource"
 	"user-manager/cmd/mock-3rd-party-apis/config"
 	mock_util "user-manager/cmd/mock-3rd-party-apis/util"
 	"user-manager/util"
@@ -12,7 +12,7 @@ func TestUserEndpointBeforeSignup(config *config.Config, _ mock_util.Emails, _ *
 	if err != nil {
 		return util.Wrap("error making user request", err)
 	}
-	if err = mock_util.AssertResponseEq(200, api_endpoint.UserTO{Roles: nil, EmailVerified: false}, resp); err != nil {
+	if err = mock_util.AssertResponseEq(200, resource.UserInfoTO{Roles: nil, EmailVerified: false}, resp); err != nil {
 		return util.Wrap("response mismatch", err)
 	}
 	return nil

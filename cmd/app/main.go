@@ -1,12 +1,15 @@
 package main
 
 //go:generate go run ../migrator/main.go generate ../../db/generated/models
+//go:generate go run github.com/google/wire/cmd/wire ./...
+
 import (
+	"database/sql"
 	"embed"
-	config "user-manager/cmd/app/config"
+	"user-manager/cmd/app/injector"
 	"user-manager/cmd/app/router"
-	emailservice "user-manager/cmd/app/services/email"
 	"user-manager/db"
+	domain_model "user-manager/domain-model"
 	"user-manager/util"
 
 	"net/http"
@@ -18,6 +21,7 @@ import (
 
 //go:embed translations/*
 var translationsFS embed.FS
+var database *sql.DB
 
 func main() {
 	util.Run("LIFECYCLE", runServer)
@@ -26,29 +30,31 @@ func main() {
 func runServer(log util.Logger, dir string) error {
 	log.Info("Starting up")
 
-	err := emailservice.Initialize(log, translationsFS)
+	err := injector.SetupEmailTemplatesProviders(log, translationsFS)
 	if err != nil {
 		return util.Wrap("cannot initialize email service", err)
 	}
 
-	config, err := config.GetConfig()
+	config, err := domain_model.GetConfig()
 	if err != nil {
 		return util.Wrap("cannot read config", err)
 	}
+	injector.SetupConfigProvider(config)
 
 	if !config.IsLocalEnv() {
 		gin.SetMode(gin.ReleaseMode)
 	}
 
-	connection, err := config.DbInfo.OpenDbConnection(log)
+	database, err = config.DbInfo.OpenDbConnection(log)
 	if err != nil {
 		return util.Wrap("could not open db connection", err)
 	}
-	defer db.CloseOrPanic(connection)
+	defer db.CloseOrPanic(database)
+	injector.SetupDatabaseProvider(database)
 
 	if err = util.RunHttpServer(log, &http.Server{
 		Addr:         ":" + config.AppPort,
-		Handler:      router.New(connection, config),
+		Handler:      router.New(),
 		ReadTimeout:  1 * time.Minute,
 		WriteTimeout: 1 * time.Minute,
 	}); err != nil {

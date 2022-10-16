@@ -5,21 +5,21 @@ import (
 	"database/sql"
 	"fmt"
 	"user-manager/util"
+	"user-manager/util/nullable"
 )
 
-func Fetch[A interface{}](query func(ctx context.Context) (A, error)) (A, error) {
+func Fetch[A interface{}](query func(ctx context.Context) (A, error)) (nullable.Nullable[A], error) {
 	ctx, cancelTimeout := DefaultQueryContext()
 	defer cancelTimeout()
 	res, err := query(ctx)
 
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return *new(A), nil
-		} else {
-			return *new(A), err
+			return nullable.Empty[A](), nil
 		}
+		return nullable.Empty[A](), err
 	}
-	return res, nil
+	return nullable.Of(res), nil
 }
 
 func ExecSingleMutation(query func(ctx context.Context) (int64, error)) error {
