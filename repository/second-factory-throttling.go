@@ -23,9 +23,9 @@ func ProvideSecondFactorThrottlingRepository(tx *sql.Tx) *SecondFactorThrottling
 }
 
 func (r *SecondFactorThrottlingRepository) GetForUser(userId domain_model.AppUserID) (nullable.Nullable[*domain_model.SecondFactorThrottling], error) {
-	throttling, err := db.Fetch(func(ctx context.Context) (*models.TwoFactorThrottling, error) {
-		return models.TwoFactorThrottlings(
-			models.TwoFactorThrottlingWhere.AppUserID.EQ(int64(userId)),
+	throttling, err := db.Fetch(func(ctx context.Context) (*models.SecondFactorThrottling, error) {
+		return models.SecondFactorThrottlings(
+			models.SecondFactorThrottlingWhere.AppUserID.EQ(int64(userId)),
 		).One(ctx, r.tx)
 	})
 	if err != nil {
@@ -36,19 +36,19 @@ func (r *SecondFactorThrottlingRepository) GetForUser(userId domain_model.AppUse
 	}
 	return nullable.NeverNil(domain_model.FromSecondFactorThrottlingModel(throttling.OrPanic())), nil
 }
-func (r *SecondFactorThrottlingRepository) Update(throttlingId domain_model.TwoFactorThrottlingID, failedAttemptsSinceLastSuccess int, timeoutUntil nullable.Nullable[time.Time]) error {
+func (r *SecondFactorThrottlingRepository) Update(throttlingId domain_model.SecondFactorThrottlingID, failedAttemptsSinceLastSuccess int, timeoutUntil nullable.Nullable[time.Time]) error {
 	return db.ExecSingleMutation(func(ctx context.Context) (int64, error) {
-		throttling := models.TwoFactorThrottling{TwoFactorThrottlingID: int64(throttlingId), FailedAttemptsSinceLastSuccess: failedAttemptsSinceLastSuccess}
+		throttling := models.SecondFactorThrottling{SecondFactorThrottlingID: int64(throttlingId), FailedAttemptsSinceLastSuccess: failedAttemptsSinceLastSuccess}
 		if timeoutUntil.IsPresent {
 			throttling.TimeoutUntil = null.TimeFrom(timeoutUntil.OrPanic())
 		}
-		return throttling.Update(ctx, r.tx, boil.Whitelist(models.TwoFactorThrottlingColumns.FailedAttemptsSinceLastSuccess, models.TwoFactorThrottlingColumns.TimeoutUntil))
+		return throttling.Update(ctx, r.tx, boil.Whitelist(models.SecondFactorThrottlingColumns.FailedAttemptsSinceLastSuccess, models.SecondFactorThrottlingColumns.TimeoutUntil))
 	})
 }
 
 func (r *SecondFactorThrottlingRepository) Insert(userId domain_model.AppUserID, failedAttemptsSinceLastSuccess int) error {
 	ctx, cancelTimeout := db.DefaultQueryContext()
 	defer cancelTimeout()
-	throttling := models.TwoFactorThrottling{AppUserID: int64(userId), FailedAttemptsSinceLastSuccess: failedAttemptsSinceLastSuccess}
+	throttling := models.SecondFactorThrottling{AppUserID: int64(userId), FailedAttemptsSinceLastSuccess: failedAttemptsSinceLastSuccess}
 	return throttling.Insert(ctx, r.tx, boil.Infer())
 }

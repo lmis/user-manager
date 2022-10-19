@@ -1,6 +1,7 @@
 package domain_model
 
 import (
+	"encoding/json"
 	"time"
 	"user-manager/db/generated/models"
 	"user-manager/util/nullable"
@@ -10,19 +11,26 @@ import (
 type AppUserID int64
 
 type AppUser struct {
-	AppUserID                    AppUserID                    `json:"appUserId"`
-	Language                     UserLanguage                 `json:"language"`
-	UserName                     string                       `json:"userName"`
-	PasswordHash                 string                       `json:"passwordHash"`
-	Email                        string                       `json:"email"`
-	EmailVerified                bool                         `json:"emailVerified"`
-	EmailVerificationToken       nullable.Nullable[string]    `json:"emailVerificationToken,omitempty"`
-	NewEmail                     nullable.Nullable[string]    `json:"newEmail,omitempty"`
-	PasswordResetToken           nullable.Nullable[string]    `json:"passwordResetToken,omitempty"`
-	PasswordResetTokenValidUntil nullable.Nullable[time.Time] `json:"passwordResetTokenValidUntil,omitempty"`
-	TwoFactorToken               nullable.Nullable[string]    `json:"twoFactorToken,omitempty"`
-	TempraryTwoFactorToken       nullable.Nullable[string]    `json:"tempraryTwoFactorToken,omitempty"`
-	UserRoles                    []UserRole                   `json:"userRoles,omitempty"`
+	AppUserID                    AppUserID
+	Language                     UserLanguage
+	UserName                     string
+	PasswordHash                 string
+	Email                        string
+	EmailVerified                bool
+	EmailVerificationToken       nullable.Nullable[string]
+	NewEmail                     nullable.Nullable[string]
+	PasswordResetToken           nullable.Nullable[string]
+	PasswordResetTokenValidUntil nullable.Nullable[time.Time]
+	SecondFactorToken            nullable.Nullable[string]
+	TemporarySecondFactorToken   nullable.Nullable[string]
+	UserRoles                    []UserRole
+}
+
+func (u *AppUser) MarshallJSON() ([]byte, error) {
+	return json.Marshal(map[string]interface{}{
+		"id":        u.AppUserID,
+		"userRoles": u.UserRoles,
+	})
 }
 
 func FromAppUserAndUserRolesModel(m *models.AppUser, r models.AppUserRoleSlice) *AppUser {
@@ -37,8 +45,8 @@ func FromAppUserAndUserRolesModel(m *models.AppUser, r models.AppUserRoleSlice) 
 		NewEmail:                     nullable.FromNullString(m.NewEmail),
 		PasswordResetToken:           nullable.FromNullString(m.PasswordResetToken),
 		PasswordResetTokenValidUntil: nullable.FromNullTime(m.PasswordResetTokenValidUntil),
-		TwoFactorToken:               nullable.FromNullString(m.TwoFactorToken),
-		TempraryTwoFactorToken:       nullable.FromNullString(m.TempraryTwoFactorToken),
+		SecondFactorToken:            nullable.FromNullString(m.SecondFactorToken),
+		TemporarySecondFactorToken:   nullable.FromNullString(m.TemporarySecondFactorToken),
 		UserRoles:                    slices.Map(r, func(m *models.AppUserRole) UserRole { return UserRole(m.Role) }),
 	}
 }

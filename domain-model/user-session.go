@@ -14,7 +14,7 @@ const (
 )
 
 type UserSession struct {
-	UserSessionID   UserSessionID   `json:"userSessionId"`
+	UserSessionID   UserSessionID
 	User            *AppUser        `json:"user"`
 	UserSessionType UserSessionType `json:"userSessionType"`
 }

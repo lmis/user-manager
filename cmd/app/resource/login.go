@@ -83,7 +83,7 @@ func (r *LoginResource) Login(requestTO *LoginTO) (*LoginResponseTO, error) {
 		return &LoginResponseTO{LOGIN_RESPONSE_INVALID_CREDENTIALS}, nil
 	}
 
-	if user.TwoFactorToken.IsPresent {
+	if user.SecondFactorToken.IsPresent {
 		return &LoginResponseTO{LOGIN_RESPONSE_2FA_REQUIRED}, nil
 	}
 
@@ -141,7 +141,7 @@ func (r *LoginResource) LoginWithSecondFactor(requestTO *LoginWithSecondFactorTO
 			return &LoginWithSecondFactorResponseTO{TimeoutUntil: throttling.OrPanic().TimeoutUntil.OrPanic()}, nil
 		}
 
-		tokenMatches := user.TwoFactorToken.IsPresent && totp.Validate(requestTO.SecondFactor, user.TwoFactorToken.OrPanic())
+		tokenMatches := user.SecondFactorToken.IsPresent && totp.Validate(requestTO.SecondFactor, user.SecondFactorToken.OrPanic())
 
 		if throttling.IsPresent {
 			failedAttemptsSinceLastSuccess := 0
@@ -153,7 +153,7 @@ func (r *LoginResource) LoginWithSecondFactor(requestTO *LoginWithSecondFactorTO
 					timeoutUntil = nullable.Of(time.Now().Add(time.Minute * 3 * time.Duration(failedAttemptsSinceLastSuccess)))
 				}
 			}
-			if err := secondFactorThrottlingRepository.Update(throttling.OrPanic().TwoFactorThrottlingID, failedAttemptsSinceLastSuccess, timeoutUntil); err != nil {
+			if err := secondFactorThrottlingRepository.Update(throttling.OrPanic().SecondFactorThrottlingID, failedAttemptsSinceLastSuccess, timeoutUntil); err != nil {
 				return nil, util.Wrap("issue updating throttling in db", err)
 			}
 		} else if !tokenMatches {

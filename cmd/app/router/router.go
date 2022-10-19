@@ -47,6 +47,7 @@ func registerAdminGroup(admin *gin.RouterGroup) {
 
 func registerSuperAdminGroup(superAdmin *gin.RouterGroup) {
 	middleware.RegisterRequireRoleMiddlware(superAdmin, domain_model.USER_ROLE_SUPER_ADMIN)
+
 	superAdmin.POST("add-admin-user", todo).
 		POST("change-password", todo)
 }
@@ -70,7 +71,7 @@ func registerUserGroup(user *gin.RouterGroup) {
 func registerSettingsGroup(settings *gin.RouterGroup) {
 	middleware.RegisterVerifiedEmailAuthorizationMiddleware(settings)
 	resource.RegisterSettingsResource(settings)
-	// settings.POST("sudo", ginext.WrapEndpoint(user_settings_endpoint.PostSudo)).
+
 	registerSensitiveSettingsGroup(settings.Group("sensitive-settings"))
 }
 func registerSensitiveSettingsGroup(sensitiveSettings *gin.RouterGroup) {

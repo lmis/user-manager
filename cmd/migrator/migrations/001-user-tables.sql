@@ -12,8 +12,8 @@ CREATE TABLE app_user (
 	new_email                         TEXT,
 	password_reset_token              TEXT,
 	password_reset_token_valid_until  TIMESTAMP WITH TIME ZONE,
-	two_factor_token                  TEXT,
-	temprary_two_factor_token         TEXT,
+	second_factor_token               TEXT,
+	temporary_second_factor_token     TEXT,
 	created_at                        TIMESTAMP WITH TIME ZONE    NOT NULL DEFAULT NOW(),
 	updated_at                        TIMESTAMP WITH TIME ZONE    NOT NULL
 );
@@ -36,8 +36,8 @@ CREATE TABLE user_session (
 	updated_at                        TIMESTAMP WITH TIME ZONE                   NOT NULL
 );
 
-CREATE TABLE two_factor_throttling (
-	two_factor_throttling_id              BIGSERIAL                                  PRIMARY KEY,
+CREATE TABLE second_factor_throttling (
+	second_factor_throttling_id              BIGSERIAL                                  PRIMARY KEY,
 	app_user_id                           BIGINT REFERENCES app_user(app_user_id)    UNIQUE NOT NULL,
 	failed_attempts_since_last_success    INTEGER                                    NOT NULL,
 	timeout_until                         TIMESTAMP WITH TIME ZONE,
@@ -50,4 +50,4 @@ DROP TYPE USER_SESSION_TYPE;
 DROP TABLE app_user_role;
 DROP TABLE app_user;
 DROP TYPE USER_ROLE;
-DROP TABLE two_factor_throttling;
+DROP TABLE second_factor_throttling;
