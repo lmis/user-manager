@@ -18,6 +18,7 @@ func todo(c *gin.Context) {
 func New() *gin.Engine {
 	r := gin.New()
 	r.HandleMethodNotAllowed = true
+
 	middleware.RegisterRequestContextMiddleware(r)
 	middleware.RegisterLoggerMiddleware(r)
 	middleware.RegisterRecoveryMiddleware(r)
@@ -35,8 +36,18 @@ func registerApiGroup(api *gin.RouterGroup) {
 	resource.RegisterUserInfoResource(api)
 
 	registerAuthGroup(api.Group("auth"))
-	registerUserGroup(api.Group("user"))
 	registerAdminGroup(api.Group("admin"))
+	registerUserGroup(api.Group("user"))
+}
+
+func registerAuthGroup(auth *gin.RouterGroup) {
+	middleware.RegisterTimingObfuscationMiddleware(auth, 400*time.Millisecond)
+
+	resource.RegisterSignUpResource(auth)
+	resource.RegisterLoginResource(auth)
+	resource.RegisterLogoutResource(auth)
+	// 	POST("request-password-reset", ginext.WrapEndpointWithoutResponseBody(auth.PostRequestPasswordReset)).
+	// 	POST("reset-password", ginext.WrapEndpoint(auth.PostResetPassword))
 }
 
 func registerAdminGroup(admin *gin.RouterGroup) {
@@ -48,21 +59,13 @@ func registerAdminGroup(admin *gin.RouterGroup) {
 func registerSuperAdminGroup(superAdmin *gin.RouterGroup) {
 	middleware.RegisterRequireRoleMiddlware(superAdmin, domain_model.USER_ROLE_SUPER_ADMIN)
 
-	superAdmin.POST("add-admin-user", todo).
-		POST("change-password", todo)
-}
-
-func registerAuthGroup(auth *gin.RouterGroup) {
-	middleware.RegisterTimingObfuscationMiddleware(auth, 400*time.Millisecond)
-	resource.RegisterSignUpResource(auth)
-	resource.RegisterLoginResource(auth)
-	resource.RegisterLogoutResource(auth)
-	// 	POST("request-password-reset", ginext.WrapEndpointWithoutResponseBody(auth.PostRequestPasswordReset)).
-	// 	POST("reset-password", ginext.WrapEndpoint(auth.PostResetPassword))
+	// POST("add-admin-user", todo).
+	// POST("change-password", todo)
 }
 
 func registerUserGroup(user *gin.RouterGroup) {
 	middleware.RegisterRequireRoleMiddlware(user, domain_model.USER_ROLE_USER)
+
 	resource.RegisterEmailConfirmationResource(user)
 
 	registerSettingsGroup(user.Group("settings"))
@@ -70,13 +73,16 @@ func registerUserGroup(user *gin.RouterGroup) {
 
 func registerSettingsGroup(settings *gin.RouterGroup) {
 	middleware.RegisterVerifiedEmailAuthorizationMiddleware(settings)
+
 	resource.RegisterSettingsResource(settings)
+	// POST("generate-temporary-second-factor-token"
 
 	registerSensitiveSettingsGroup(settings.Group("sensitive-settings"))
 }
 func registerSensitiveSettingsGroup(sensitiveSettings *gin.RouterGroup) {
 	middleware.RegisterRequireSudoModeMiddleware(sensitiveSettings)
-	// sensitiveSettings.POST("change-email", ginext.WrapEndpointWithoutResponseBody(sensitive_user_settings_endpoint.PostChangeEmail)).
+
+	resource.RegisterSensitiveSettingsResource(sensitiveSettings)
 	// 	POST("change-password", todo).
 	// 	POST("second-factor", todo)
 }

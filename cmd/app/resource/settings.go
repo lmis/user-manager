@@ -33,7 +33,6 @@ func ProvideSettingsResource(
 func RegisterSettingsResource(group *gin.RouterGroup) {
 	group.POST("language", ginext.WrapEndpointWithoutResponseBody(InitializeSettingsResource, (*SettingsResource).SetLanguage))
 	group.POST("confirm-email-change", ginext.WrapEndpoint(InitializeSettingsResource, (*SettingsResource).ConfirmEmailChange))
-	group.POST("generate-temporary-second-factor-token", ginext.WrapEndpointWithoutRequestOrResponseBody(InitializeSettingsResource, (*SettingsResource).GenerateTemporarySecondFactorToken))
 	group.POST("enter-sudo-mode", ginext.WrapEndpoint(InitializeSettingsResource, (*SettingsResource).EnterSudoMode))
 }
 
@@ -54,10 +53,6 @@ func (r *SettingsResource) SetLanguage(requestTO *LanguageTO) error {
 		return util.Wrap("error updating language", err)
 	}
 	return nil
-}
-
-func (r *SettingsResource) GenerateTemporarySecondFactorToken() error {
-	return util.Error("endpoint not implemented")
 }
 
 type SudoTO struct {

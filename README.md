@@ -161,7 +161,7 @@ type EmailChangeConfirmationResponseTO struct {
 	Email  string            `json:"email"`
 }
 ```
-##### POST   /api/user/settings/sensitive/change-email
+##### POST   /api/user/settings/sensitive/initiate-email-change
 Allows user to set a new email for login and communcation
 ```golang
 type ChangeEmailTO struct {
