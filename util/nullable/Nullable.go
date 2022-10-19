@@ -1,6 +1,7 @@
 package nullable
 
 import (
+	"encoding/json"
 	"time"
 	"user-manager/util"
 
@@ -8,19 +9,26 @@ import (
 )
 
 type Nullable[T interface{}] struct {
-	IsPresent bool `json:"isPresent"`
-	Val       T    `json:"val,omitempty"`
+	IsPresent bool
+	val       T
+}
+
+func (n *Nullable[T]) MarshallJSON() ([]byte, error) {
+	if !n.IsPresent {
+		return json.Marshal(nil)
+	}
+	return json.Marshal(n.val)
 }
 
 func (n Nullable[T]) OrElse(defaultValue T) T {
 	if n.IsPresent {
-		return n.Val
+		return n.val
 	}
 	return defaultValue
 }
 func (n Nullable[T]) OrPanic() T {
 	if n.IsPresent {
-		return n.Val
+		return n.val
 	}
 	panic(util.Error("accessing value of empty Nullable"))
 }
@@ -30,7 +38,7 @@ func (n Nullable[T]) IsEmpty() bool {
 }
 
 func Of[T interface{}](val T) Nullable[T] {
-	return Nullable[T]{IsPresent: true, Val: val}
+	return Nullable[T]{IsPresent: true, val: val}
 }
 
 func NeverNil[T interface{}](val *T) Nullable[*T] {

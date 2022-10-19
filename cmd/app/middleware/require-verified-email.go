@@ -28,8 +28,9 @@ func RegisterVerifiedEmailAuthorizationMiddleware(group *gin.RouterGroup) {
 func (m *VerifiedEmailAuthorizationMiddleware) Handle() {
 	c := m.c
 	userSession := m.userSession
-	if userSession.IsEmpty() || !userSession.Val.User.EmailVerified {
-		m.securityLog.Info("Email not verified")
+	securityLog := m.securityLog
+	if userSession.IsEmpty() || !userSession.OrPanic().User.EmailVerified {
+		securityLog.Info("Email not verified")
 		c.AbortWithError(http.StatusForbidden, util.Errorf("email not verified"))
 		return
 	}

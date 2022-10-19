@@ -2,10 +2,9 @@
 A currently pretty useless backend written with gin and sqlboiler.
 
 ## Build and run
-1. Run `install`
-2. Make sure you have docker daemon running
-3. Run `check`
-4. Run `local-dev-startup`
+1. Make sure you have docker daemon running
+2. Run `check`
+3. Run `local-dev-startup`
 
 ### Run endpoint tests
 To run the endpoint tests, run `run-tests` while a local instance is running.
@@ -88,13 +87,13 @@ type ResetPasswordResponseTO struct {
 }
 ```
 
-##### GET    /api/user
+##### GET    /api/user-info
 Returns information on the current user and their roles
 ```golang
-type UserTO struct {
-	Roles         []models.UserRole   `json:"roles"`
+type UserInfoTO struct {
+	Roles         []domain_model.UserRole   `json:"roles"`
 	EmailVerified bool                `json:"emailVerified"`
-	Language      models.UserLanguage `json:"language"`
+	Language      domain_model.UserLanguage `json:"language"`
 }
 ```
 ##### POST   /api/user/confirm-email
@@ -128,7 +127,7 @@ type RetriggerConfirmationEmailResponseTO struct {
 Allows users to set their language choice
 ```golang
 type LanguageTO struct {
-	Language models.UserLanguage `json:"language"`
+	Language domain_model.UserLanguage `json:"language"`
 }
 ```
 ##### POST   /api/user/settings/sudo

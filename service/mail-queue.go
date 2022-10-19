@@ -22,13 +22,14 @@ func ProvideMailQueueService(mailQueueRepository *repository.MailQueueRepository
 
 func (s *MailQueueService) SendVerificationEmail(language domain_model.UserLanguage, email string, verificationToken string) error {
 	translation := s.translations[language]
+	config := s.config
 
 	data := map[string]string{
-		"AppUrl":                 s.config.AppUrl,
+		"AppUrl":                 config.AppUrl,
 		"EmailVerificationToken": verificationToken,
-		"ServiceName":            s.config.ServiceName,
+		"ServiceName":            config.ServiceName,
 	}
-	if err := s.enqueueBasicEmail(translation, translation.VerificationEmail, data, s.config.EmailFrom, email, domain_model.MAIL_QUEUE_PRIO_HIGH); err != nil {
+	if err := s.enqueueBasicEmail(translation, translation.VerificationEmail, data, config.EmailFrom, email, domain_model.MAIL_QUEUE_PRIO_HIGH); err != nil {
 		return util.Wrap("error enqueuing basic email", err)
 	}
 	return nil
@@ -36,11 +37,12 @@ func (s *MailQueueService) SendVerificationEmail(language domain_model.UserLangu
 
 func (s *MailQueueService) SendSignUpAttemptEmail(language domain_model.UserLanguage, email string) error {
 	translation := s.translations[language]
+	config := s.config
 
 	data := map[string]string{
-		"ServiceName": s.config.ServiceName,
+		"ServiceName": config.ServiceName,
 	}
-	if err := s.enqueueBasicEmail(translation, translation.SignUpAttemptedEmail, data, s.config.EmailFrom, email, domain_model.MAIL_QUEUE_PRIO_HIGH); err != nil {
+	if err := s.enqueueBasicEmail(translation, translation.SignUpAttemptedEmail, data, config.EmailFrom, email, domain_model.MAIL_QUEUE_PRIO_HIGH); err != nil {
 		return util.Wrap("error enqueuing basic email", err)
 	}
 	return nil
@@ -48,14 +50,15 @@ func (s *MailQueueService) SendSignUpAttemptEmail(language domain_model.UserLang
 
 func (s *MailQueueService) SendChangeVerificationEmail(language domain_model.UserLanguage, email string, verificationToken string, newEmail string) error {
 	translation := s.translations[language]
+	config := s.config
 
 	data := map[string]string{
-		"AppUrl":                       s.config.AppUrl,
+		"AppUrl":                       config.AppUrl,
 		"EmailChangeVerificationToken": verificationToken,
-		"ServiceName":                  s.config.ServiceName,
+		"ServiceName":                  config.ServiceName,
 		"NewEmail":                     newEmail,
 	}
-	if err := s.enqueueBasicEmail(translation, translation.ChangeVerificationEmail, data, s.config.EmailFrom, newEmail, domain_model.MAIL_QUEUE_PRIO_HIGH); err != nil {
+	if err := s.enqueueBasicEmail(translation, translation.ChangeVerificationEmail, data, config.EmailFrom, newEmail, domain_model.MAIL_QUEUE_PRIO_HIGH); err != nil {
 		return util.Wrap("error enqueuing basic email", err)
 	}
 	return nil
@@ -63,12 +66,13 @@ func (s *MailQueueService) SendChangeVerificationEmail(language domain_model.Use
 
 func (s *MailQueueService) SendChangeNotificationEmail(language domain_model.UserLanguage, email string, newEmail string) error {
 	translation := s.translations[language]
+	config := s.config
 
 	data := map[string]string{
-		"ServiceName": s.config.ServiceName,
+		"ServiceName": config.ServiceName,
 		"NewEmail":    newEmail,
 	}
-	if err := s.enqueueBasicEmail(translation, translation.ChangeNotificationEmail, data, s.config.EmailFrom, email, domain_model.MAIL_QUEUE_PRIO_HIGH); err != nil {
+	if err := s.enqueueBasicEmail(translation, translation.ChangeNotificationEmail, data, config.EmailFrom, email, domain_model.MAIL_QUEUE_PRIO_HIGH); err != nil {
 		return util.Wrap("error enqueuing basic email", err)
 	}
 	return nil
@@ -76,13 +80,14 @@ func (s *MailQueueService) SendChangeNotificationEmail(language domain_model.Use
 
 func (s *MailQueueService) SendResetPasswordEmail(language domain_model.UserLanguage, email string, resetToken string) error {
 	translation := s.translations[language]
+	config := s.config
 
 	data := map[string]string{
-		"ServiceName":        s.config.ServiceName,
-		"AppUrl":             s.config.AppUrl,
+		"ServiceName":        config.ServiceName,
+		"AppUrl":             config.AppUrl,
 		"PasswordResetToken": resetToken,
 	}
-	if err := s.enqueueBasicEmail(translation, translation.ChangeNotificationEmail, data, s.config.EmailFrom, email, domain_model.MAIL_QUEUE_PRIO_HIGH); err != nil {
+	if err := s.enqueueBasicEmail(translation, translation.ChangeNotificationEmail, data, config.EmailFrom, email, domain_model.MAIL_QUEUE_PRIO_HIGH); err != nil {
 		return util.Wrap("error enqueuing basic email", err)
 	}
 	return nil
@@ -114,6 +119,9 @@ func (s *MailQueueService) enqueueBasicEmail(
 	to string,
 	priority domain_model.MailQueuePriority,
 ) error {
+	baseTemplate := s.baseTemplate
+	mailQueueRepository := s.mailQueueRepository
+
 	var err error
 	salutation := ""
 	_, ok := data["UserName"]
@@ -142,7 +150,7 @@ func (s *MailQueueService) enqueueBasicEmail(
 		}
 	}
 	writer := &strings.Builder{}
-	if err = s.baseTemplate.Execute(writer, baseTemplateData{
+	if err = baseTemplate.Execute(writer, baseTemplateData{
 		Salutation: salutation,
 		Paragraphs: paragraphs,
 		Footer:     translation.Footer,
@@ -150,7 +158,7 @@ func (s *MailQueueService) enqueueBasicEmail(
 		return util.Wrap("issue executing base template", err)
 	}
 
-	if err = s.mailQueueRepository.InsertPending(from, to, writer.String(), subject, priority); err != nil {
+	if err = mailQueueRepository.InsertPending(from, to, writer.String(), subject, priority); err != nil {
 		return util.Wrap("issue inserting pending email", err)
 	}
 	return nil

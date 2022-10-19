@@ -1,6 +1,10 @@
 package service
 
-import "golang.org/x/crypto/bcrypt"
+import (
+	"user-manager/util"
+
+	"golang.org/x/crypto/bcrypt"
+)
 
 type AuthService struct {
 }
@@ -10,6 +14,10 @@ func ProvideAuthService() *AuthService {
 }
 
 func (s *AuthService) Hash(password []byte) (string, error) {
+	if len(password) > 71 {
+		return "", util.Errorf("password too long")
+
+	}
 	hash, err := bcrypt.GenerateFromPassword(password, bcrypt.DefaultCost)
 	if err != nil {
 		return "", err

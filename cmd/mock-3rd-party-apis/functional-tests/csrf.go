@@ -10,6 +10,7 @@ import (
 	"user-manager/cmd/mock-3rd-party-apis/config"
 	mock_util "user-manager/cmd/mock-3rd-party-apis/util"
 	"user-manager/db/generated/models"
+	domain_model "user-manager/domain-model"
 	"user-manager/util"
 )
 
@@ -18,7 +19,7 @@ func TestCallWithMismatchingCsrfTokens(config *config.Config, emails mock_util.E
 	password := testUser.Password
 
 	// Check user
-	req, err := http.NewRequest("GET", fmt.Sprintf("%s/api/%s", config.AppUrl, "user"), nil)
+	req, err := http.NewRequest("GET", fmt.Sprintf("%s/api/%s", config.AppUrl, "user-info"), nil)
 	if err != nil {
 		return util.Wrap("error building user request", err)
 	}
@@ -63,7 +64,7 @@ func TestCallWithMismatchingCsrfTokens(config *config.Config, emails mock_util.E
 		return util.Wrap("error building language request", err)
 	}
 
-	b, err := json.Marshal(&resource.LanguageTO{Language: models.UserLanguageDE})
+	b, err := json.Marshal(&resource.LanguageTO{Language: domain_model.UserLanguage(models.UserLanguageDE)})
 	if err != nil {
 		return util.Wrap("issue marshalling language json", err)
 	}

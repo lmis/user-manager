@@ -38,6 +38,7 @@ func TestSignUp(config *config.Config, emails mock_util.Emails, testUser *mock_u
 	if err != nil {
 		return util.Wrap("error making login request", err)
 	}
+
 	if err = mock_util.AssertResponseEq(200, resource.LoginResponseTO{Status: resource.LOGIN_RESPONSE_LOGGED_IN}, resp); err != nil {
 		return util.Wrap("login response mismatch", err)
 	}
@@ -53,11 +54,11 @@ func TestSignUp(config *config.Config, emails mock_util.Emails, testUser *mock_u
 	}
 
 	// Check user
-	resp, err = mock_util.MakeApiRequest("GET", config, "user", nil, sessionCookie)
+	resp, err = mock_util.MakeApiRequest("GET", config, "user-info", nil, sessionCookie)
 	if err != nil {
 		return util.Wrap("error making user request", err)
 	}
-	if err = mock_util.AssertResponseEq(200, resource.UserInfoTO{Roles: []domain_model.UserRole{"USER"}, Language: "DE"}, resp); err != nil {
+	if err = mock_util.AssertResponseEq(200, resource.UserInfoTO{Roles: []domain_model.UserRole{domain_model.USER_ROLE_USER}, Language: "DE"}, resp); err != nil {
 		return util.Wrap("user resonse mismatch", err)
 	}
 
@@ -113,11 +114,11 @@ func TestSignUp(config *config.Config, emails mock_util.Emails, testUser *mock_u
 	}
 
 	// Check user
-	resp, err = mock_util.MakeApiRequest("GET", config, "user", nil, sessionCookie)
+	resp, err = mock_util.MakeApiRequest("GET", config, "user-info", nil, sessionCookie)
 	if err != nil {
 		return util.Wrap("error making user after confirmation request", err)
 	}
-	if err = mock_util.AssertResponseEq(200, resource.UserInfoTO{Roles: []domain_model.UserRole{"USER"}, EmailVerified: true, Language: "DE"}, resp); err != nil {
+	if err = mock_util.AssertResponseEq(200, resource.UserInfoTO{Roles: []domain_model.UserRole{domain_model.USER_ROLE_USER}, EmailVerified: true, Language: "DE"}, resp); err != nil {
 		return util.Wrap("user after confirmation response mismatch", err)
 	}
 
@@ -131,7 +132,7 @@ func TestSignUp(config *config.Config, emails mock_util.Emails, testUser *mock_u
 	}
 
 	// Check user
-	resp, err = mock_util.MakeApiRequest("GET", config, "user", nil, sessionCookie)
+	resp, err = mock_util.MakeApiRequest("GET", config, "user-info", nil, sessionCookie)
 	if err != nil {
 		return util.Wrap("error making user after logout request", err)
 	}

@@ -28,11 +28,12 @@ type UserInfoTO struct {
 
 func (r *UserInfoResource) Get() (*UserInfoTO, error) {
 	userSession := r.userSession
+
 	userTO := UserInfoTO{}
 	if userSession.IsPresent {
-		userTO.Roles = userSession.Val.User.UserRoles
-		userTO.EmailVerified = userSession.Val.User.EmailVerified
-		userTO.Language = userSession.Val.User.Language
+		userTO.Roles = userSession.OrPanic().User.UserRoles
+		userTO.EmailVerified = userSession.OrPanic().User.EmailVerified
+		userTO.Language = userSession.OrPanic().User.Language
 	}
 	return &userTO, nil
 }

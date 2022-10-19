@@ -36,7 +36,7 @@ func (m *RequireRoleMiddleware) Handle(requiredRole domain_model.UserRole) {
 		return
 	}
 
-	receivedRoles := userSession.Val.User.UserRoles
+	receivedRoles := userSession.OrPanic().User.UserRoles
 	if !slices.Contains(receivedRoles, requiredRole) {
 		securityLog.Info("Not a %s: wrong role (%v)", requiredRole, receivedRoles)
 		c.AbortWithError(http.StatusUnauthorized, util.Errorf("wrong role. required %s, received %v", requiredRole, receivedRoles))

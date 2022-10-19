@@ -17,16 +17,22 @@ import (
 
 func InitializeEmailConfirmationResource(c *gin.Context) *EmailConfirmationResource {
 	securityLog := injector.ProvideSecurityLog(c)
-	nullable := injector.ProvideUserSession(c)
 	tx := injector.ProvideTx(c)
+	mailQueueRepository := repository.ProvideMailQueueRepository(tx)
+	config := injector.ProvideConfig()
+	v := injector.ProvideTranslations()
+	template := injector.ProvideBaseTemplate()
+	mailQueueService := service.ProvideMailQueueService(mailQueueRepository, config, v, template)
+	nullable := injector.ProvideUserSession(c)
 	userRepository := repository.ProvideUserRepository(tx)
-	emailConfirmationResource := ProvideEmailConfirmationResource(securityLog, nullable, userRepository)
+	emailConfirmationResource := ProvideEmailConfirmationResource(securityLog, mailQueueService, nullable, userRepository)
 	return emailConfirmationResource
 }
 
 func InitializeLoginResource(c *gin.Context) *LoginResource {
 	securityLog := injector.ProvideSecurityLog(c)
-	sessionCookieService := service.ProvideSessionCookieService(c)
+	config := injector.ProvideConfig()
+	sessionCookieService := service.ProvideSessionCookieService(c, config)
 	tx := injector.ProvideTx(c)
 	sessionRepository := repository.ProvideSessionRepository(tx)
 	userRepository := repository.ProvideUserRepository(tx)
@@ -45,8 +51,7 @@ func InitializeSignUpResource(c *gin.Context) *SignUpResource {
 	mailQueueService := service.ProvideMailQueueService(mailQueueRepository, config, v, template)
 	authService := service.ProvideAuthService()
 	securityLog := injector.ProvideSecurityLog(c)
-	nullable := injector.ProvideUserSession(c)
-	signUpResource := ProvideSignUpResource(userRepository, mailQueueService, authService, securityLog, nullable)
+	signUpResource := ProvideSignUpResource(userRepository, mailQueueService, authService, securityLog)
 	return signUpResource
 }
 
@@ -58,10 +63,23 @@ func InitializeUserInfoResource(c *gin.Context) *UserInfoResource {
 
 func InitializeLogoutResource(c *gin.Context) *LogoutResource {
 	securityLog := injector.ProvideSecurityLog(c)
-	sessionCookieService := service.ProvideSessionCookieService(c)
+	config := injector.ProvideConfig()
+	sessionCookieService := service.ProvideSessionCookieService(c, config)
 	tx := injector.ProvideTx(c)
 	sessionRepository := repository.ProvideSessionRepository(tx)
 	nullable := injector.ProvideUserSession(c)
 	logoutResource := ProvideLogoutResource(securityLog, sessionCookieService, sessionRepository, nullable)
 	return logoutResource
+}
+
+func InitializeSettingsResource(c *gin.Context) *SettingsResource {
+	securityLog := injector.ProvideSecurityLog(c)
+	config := injector.ProvideConfig()
+	sessionCookieService := service.ProvideSessionCookieService(c, config)
+	nullable := injector.ProvideUserSession(c)
+	tx := injector.ProvideTx(c)
+	userRepository := repository.ProvideUserRepository(tx)
+	sessionRepository := repository.ProvideSessionRepository(tx)
+	settingsResource := ProvideSettingsResource(securityLog, sessionCookieService, nullable, userRepository, sessionRepository)
+	return settingsResource
 }

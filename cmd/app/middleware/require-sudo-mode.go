@@ -28,8 +28,10 @@ func RegisterRequireSudoModeMiddleware(group *gin.RouterGroup) {
 
 func (m *RequireSudoModeMiddleware) Handle() {
 	c := m.c
+	sessionCookieService := m.sessionCookieService
+	sessionRepository := m.sessionRepository
 
-	sudoSessionId, err := m.sessionCookieService.GetSessionCookie(domain_model.USER_SESSION_TYPE_SUDO)
+	sudoSessionId, err := sessionCookieService.GetSessionCookie(domain_model.USER_SESSION_TYPE_SUDO)
 	if err != nil {
 		c.AbortWithError(http.StatusInternalServerError, util.Wrap("getting session cookie failed", err))
 		return
@@ -40,7 +42,7 @@ func (m *RequireSudoModeMiddleware) Handle() {
 		return
 	}
 
-	session, err := m.sessionRepository.GetSessionAndUser(sudoSessionId.Val, domain_model.USER_SESSION_TYPE_SUDO)
+	session, err := sessionRepository.GetSessionAndUser(sudoSessionId.OrPanic(), domain_model.USER_SESSION_TYPE_SUDO)
 	if err != nil {
 		c.AbortWithError(http.StatusInternalServerError, util.Wrap("getting sudo session failed", err))
 		return
@@ -51,7 +53,7 @@ func (m *RequireSudoModeMiddleware) Handle() {
 		return
 	}
 
-	if err := m.sessionRepository.UpdateSessionTimeout(session.Val.UserSessionID, time.Now().Add(domain_model.SUDO_SESSION_DURATION)); err != nil {
+	if err := sessionRepository.UpdateSessionTimeout(session.OrPanic().UserSessionID, time.Now().Add(domain_model.SUDO_SESSION_DURATION)); err != nil {
 		c.AbortWithError(http.StatusInternalServerError, util.Wrap("issue updating session timeout in db", err))
 		return
 	}

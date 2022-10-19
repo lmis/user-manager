@@ -28,12 +28,13 @@ func RegisterDatabaseMiddleware(group *gin.RouterGroup) {
 func (m *DatabaseMiddleware) Handle() {
 	c := m.c
 	log := m.log
+	database := m.database
 
 	ctx, cancelTimeout := db.DefaultQueryContext()
 	defer cancelTimeout()
 
 	log.Info("BEGIN Transaction")
-	tx, err := m.database.BeginTx(ctx, nil)
+	tx, err := database.BeginTx(ctx, nil)
 	if err != nil {
 		c.AbortWithError(http.StatusInternalServerError, util.Wrap("begin transaction failed", err))
 		return

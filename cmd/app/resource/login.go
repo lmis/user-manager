@@ -57,8 +57,11 @@ type LoginResponseTO struct {
 
 func (r *LoginResource) Login(requestTO *LoginTO) (*LoginResponseTO, error) {
 	securityLog := r.securityLog
+	sessionCookieService := r.sessionCookieService
+	userRepository := r.userRepository
+	sessionRepository := r.sessionRepository
 
-	maybeUser, err := r.userRepository.GetUser(requestTO.Email)
+	maybeUser, err := userRepository.GetUser(requestTO.Email)
 	if err != nil {
 		return nil, util.Wrap("error fetching user", err)
 	}
@@ -86,11 +89,11 @@ func (r *LoginResource) Login(requestTO *LoginTO) (*LoginResponseTO, error) {
 
 	securityLog.Info("Login")
 	sessionId := util.MakeRandomURLSafeB64(21)
-	if err = r.sessionRepository.InsertSession(sessionId, domain_model.USER_SESSION_TYPE_LOGIN, user.AppUserID, domain_model.LOGIN_SESSION_DURATION); err != nil {
+	if err = sessionRepository.InsertSession(sessionId, domain_model.USER_SESSION_TYPE_LOGIN, user.AppUserID, domain_model.LOGIN_SESSION_DURATION); err != nil {
 		return nil, util.Wrap("error inserting session", err)
 	}
 
-	r.sessionCookieService.SetSessionCookie(nullable.Of(sessionId), domain_model.USER_SESSION_TYPE_LOGIN)
+	sessionCookieService.SetSessionCookie(nullable.Of(sessionId), domain_model.USER_SESSION_TYPE_LOGIN)
 	return &LoginResponseTO{LOGIN_RESPONSE_LOGGED_IN}, nil
 }
 
@@ -133,24 +136,24 @@ func (r *LoginResource) LoginWithSecondFactor(requestTO *LoginWithSecondFactorTO
 			return nil, util.Wrap("error loading throttling", err)
 		}
 
-		if throttling.IsPresent && throttling.Val.TimeoutUntil.IsPresent && throttling.Val.TimeoutUntil.Val.After(time.Now()) {
+		if throttling.IsPresent && throttling.OrPanic().TimeoutUntil.IsPresent && throttling.OrPanic().TimeoutUntil.OrPanic().After(time.Now()) {
 			securityLog.Info("Throttled 2FA attempted")
-			return &LoginWithSecondFactorResponseTO{TimeoutUntil: throttling.Val.TimeoutUntil.Val}, nil
+			return &LoginWithSecondFactorResponseTO{TimeoutUntil: throttling.OrPanic().TimeoutUntil.OrPanic()}, nil
 		}
 
-		tokenMatches := user.TwoFactorToken.IsPresent && totp.Validate(requestTO.SecondFactor, user.TwoFactorToken.Val)
+		tokenMatches := user.TwoFactorToken.IsPresent && totp.Validate(requestTO.SecondFactor, user.TwoFactorToken.OrPanic())
 
 		if throttling.IsPresent {
 			failedAttemptsSinceLastSuccess := 0
 			timeoutUntil := nullable.Empty[time.Time]()
 			if !tokenMatches {
-				failedAttemptsSinceLastSuccess = throttling.Val.FailedAttemptsSinceLastSuccess + 1
+				failedAttemptsSinceLastSuccess = throttling.OrPanic().FailedAttemptsSinceLastSuccess + 1
 				// TODO: Check this exponential timeout logic
 				if failedAttemptsSinceLastSuccess%5 == 0 {
 					timeoutUntil = nullable.Of(time.Now().Add(time.Minute * 3 * time.Duration(failedAttemptsSinceLastSuccess)))
 				}
 			}
-			if err := secondFactorThrottlingRepository.Update(throttling.Val.TwoFactorThrottlingID, failedAttemptsSinceLastSuccess, timeoutUntil); err != nil {
+			if err := secondFactorThrottlingRepository.Update(throttling.OrPanic().TwoFactorThrottlingID, failedAttemptsSinceLastSuccess, timeoutUntil); err != nil {
 				return nil, util.Wrap("issue updating throttling in db", err)
 			}
 		} else if !tokenMatches {
@@ -185,7 +188,7 @@ func (r *LoginResource) LoginWithSecondFactor(requestTO *LoginWithSecondFactorTO
 			return &LoginWithSecondFactorResponseTO{}, nil
 		}
 
-		deviceSession, err := sessionRepository.GetSessionAndUser(maybeDeviceSessionId.Val, domain_model.USER_SESSION_TYPE_REMEMBER_DEVICE)
+		deviceSession, err := sessionRepository.GetSessionAndUser(maybeDeviceSessionId.OrPanic(), domain_model.USER_SESSION_TYPE_REMEMBER_DEVICE)
 
 		if err != nil {
 			return nil, util.Wrap("fetching device session failed", err)

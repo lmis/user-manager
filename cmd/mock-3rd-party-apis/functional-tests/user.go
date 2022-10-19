@@ -8,7 +8,7 @@ import (
 )
 
 func TestUserEndpointBeforeSignup(config *config.Config, _ mock_util.Emails, _ *mock_util.TestUser) error {
-	resp, err := mock_util.MakeApiRequest("GET", config, "user", nil, nil)
+	resp, err := mock_util.MakeApiRequest("GET", config, "user-info", nil, nil)
 	if err != nil {
 		return util.Wrap("error making user request", err)
 	}

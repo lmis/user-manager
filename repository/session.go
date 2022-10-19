@@ -72,7 +72,7 @@ func (r *SessionRepository) GetSessionAndUser(sessionId domain_model.UserSession
 	}
 
 	roles, err := db.Fetch(func(ctx context.Context) (models.AppUserRoleSlice, error) {
-		return models.AppUserRoles(models.AppUserRoleWhere.AppUserID.EQ(session.Val.AppUserID)).
+		return models.AppUserRoles(models.AppUserRoleWhere.AppUserID.EQ(session.OrPanic().AppUserID)).
 			All(ctx, r.tx)
 	})
 
@@ -84,5 +84,5 @@ func (r *SessionRepository) GetSessionAndUser(sessionId domain_model.UserSession
 		return nullable.Empty[*domain_model.UserSession](), nil
 	}
 
-	return nullable.NeverNil(domain_model.FromUserSessionAppUserAndUserRolesModel(session.Val, session.Val.R.AppUser, roles.Val)), nil
+	return nullable.NeverNil(domain_model.FromUserSessionAppUserAndUserRolesModel(session.OrPanic(), session.OrPanic().R.AppUser, roles.OrPanic())), nil
 }

@@ -45,7 +45,7 @@ func (r *LogoutResource) Logout(request LogoutTO) error {
 
 	sessionCookieService.RemoveSessionCookie(domain_model.USER_SESSION_TYPE_LOGIN)
 	if userSession.IsPresent {
-		if err := sessionRepository.Delete(userSession.Val.UserSessionID); err != nil {
+		if err := sessionRepository.Delete(userSession.OrPanic().UserSessionID); err != nil {
 			return util.Wrap("issue while deleting login session", err)
 		}
 	}
@@ -56,7 +56,7 @@ func (r *LogoutResource) Logout(request LogoutTO) error {
 	}
 	if sudoSessionId.IsPresent {
 		sessionCookieService.RemoveSessionCookie(domain_model.USER_SESSION_TYPE_SUDO)
-		if err := sessionRepository.Delete(domain_model.UserSessionID(sudoSessionId.Val)); err != nil {
+		if err := sessionRepository.Delete(domain_model.UserSessionID(sudoSessionId.OrPanic())); err != nil {
 			return util.Wrap("issue while deleting sudo session", err)
 		}
 	}
@@ -67,7 +67,7 @@ func (r *LogoutResource) Logout(request LogoutTO) error {
 		}
 		if deviceSessionId.IsPresent {
 			sessionCookieService.RemoveSessionCookie(domain_model.USER_SESSION_TYPE_REMEMBER_DEVICE)
-			if err := sessionRepository.Delete(domain_model.UserSessionID(deviceSessionId.Val)); err != nil {
+			if err := sessionRepository.Delete(domain_model.UserSessionID(deviceSessionId.OrPanic())); err != nil {
 				return util.Wrap("issue while deleting device session", err)
 			}
 		}

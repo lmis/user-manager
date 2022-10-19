@@ -6,7 +6,6 @@ import (
 	"user-manager/repository"
 	"user-manager/service"
 	"user-manager/util"
-	"user-manager/util/nullable"
 
 	"github.com/gin-gonic/gin"
 )
@@ -16,7 +15,6 @@ type SignUpResource struct {
 	mailQueueService *service.MailQueueService
 	authService      *service.AuthService
 	securityLog      domain_model.SecurityLog
-	userSession      nullable.Nullable[*domain_model.UserSession]
 }
 
 func ProvideSignUpResource(
@@ -24,14 +22,12 @@ func ProvideSignUpResource(
 	mailQueueService *service.MailQueueService,
 	authService *service.AuthService,
 	securityLog domain_model.SecurityLog,
-	userSession nullable.Nullable[*domain_model.UserSession],
 ) *SignUpResource {
-	return &SignUpResource{userRepository, mailQueueService, authService, securityLog, userSession}
+	return &SignUpResource{userRepository, mailQueueService, authService, securityLog}
 }
 
 func RegisterSignUpResource(group *gin.RouterGroup) {
 	group.POST("sign-up", ginext.WrapEndpointWithoutResponseBody(InitializeSignUpResource, (*SignUpResource).SignUp))
-	group.POST("re-trigger-confirmation-email", ginext.WrapEndpointWithoutRequestBody(InitializeSignUpResource, (*SignUpResource).RetriggerVerificationEmail))
 }
 
 type SignUpTO struct {
@@ -53,7 +49,7 @@ func (r *SignUpResource) SignUp(requestTO *SignUpTO) error {
 	}
 	if user.IsPresent {
 		securityLog.Info("User already exists")
-		if err = mailQueueService.SendSignUpAttemptEmail(user.Val.Language, user.Val.Email); err != nil {
+		if err = mailQueueService.SendSignUpAttemptEmail(user.OrPanic().Language, user.OrPanic().Email); err != nil {
 			return util.Wrap("error sending signup attempted email", err)
 		}
 		return nil
@@ -79,27 +75,4 @@ func (r *SignUpResource) SignUp(requestTO *SignUpTO) error {
 	}
 
 	return nil
-}
-
-type RetriggerConfirmationEmailResponseTO struct {
-	Sent bool `json:"sent"`
-}
-
-func (r *SignUpResource) RetriggerVerificationEmail() (*RetriggerConfirmationEmailResponseTO, error) {
-	user := r.userSession.OrPanic().User
-
-	if user.EmailVerified {
-		r.securityLog.Info("Email already verified")
-		return &RetriggerConfirmationEmailResponseTO{Sent: false}, nil
-	}
-
-	if err := r.userRepository.UpdateUserEmailVerificationToken(user.AppUserID, util.MakeRandomURLSafeB64(21)); err != nil {
-		return nil, util.Wrap("issue updating token", err)
-	}
-
-	if err := r.mailQueueService.SendVerificationEmail(user.Language, user.Email, user.EmailVerificationToken.OrPanic()); err != nil {
-		return nil, util.Wrap("error sending verification email", err)
-	}
-
-	return &RetriggerConfirmationEmailResponseTO{Sent: true}, nil
 }

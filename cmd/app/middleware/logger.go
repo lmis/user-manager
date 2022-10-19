@@ -96,8 +96,8 @@ func getMetadata(logger *RequestLogger) *LogMetadata {
 		Latency:       logger.latency,
 	}
 	if userSession.IsPresent {
-		metadata.UserID = int(userSession.Val.User.AppUserID)
-		metadata.Roles = userSession.Val.User.UserRoles
+		metadata.UserID = int(userSession.OrPanic().User.AppUserID)
+		metadata.Roles = userSession.OrPanic().User.UserRoles
 	}
 	return &metadata
 }

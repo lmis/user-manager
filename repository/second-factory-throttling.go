@@ -34,13 +34,13 @@ func (r *SecondFactorThrottlingRepository) GetForUser(userId domain_model.AppUse
 	if throttling.IsEmpty() {
 		return nullable.Empty[*domain_model.SecondFactorThrottling](), nil
 	}
-	return nullable.NeverNil(domain_model.FromSecondFactorThrottlingModel(throttling.Val)), nil
+	return nullable.NeverNil(domain_model.FromSecondFactorThrottlingModel(throttling.OrPanic())), nil
 }
 func (r *SecondFactorThrottlingRepository) Update(throttlingId domain_model.TwoFactorThrottlingID, failedAttemptsSinceLastSuccess int, timeoutUntil nullable.Nullable[time.Time]) error {
 	return db.ExecSingleMutation(func(ctx context.Context) (int64, error) {
 		throttling := models.TwoFactorThrottling{TwoFactorThrottlingID: int64(throttlingId), FailedAttemptsSinceLastSuccess: failedAttemptsSinceLastSuccess}
 		if timeoutUntil.IsPresent {
-			throttling.TimeoutUntil = null.TimeFrom(timeoutUntil.Val)
+			throttling.TimeoutUntil = null.TimeFrom(timeoutUntil.OrPanic())
 		}
 		return throttling.Update(ctx, r.tx, boil.Whitelist(models.TwoFactorThrottlingColumns.FailedAttemptsSinceLastSuccess, models.TwoFactorThrottlingColumns.TimeoutUntil))
 	})

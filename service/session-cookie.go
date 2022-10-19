@@ -11,11 +11,12 @@ import (
 )
 
 type SessionCookieService struct {
-	ctx *gin.Context
+	ctx    *gin.Context
+	config *domain_model.Config
 }
 
-func ProvideSessionCookieService(ctx *gin.Context) *SessionCookieService {
-	return &SessionCookieService{ctx}
+func ProvideSessionCookieService(ctx *gin.Context, config *domain_model.Config) *SessionCookieService {
+	return &SessionCookieService{ctx, config}
 }
 
 func (s *SessionCookieService) RemoveSessionCookie(sessionType domain_model.UserSessionType) {
@@ -23,16 +24,27 @@ func (s *SessionCookieService) RemoveSessionCookie(sessionType domain_model.User
 }
 
 func (s *SessionCookieService) SetSessionCookie(sessionID nullable.Nullable[string], sessionType domain_model.UserSessionType) {
-	maxAge := int(domain_model.LOGIN_SESSION_DURATION.Seconds())
-	if sessionID.IsEmpty() {
-		maxAge = -1
+	ctx := s.ctx
+	config := s.config
+
+	maxAge := -1
+	value := ""
+	if sessionID.IsPresent {
+		value = sessionID.OrPanic()
+		maxAge = int(domain_model.LOGIN_SESSION_DURATION.Seconds())
 	}
-	s.ctx.SetCookie(s.getCookieName(sessionType), sessionID.Val, maxAge, "", "", true, true)
-	s.ctx.SetSameSite(http.SameSiteStrictMode)
+	secure := true
+	if config.IsLocalEnv() {
+		secure = false
+	}
+	ctx.SetCookie(s.getCookieName(sessionType), value, maxAge, "", "", secure, true)
+	ctx.SetSameSite(http.SameSiteStrictMode)
 }
 
 func (s *SessionCookieService) GetSessionCookie(sessionType domain_model.UserSessionType) (nullable.Nullable[domain_model.UserSessionID], error) {
-	cookie, err := s.ctx.Request.Cookie(s.getCookieName(sessionType))
+	ctx := s.ctx
+
+	cookie, err := ctx.Request.Cookie(s.getCookieName(sessionType))
 	if err != nil {
 		if err == http.ErrNoCookie {
 			return nullable.Empty[domain_model.UserSessionID](), nil

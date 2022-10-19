@@ -53,6 +53,7 @@ func registerSuperAdminGroup(superAdmin *gin.RouterGroup) {
 
 func registerAuthGroup(auth *gin.RouterGroup) {
 	middleware.RegisterTimingObfuscationMiddleware(auth, 400*time.Millisecond)
+	resource.RegisterSignUpResource(auth)
 	resource.RegisterLoginResource(auth)
 	resource.RegisterLogoutResource(auth)
 	// 	POST("request-password-reset", ginext.WrapEndpointWithoutResponseBody(auth.PostRequestPasswordReset)).
@@ -61,7 +62,6 @@ func registerAuthGroup(auth *gin.RouterGroup) {
 
 func registerUserGroup(user *gin.RouterGroup) {
 	middleware.RegisterRequireRoleMiddlware(user, domain_model.USER_ROLE_USER)
-	resource.RegisterSignUpResource(user)
 	resource.RegisterEmailConfirmationResource(user)
 
 	registerSettingsGroup(user.Group("settings"))
@@ -69,10 +69,8 @@ func registerUserGroup(user *gin.RouterGroup) {
 
 func registerSettingsGroup(settings *gin.RouterGroup) {
 	middleware.RegisterVerifiedEmailAuthorizationMiddleware(settings)
+	resource.RegisterSettingsResource(settings)
 	// settings.POST("sudo", ginext.WrapEndpoint(user_settings_endpoint.PostSudo)).
-	// 	POST("language", ginext.WrapEndpointWithoutResponseBody(user_settings_endpoint.PostLanguage)).
-	// 	POST("confirm-email-change", ginext.WrapEndpoint(user_settings_endpoint.PostConfirmEmailChange)).
-	// 	POST("generate-temporary-2fa", todo)
 	registerSensitiveSettingsGroup(settings.Group("sensitive-settings"))
 }
 func registerSensitiveSettingsGroup(sensitiveSettings *gin.RouterGroup) {

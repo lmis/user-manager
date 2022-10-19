@@ -33,3 +33,8 @@ func InitializeLogoutResource(c *gin.Context) *LogoutResource {
 	wire.Build(ProvideLogoutResource, injector.AllDependencies)
 	return &LogoutResource{}
 }
+
+func InitializeSettingsResource(c *gin.Context) *SettingsResource {
+	wire.Build(ProvideSettingsResource, injector.AllDependencies)
+	return &SettingsResource{}
+}

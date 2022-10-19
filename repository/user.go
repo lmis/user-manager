@@ -35,7 +35,7 @@ func (r *UserRepository) GetUser(email string) (nullable.Nullable[*domain_model.
 	if user.IsEmpty() {
 		return nullable.Empty[*domain_model.AppUser](), nil
 	}
-	return nullable.NeverNil(domain_model.FromAppUserAndUserRolesModel(user.Val, user.Val.R.AppUserRoles)), nil
+	return nullable.NeverNil(domain_model.FromAppUserAndUserRolesModel(user.OrPanic(), user.OrPanic().R.AppUserRoles)), nil
 }
 
 func (r *UserRepository) UpdateUserEmailVerificationToken(appUserId domain_model.AppUserID, token string) error {
@@ -43,13 +43,33 @@ func (r *UserRepository) UpdateUserEmailVerificationToken(appUserId domain_model
 		return (&models.AppUser{AppUserID: int64(appUserId), EmailVerificationToken: null.StringFrom(token)}).Update(ctx, r.tx, boil.Whitelist(models.AppUserColumns.EmailVerificationToken))
 	})
 }
-func (r *UserRepository) UpdateUserEmailVerification(appUserId domain_model.AppUserID, token nullable.Nullable[string], verified bool) error {
+func (r *UserRepository) SetEmailToVerified(appUserId domain_model.AppUserID) error {
 	return db.ExecSingleMutation(func(ctx context.Context) (int64, error) {
-		user := &models.AppUser{AppUserID: int64(appUserId), EmailVerified: verified}
-		if token.IsPresent {
-			user.EmailVerificationToken = null.StringFrom(token.Val)
+		user := &models.AppUser{AppUserID: int64(appUserId), EmailVerified: true}
+		return user.Update(ctx, r.tx, boil.Whitelist(
+			models.AppUserColumns.EmailVerificationToken,
+			models.AppUserColumns.EmailVerified))
+	})
+}
+
+func (r *UserRepository) SetEmailAsVerified(appUserId domain_model.AppUserID, email string) error {
+	return db.ExecSingleMutation(func(ctx context.Context) (int64, error) {
+		user := &models.AppUser{
+			AppUserID:     int64(appUserId),
+			EmailVerified: true,
+			Email:         email,
 		}
-		return user.Update(ctx, r.tx, boil.Whitelist(models.AppUserColumns.EmailVerificationToken, models.AppUserColumns.EmailVerified))
+		return user.Update(ctx, r.tx, boil.Whitelist(
+			models.AppUserColumns.Email,
+			models.AppUserColumns.NewEmail,
+			models.AppUserColumns.EmailVerificationToken,
+			models.AppUserColumns.EmailVerified))
+	})
+}
+func (r *UserRepository) UpdateLanguage(appUserId domain_model.AppUserID, language domain_model.UserLanguage) error {
+	return db.ExecSingleMutation(func(ctx context.Context) (int64, error) {
+		user := &models.AppUser{AppUserID: int64(appUserId), Language: models.UserLanguage(language)}
+		return user.Update(ctx, r.tx, boil.Whitelist(models.AppUserColumns.Language))
 	})
 }
 
