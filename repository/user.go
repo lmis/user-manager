@@ -52,18 +52,29 @@ func (r *UserRepository) SetEmailToVerified(appUserId domain_model.AppUserID) er
 	})
 }
 
-func (r *UserRepository) SetEmailAsVerified(appUserId domain_model.AppUserID, email string) error {
+func (r *UserRepository) SetNextEmail(appUserId domain_model.AppUserID, nextEmail string, verificationToken string) error {
 	return db.ExecSingleMutation(func(ctx context.Context) (int64, error) {
 		user := &models.AppUser{
-			AppUserID:     int64(appUserId),
-			EmailVerified: true,
-			Email:         email,
+			AppUserID:              int64(appUserId),
+			NextEmail:              null.StringFrom(nextEmail),
+			EmailVerificationToken: null.StringFrom(verificationToken),
+		}
+		return user.Update(ctx, r.tx, boil.Whitelist(
+			models.AppUserColumns.NextEmail,
+			models.AppUserColumns.EmailVerificationToken))
+	})
+}
+
+func (r *UserRepository) SetEmailAndClearNextEmail(appUserId domain_model.AppUserID, email string) error {
+	return db.ExecSingleMutation(func(ctx context.Context) (int64, error) {
+		user := &models.AppUser{
+			AppUserID: int64(appUserId),
+			Email:     email,
 		}
 		return user.Update(ctx, r.tx, boil.Whitelist(
 			models.AppUserColumns.Email,
-			models.AppUserColumns.NewEmail,
-			models.AppUserColumns.EmailVerificationToken,
-			models.AppUserColumns.EmailVerified))
+			models.AppUserColumns.NextEmail,
+			models.AppUserColumns.EmailVerificationToken))
 	})
 }
 func (r *UserRepository) UpdateLanguage(appUserId domain_model.AppUserID, language domain_model.UserLanguage) error {

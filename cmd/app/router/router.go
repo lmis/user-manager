@@ -78,5 +78,5 @@ func registerSensitiveSettingsGroup(sensitiveSettings *gin.RouterGroup) {
 	middleware.RegisterRequireSudoModeMiddleware(sensitiveSettings)
 	// sensitiveSettings.POST("change-email", ginext.WrapEndpointWithoutResponseBody(sensitive_user_settings_endpoint.PostChangeEmail)).
 	// 	POST("change-password", todo).
-	// 	POST("2fa", todo)
+	// 	POST("second-factor", todo)
 }

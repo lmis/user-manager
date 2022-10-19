@@ -113,7 +113,7 @@ func (r *SettingsResource) ConfirmEmailChange(request *EmailChangeConfirmationTO
 
 	user := userSession.OrPanic().User
 
-	if !user.NewEmail.IsPresent {
+	if user.NextEmail.IsEmpty() {
 		return &EmailChangeConfirmationResponseTO{EMAIL_CHANGE_RESPONSE_NO_CHANGE_IN_PROGRESS}, nil
 	}
 
@@ -126,7 +126,7 @@ func (r *SettingsResource) ConfirmEmailChange(request *EmailChangeConfirmationTO
 		return &EmailChangeConfirmationResponseTO{EMAIL_CHANGE_RESPONSE_INVALID_TOKEN}, nil
 	}
 
-	if err := userRepository.SetEmailAsVerified(user.AppUserID, user.NewEmail.OrPanic()); err != nil {
+	if err := userRepository.SetEmailAndClearNextEmail(user.AppUserID, user.NextEmail.OrPanic()); err != nil {
 		return nil, util.Wrap("issue setting email ", err)
 	}
 

@@ -170,11 +170,11 @@ type ChangeEmailTO struct {
 ```
 
 #### Future endpoints
-##### POST   /api/user/settings/generate-temporary-2fa
+##### POST   /api/user/settings/generate-temporary-second-factor-token
 Generates and stores a secret to be used when users enable 2FA
 ##### POST   /api/user/settings/sensitive/change-password
 Allows users to change their password
-##### POST   /api/user/settings/sensitive/2fa
+##### POST   /api/user/settings/sensitive/second-factor
 Enable / Disable 2FA login
 
 ### Session cookies

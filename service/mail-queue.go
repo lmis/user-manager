@@ -48,7 +48,7 @@ func (s *MailQueueService) SendSignUpAttemptEmail(language domain_model.UserLang
 	return nil
 }
 
-func (s *MailQueueService) SendChangeVerificationEmail(language domain_model.UserLanguage, email string, verificationToken string, newEmail string) error {
+func (s *MailQueueService) SendChangeVerificationEmail(language domain_model.UserLanguage, newEmail string, verificationToken string) error {
 	translation := s.translations[language]
 	config := s.config
 

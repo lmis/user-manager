@@ -38,3 +38,8 @@ func InitializeSettingsResource(c *gin.Context) *SettingsResource {
 	wire.Build(ProvideSettingsResource, injector.AllDependencies)
 	return &SettingsResource{}
 }
+
+func InitializeSensitiveSettingsResource(c *gin.Context) *SensitiveSettingsResource {
+	wire.Build(ProvideSensitiveSettingsResource, injector.AllDependencies)
+	return &SensitiveSettingsResource{}
+}

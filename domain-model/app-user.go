@@ -18,7 +18,7 @@ type AppUser struct {
 	Email                        string
 	EmailVerified                bool
 	EmailVerificationToken       nullable.Nullable[string]
-	NewEmail                     nullable.Nullable[string]
+	NextEmail                    nullable.Nullable[string]
 	PasswordResetToken           nullable.Nullable[string]
 	PasswordResetTokenValidUntil nullable.Nullable[time.Time]
 	SecondFactorToken            nullable.Nullable[string]
@@ -42,7 +42,7 @@ func FromAppUserAndUserRolesModel(m *models.AppUser, r models.AppUserRoleSlice) 
 		Email:                        m.Email,
 		EmailVerified:                m.EmailVerified,
 		EmailVerificationToken:       nullable.FromNullString(m.EmailVerificationToken),
-		NewEmail:                     nullable.FromNullString(m.NewEmail),
+		NextEmail:                    nullable.FromNullString(m.NextEmail),
 		PasswordResetToken:           nullable.FromNullString(m.PasswordResetToken),
 		PasswordResetTokenValidUntil: nullable.FromNullTime(m.PasswordResetTokenValidUntil),
 		SecondFactorToken:            nullable.FromNullString(m.SecondFactorToken),

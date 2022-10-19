@@ -83,3 +83,17 @@ func InitializeSettingsResource(c *gin.Context) *SettingsResource {
 	settingsResource := ProvideSettingsResource(securityLog, sessionCookieService, nullable, userRepository, sessionRepository)
 	return settingsResource
 }
+
+func InitializeSensitiveSettingsResource(c *gin.Context) *SensitiveSettingsResource {
+	securityLog := injector.ProvideSecurityLog(c)
+	tx := injector.ProvideTx(c)
+	mailQueueRepository := repository.ProvideMailQueueRepository(tx)
+	config := injector.ProvideConfig()
+	v := injector.ProvideTranslations()
+	template := injector.ProvideBaseTemplate()
+	mailQueueService := service.ProvideMailQueueService(mailQueueRepository, config, v, template)
+	nullable := injector.ProvideUserSession(c)
+	userRepository := repository.ProvideUserRepository(tx)
+	sensitiveSettingsResource := ProvideSensitiveSettingsResource(securityLog, mailQueueService, nullable, userRepository)
+	return sensitiveSettingsResource
+}
