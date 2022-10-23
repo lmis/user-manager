@@ -8,7 +8,7 @@ signUpAttemptedEmail:
   - "Signup attempt"
   - "You have tried to sign up for {{.ServiceName}} again."
   - "Since you already have an account, you can instead just log in normally and ignore this email."
-changeNotifiationEmail:
+changeNotificationEmail:
   - "Email addresse about to be changed"
   - "You have changed your email address for {{.ServiceName}} to {{.NewEmail}}."
   - "Your current email will remain in use, until you have confirmed your new email."
@@ -17,7 +17,7 @@ changeVerificationEmail:
   - "New email confirmation"
   - "You have changed your email address for {{.ServiceName}} to {{.NewEmail}}."
   - "To confirm this change, please click on the following link {{.AppUrl}}/email-verification?token={{.EmailVerificationToken}}"
-requestPasswordEmail: 
+resetPasswordEmail: 
   - "Password reset"
   - "You have reset your password for {{.ServiceName}}."
   - "Please click on the following Link to chose a new password: {{.AppUrl}}/password-reset?token={{.PasswordResetToken}}"

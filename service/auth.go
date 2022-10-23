@@ -14,6 +14,11 @@ func ProvideAuthService() *AuthService {
 }
 
 func (s *AuthService) Hash(password []byte) (string, error) {
+	if len(password) < 8 {
+		return "", util.Errorf("password too short")
+
+	}
+	// See https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html#input-limits
 	if len(password) > 71 {
 		return "", util.Errorf("password too long")
 

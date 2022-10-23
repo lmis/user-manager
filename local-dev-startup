@@ -11,7 +11,7 @@ export DB_HOST=localhost
 export DB_PORT=5432
 export DB_USER=postgres
 export DB_PASSWORD=$(cat /dev/random | head -c 15 | base64)
-_DOCKER_POSTGRES_NAME=postgres-local-dev-$(cat /proc/sys/kernel/random/uuid)
+_DOCKER_POSTGRES_NAME=postgres-local-dev
 
 killIfExists() {
     if [[ -n "$1" ]]

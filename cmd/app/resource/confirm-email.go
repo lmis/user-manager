@@ -28,7 +28,7 @@ func ProvideEmailConfirmationResource(
 }
 
 func RegisterEmailConfirmationResource(group *gin.RouterGroup) {
-	group.POST("confirm-email", ginext.WrapEndpoint(InitializeEmailConfirmationResource, (*EmailConfirmationResource).Post))
+	group.POST("confirm-email", ginext.WrapEndpoint(InitializeEmailConfirmationResource, (*EmailConfirmationResource).ConfirmEmail))
 	group.POST("re-trigger-confirmation-email", ginext.WrapEndpointWithoutRequestBody(InitializeEmailConfirmationResource, (*EmailConfirmationResource).RetriggerVerificationEmail))
 }
 
@@ -39,25 +39,23 @@ type EmailConfirmationTO struct {
 type EmailConfirmationStatus string
 
 const (
-	AlreadyConfirmed EmailConfirmationStatus = "already-confirmed"
-	NewlyConfirmed   EmailConfirmationStatus = "newly-confirmed"
-	InvalidToken     EmailConfirmationStatus = "invalid-token"
+	EMAIL_CONFIRMATION_RESPONSE_ALREADY_CONFIRMED EmailConfirmationStatus = "already-confirmed"
+	EMAIL_CONFIRMATION_RESPONSE_NEWLY_CONFIRMED   EmailConfirmationStatus = "newly-confirmed"
+	EMAIL_CONFIRMATION_RESPONSE_INVALID_TOKEN     EmailConfirmationStatus = "invalid-token"
 )
 
 type EmailConfirmationResponseTO struct {
 	Status EmailConfirmationStatus `json:"status"`
 }
 
-func (r *EmailConfirmationResource) Post(request *EmailConfirmationTO) (*EmailConfirmationResponseTO, error) {
+func (r *EmailConfirmationResource) ConfirmEmail(request *EmailConfirmationTO) (*EmailConfirmationResponseTO, error) {
 	securityLog := r.securityLog
 	user := r.userSession.OrPanic().User
 	userRepository := r.userRepository
 
 	if user.EmailVerified {
 		securityLog.Info("Email already verified")
-		return &EmailConfirmationResponseTO{
-			Status: AlreadyConfirmed,
-		}, nil
+		return &EmailConfirmationResponseTO{EMAIL_CONFIRMATION_RESPONSE_ALREADY_CONFIRMED}, nil
 	}
 
 	if user.EmailVerificationToken.IsEmpty() {
@@ -66,18 +64,14 @@ func (r *EmailConfirmationResource) Post(request *EmailConfirmationTO) (*EmailCo
 
 	if request.Token != user.EmailVerificationToken.OrPanic() {
 		securityLog.Info("Invalid email verification token")
-		return &EmailConfirmationResponseTO{
-			Status: InvalidToken,
-		}, nil
+		return &EmailConfirmationResponseTO{EMAIL_CONFIRMATION_RESPONSE_INVALID_TOKEN}, nil
 	}
 
 	if err := userRepository.SetEmailToVerified(user.AppUserID); err != nil {
 		return nil, util.Wrap("issue setting email to verified", err)
 	}
 
-	return &EmailConfirmationResponseTO{
-		Status: NewlyConfirmed,
-	}, nil
+	return &EmailConfirmationResponseTO{EMAIL_CONFIRMATION_RESPONSE_NEWLY_CONFIRMED}, nil
 }
 
 type RetriggerConfirmationEmailResponseTO struct {

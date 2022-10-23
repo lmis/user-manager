@@ -38,21 +38,20 @@ func (r *SessionRepository) InsertSession(sessionId string, sessionType domain_m
 }
 
 func (r *SessionRepository) UpdateSessionTimeout(sessionId domain_model.UserSessionID, timeout time.Time) error {
-	if err := db.ExecSingleMutation(func(ctx context.Context) (int64, error) {
-		return (&models.UserSession{UserSessionID: string(sessionId), TimeoutAt: timeout}).Update(ctx, r.tx, boil.Whitelist(models.UserSessionColumns.TimeoutAt))
-	}); err != nil {
-		return util.Wrap("error updating session timeout", err)
-	}
-	return nil
+	userSession := &models.UserSession{
+		UserSessionID: string(sessionId),
+		TimeoutAt:     timeout}
+	return db.ExecSingleMutation(func(ctx context.Context) (int64, error) {
+		return userSession.Update(ctx, r.tx, boil.Whitelist(models.UserSessionColumns.TimeoutAt))
+	})
 }
 
 func (r *SessionRepository) Delete(sessionId domain_model.UserSessionID) error {
-	if err := db.ExecSingleMutation(func(ctx context.Context) (int64, error) {
-		return (&models.UserSession{UserSessionID: string(sessionId)}).Delete(ctx, r.tx)
-	}); err != nil {
-		return util.Wrap("issue while deleting session", err)
-	}
-	return nil
+	userSession := &models.UserSession{
+		UserSessionID: string(sessionId)}
+	return db.ExecSingleMutation(func(ctx context.Context) (int64, error) {
+		return userSession.Delete(ctx, r.tx)
+	})
 }
 
 func (r *SessionRepository) GetSessionAndUser(sessionId domain_model.UserSessionID, sessionType domain_model.UserSessionType) (nullable.Nullable[*domain_model.UserSession], error) {

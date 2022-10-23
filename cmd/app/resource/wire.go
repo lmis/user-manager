@@ -43,3 +43,8 @@ func InitializeSensitiveSettingsResource(c *gin.Context) *SensitiveSettingsResou
 	wire.Build(ProvideSensitiveSettingsResource, injector.AllDependencies)
 	return &SensitiveSettingsResource{}
 }
+
+func InitializeResetPasswordResource(c *gin.Context) *ResetPasswordResource {
+	wire.Build(ProvideResetPasswordResource, injector.AllDependencies)
+	return &ResetPasswordResource{}
+}

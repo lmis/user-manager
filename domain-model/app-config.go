@@ -16,9 +16,10 @@ type Config struct {
 }
 
 const (
-	LOGIN_SESSION_DURATION  = 60 * time.Minute
-	SUDO_SESSION_DURATION   = 10 * time.Minute
-	DEVICE_SESSION_DURATION = 30 * 24 * time.Hour
+	LOGIN_SESSION_DURATION        = 60 * time.Minute
+	SUDO_SESSION_DURATION         = 10 * time.Minute
+	DEVICE_SESSION_DURATION       = 30 * 24 * time.Hour
+	PASSWORD_RESET_TOKEN_DURATION = 1 * time.Hour
 )
 
 func (conf *Config) IsLocalEnv() bool {

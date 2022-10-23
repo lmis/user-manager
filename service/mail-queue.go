@@ -87,7 +87,7 @@ func (s *MailQueueService) SendResetPasswordEmail(language domain_model.UserLang
 		"AppUrl":             config.AppUrl,
 		"PasswordResetToken": resetToken,
 	}
-	if err := s.enqueueBasicEmail(translation, translation.ChangeNotificationEmail, data, config.EmailFrom, email, domain_model.MAIL_QUEUE_PRIO_HIGH); err != nil {
+	if err := s.enqueueBasicEmail(translation, translation.ResetPasswordEmail, data, config.EmailFrom, email, domain_model.MAIL_QUEUE_PRIO_HIGH); err != nil {
 		return util.Wrap("error enqueuing basic email", err)
 	}
 	return nil
@@ -136,7 +136,7 @@ func (s *MailQueueService) enqueueBasicEmail(
 	subject := ""
 	paragraphs := []string{}
 	if len(templates) < 2 {
-		return util.Errorf("invalid template")
+		return util.Errorf("invalid template. %s need at least subject and paragraph", templates)
 	}
 	for i, t := range templates {
 		p, err := s.executeTemplate(t, data)

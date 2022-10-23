@@ -37,12 +37,16 @@ func (r *SecondFactorThrottlingRepository) GetForUser(userId domain_model.AppUse
 	return nullable.NeverNil(domain_model.FromSecondFactorThrottlingModel(throttling.OrPanic())), nil
 }
 func (r *SecondFactorThrottlingRepository) Update(throttlingId domain_model.SecondFactorThrottlingID, failedAttemptsSinceLastSuccess int, timeoutUntil nullable.Nullable[time.Time]) error {
+	throttling := models.SecondFactorThrottling{
+		SecondFactorThrottlingID:       int64(throttlingId),
+		FailedAttemptsSinceLastSuccess: failedAttemptsSinceLastSuccess}
+	if timeoutUntil.IsPresent {
+		throttling.TimeoutUntil = null.TimeFrom(timeoutUntil.OrPanic())
+	}
 	return db.ExecSingleMutation(func(ctx context.Context) (int64, error) {
-		throttling := models.SecondFactorThrottling{SecondFactorThrottlingID: int64(throttlingId), FailedAttemptsSinceLastSuccess: failedAttemptsSinceLastSuccess}
-		if timeoutUntil.IsPresent {
-			throttling.TimeoutUntil = null.TimeFrom(timeoutUntil.OrPanic())
-		}
-		return throttling.Update(ctx, r.tx, boil.Whitelist(models.SecondFactorThrottlingColumns.FailedAttemptsSinceLastSuccess, models.SecondFactorThrottlingColumns.TimeoutUntil))
+		return throttling.Update(ctx, r.tx, boil.Whitelist(
+			models.SecondFactorThrottlingColumns.FailedAttemptsSinceLastSuccess,
+			models.SecondFactorThrottlingColumns.TimeoutUntil))
 	})
 }
 

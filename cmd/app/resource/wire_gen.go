@@ -97,3 +97,17 @@ func InitializeSensitiveSettingsResource(c *gin.Context) *SensitiveSettingsResou
 	sensitiveSettingsResource := ProvideSensitiveSettingsResource(securityLog, mailQueueService, nullable, userRepository)
 	return sensitiveSettingsResource
 }
+
+func InitializeResetPasswordResource(c *gin.Context) *ResetPasswordResource {
+	securityLog := injector.ProvideSecurityLog(c)
+	authService := service.ProvideAuthService()
+	tx := injector.ProvideTx(c)
+	mailQueueRepository := repository.ProvideMailQueueRepository(tx)
+	config := injector.ProvideConfig()
+	v := injector.ProvideTranslations()
+	template := injector.ProvideBaseTemplate()
+	mailQueueService := service.ProvideMailQueueService(mailQueueRepository, config, v, template)
+	userRepository := repository.ProvideUserRepository(tx)
+	resetPasswordResource := ProvideResetPasswordResource(securityLog, authService, mailQueueService, userRepository)
+	return resetPasswordResource
+}

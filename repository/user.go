@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"time"
 	"user-manager/db"
 	"user-manager/db/generated/models"
 	domain_model "user-manager/domain-model"
@@ -22,7 +23,7 @@ func ProvideUserRepository(tx *sql.Tx) *UserRepository {
 	return &UserRepository{tx}
 }
 
-func (r *UserRepository) GetUser(email string) (nullable.Nullable[*domain_model.AppUser], error) {
+func (r *UserRepository) GetUserForEmail(email string) (nullable.Nullable[*domain_model.AppUser], error) {
 	user, err := db.Fetch(func(ctx context.Context) (*models.AppUser, error) {
 		return models.AppUsers(
 			models.AppUserWhere.Email.EQ(email),
@@ -44,44 +45,60 @@ func (r *UserRepository) UpdateUserEmailVerificationToken(appUserId domain_model
 	})
 }
 func (r *UserRepository) SetEmailToVerified(appUserId domain_model.AppUserID) error {
-	return db.ExecSingleMutation(func(ctx context.Context) (int64, error) {
-		user := &models.AppUser{AppUserID: int64(appUserId), EmailVerified: true}
-		return user.Update(ctx, r.tx, boil.Whitelist(
-			models.AppUserColumns.EmailVerificationToken,
-			models.AppUserColumns.EmailVerified))
-	})
+	return r.updateUser(
+		&models.AppUser{
+			AppUserID:     int64(appUserId),
+			EmailVerified: true},
+		models.AppUserColumns.EmailVerificationToken,
+		models.AppUserColumns.EmailVerified)
 }
 
 func (r *UserRepository) SetNextEmail(appUserId domain_model.AppUserID, nextEmail string, verificationToken string) error {
-	return db.ExecSingleMutation(func(ctx context.Context) (int64, error) {
-		user := &models.AppUser{
+	return r.updateUser(
+		&models.AppUser{
 			AppUserID:              int64(appUserId),
 			NextEmail:              null.StringFrom(nextEmail),
-			EmailVerificationToken: null.StringFrom(verificationToken),
-		}
-		return user.Update(ctx, r.tx, boil.Whitelist(
-			models.AppUserColumns.NextEmail,
-			models.AppUserColumns.EmailVerificationToken))
-	})
+			EmailVerificationToken: null.StringFrom(verificationToken)},
+		models.AppUserColumns.NextEmail,
+		models.AppUserColumns.EmailVerificationToken)
 }
 
 func (r *UserRepository) SetEmailAndClearNextEmail(appUserId domain_model.AppUserID, email string) error {
-	return db.ExecSingleMutation(func(ctx context.Context) (int64, error) {
-		user := &models.AppUser{
+	return r.updateUser(
+		&models.AppUser{
 			AppUserID: int64(appUserId),
-			Email:     email,
-		}
-		return user.Update(ctx, r.tx, boil.Whitelist(
-			models.AppUserColumns.Email,
-			models.AppUserColumns.NextEmail,
-			models.AppUserColumns.EmailVerificationToken))
-	})
+			Email:     email},
+		models.AppUserColumns.Email,
+		models.AppUserColumns.NextEmail,
+		models.AppUserColumns.EmailVerificationToken)
 }
-func (r *UserRepository) UpdateLanguage(appUserId domain_model.AppUserID, language domain_model.UserLanguage) error {
-	return db.ExecSingleMutation(func(ctx context.Context) (int64, error) {
-		user := &models.AppUser{AppUserID: int64(appUserId), Language: models.UserLanguage(language)}
-		return user.Update(ctx, r.tx, boil.Whitelist(models.AppUserColumns.Language))
-	})
+
+func (r *UserRepository) SetPasswordResetToken(appUserId domain_model.AppUserID, token string, validUntil time.Time) error {
+	return r.updateUser(
+		&models.AppUser{
+			AppUserID:                    int64(appUserId),
+			PasswordResetToken:           null.StringFrom(token),
+			PasswordResetTokenValidUntil: null.TimeFrom(validUntil)},
+		models.AppUserColumns.PasswordResetToken,
+		models.AppUserColumns.PasswordResetTokenValidUntil)
+}
+
+func (r *UserRepository) SetPasswordHash(appUserId domain_model.AppUserID, hash string) error {
+	return r.updateUser(
+		&models.AppUser{
+			AppUserID:    int64(appUserId),
+			PasswordHash: hash},
+		models.AppUserColumns.PasswordHash,
+		models.AppUserColumns.PasswordResetToken,
+		models.AppUserColumns.PasswordResetTokenValidUntil)
+}
+
+func (r *UserRepository) SetLanguage(appUserId domain_model.AppUserID, language domain_model.UserLanguage) error {
+	return r.updateUser(
+		&models.AppUser{
+			AppUserID: int64(appUserId),
+			Language:  models.UserLanguage(language)},
+		models.AppUserColumns.Language)
 }
 
 func (r *UserRepository) Insert(userRole domain_model.UserRole, userName string, email string, emailVerified bool, emailVerificationToken string, passwordHash string, language domain_model.UserLanguage) error {
@@ -105,4 +122,10 @@ func (r *UserRepository) Insert(userRole domain_model.UserRole, userName string,
 		return util.Wrap("cannot insert user role", err)
 	}
 	return nil
+}
+
+func (r *UserRepository) updateUser(user *models.AppUser, columns ...string) error {
+	return db.ExecSingleMutation(func(ctx context.Context) (int64, error) {
+		return user.Update(ctx, r.tx, boil.Whitelist(columns...))
+	})
 }

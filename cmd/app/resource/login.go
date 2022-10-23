@@ -61,7 +61,7 @@ func (r *LoginResource) Login(requestTO *LoginTO) (*LoginResponseTO, error) {
 	userRepository := r.userRepository
 	sessionRepository := r.sessionRepository
 
-	maybeUser, err := userRepository.GetUser(requestTO.Email)
+	maybeUser, err := userRepository.GetUserForEmail(requestTO.Email)
 	if err != nil {
 		return nil, util.Wrap("error fetching user", err)
 	}
@@ -115,7 +115,7 @@ func (r *LoginResource) LoginWithSecondFactor(requestTO *LoginWithSecondFactorTO
 	secondFactorThrottlingRepository := r.secondFactorThrottlingRepository
 	securityLog := r.securityLog
 
-	maybeUser, err := userRepository.GetUser(requestTO.Email)
+	maybeUser, err := userRepository.GetUserForEmail(requestTO.Email)
 	if err != nil {
 		return nil, util.Wrap("error finding user", err)
 	}

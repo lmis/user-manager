@@ -8,6 +8,8 @@ import (
 	config "user-manager/cmd/mock-3rd-party-apis/config"
 	functional_tests "user-manager/cmd/mock-3rd-party-apis/functional-tests"
 	mock_util "user-manager/cmd/mock-3rd-party-apis/util"
+	"user-manager/db/generated/models"
+	domain_model "user-manager/domain-model"
 	email_api "user-manager/third-party-models/email-api"
 	"user-manager/util"
 
@@ -21,10 +23,6 @@ func main() {
 
 func startServer(log util.Logger, dir string) error {
 	emails := make(mock_util.Emails)
-	testUser := mock_util.TestUser{
-		Email:    "test-user-" + util.MakeRandomURLSafeB64(3) + "@example.com",
-		Password: []byte("hunter12"),
-	}
 	log.Info("Starting up")
 	config, err := config.GetConfig(log)
 	if err != nil {
@@ -33,6 +31,21 @@ func startServer(log util.Logger, dir string) error {
 
 	app := gin.New()
 	app.Use(middleware.RecoveryMiddleware)
+
+	registerMockEmailApi(log, app, emails)
+	registerFunctionalTests(config, app, emails)
+
+	if err = util.RunHttpServer(log, &http.Server{
+		Addr:    ":" + config.Port,
+		Handler: app,
+	}); err != nil {
+		return util.Wrap("issue running http server", err)
+	}
+
+	return nil
+}
+
+func registerMockEmailApi(log util.Logger, app *gin.Engine, emails mock_util.Emails) {
 	app.POST("/mock-send-email", func(c *gin.Context) {
 		var email email_api.EmailTO
 		if err := c.BindJSON(&email); err != nil {
@@ -47,23 +60,26 @@ func startServer(log util.Logger, dir string) error {
 		}
 		log.Info("Email received %v", email)
 	})
+}
 
+func registerFunctionalTests(config *config.Config, app *gin.Engine, emails mock_util.Emails) {
+	testUser := mock_util.TestUser{}
 	tests := []mock_util.FunctionalTest{
-		{
-			Description: "Role before sign-up",
-			Test:        functional_tests.TestUserEndpointBeforeSignup,
-		},
 		{
 			Description: "Sign-up",
 			Test:        functional_tests.TestSignUp,
+		},
+		{
+			Description: "Password reset",
+			Test:        functional_tests.TestPasswordReset,
 		},
 		{
 			Description: "CSRF",
 			Test:        functional_tests.TestCallWithMismatchingCsrfTokens,
 		},
 		{
-			Description: "Bad login",
-			Test:        functional_tests.TestBadLogin,
+			Description: "Simple login",
+			Test:        functional_tests.TestSimpleLogin,
 		},
 	}
 	app.GET("/tests/:n", func(c *gin.Context) {
@@ -77,8 +93,9 @@ func startServer(log util.Logger, dir string) error {
 	})
 	app.POST("/tests/reset", func(c *gin.Context) {
 		testUser = mock_util.TestUser{
-			Email:    "test-user-" + util.MakeRandomURLSafeB64(3) + "@example.com",
+			Email:    "test-user-" + util.MakeRandomURLSafeB64(5) + "@example.com",
 			Password: []byte("hunter12"),
+			Language: domain_model.UserLanguage(models.UserLanguageDE),
 		}
 	})
 	app.POST("/tests/:n/trigger", func(c *gin.Context) {
@@ -94,13 +111,4 @@ func startServer(log util.Logger, dir string) error {
 		}
 		c.Status(http.StatusNoContent)
 	})
-
-	if err = util.RunHttpServer(log, &http.Server{
-		Addr:    ":" + config.Port,
-		Handler: app,
-	}); err != nil {
-		return util.Wrap("issue running http server", err)
-	}
-
-	return nil
 }

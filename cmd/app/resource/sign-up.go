@@ -43,7 +43,7 @@ func (r *SignUpResource) SignUp(requestTO *SignUpTO) error {
 	mailQueueService := r.mailQueueService
 	authService := r.authService
 
-	user, err := userRepository.GetUser(requestTO.Email)
+	user, err := userRepository.GetUserForEmail(requestTO.Email)
 	if err != nil {
 		return util.Wrap("error fetching user", err)
 	}

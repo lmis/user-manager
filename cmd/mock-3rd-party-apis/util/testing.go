@@ -8,12 +8,15 @@ import (
 	"io/ioutil"
 	"net/http"
 	"user-manager/cmd/mock-3rd-party-apis/config"
+	domain_model "user-manager/domain-model"
 	"user-manager/util"
 )
 
 type TestUser struct {
-	Email    string
-	Password []byte
+	Email         string
+	EmailVerified bool
+	Password      []byte
+	Language      domain_model.UserLanguage
 }
 
 type FunctionalTest struct {
@@ -21,40 +24,77 @@ type FunctionalTest struct {
 	Test        func(*config.Config, Emails, *TestUser) error
 }
 
-func MakeApiRequest(method string, config *config.Config, subpath string, payload interface{}, sessionCookie *http.Cookie) (*http.Response, error) {
+type RequestClient struct {
+	config       *config.Config
+	cookies      map[string]*http.Cookie
+	headers      map[string]string
+	lastResponse *http.Response
+}
+
+func NewRequestClient(config *config.Config) *RequestClient {
+	client := &RequestClient{
+		config:  config,
+		cookies: map[string]*http.Cookie{},
+		headers: map[string]string{},
+	}
+	client.SetCsrfTokens("abcdef", "abcdef")
+	return client
+}
+
+func (r *RequestClient) SetCsrfTokens(header string, cookie string) {
+	r.headers["X-CSRF-Token"] = header
+	r.cookies["CSRF-Token"] = &http.Cookie{
+		Name:  "CSRF-Token",
+		Value: cookie,
+	}
+}
+
+func (r *RequestClient) MakeApiRequest(method string, subpath string, payload interface{}) {
+	config := r.config
 	req, err := http.NewRequest(method, fmt.Sprintf("%s/api/%s", config.AppUrl, subpath), nil)
 	if err != nil {
-		return nil, util.Wrap("error building request", err)
+		panic(util.Wrap("error building request", err))
 	}
 	if payload != nil {
 		b, err := json.Marshal(payload)
 		if err != nil {
-			return nil, util.Wrap("issue marshalling json", err)
+			panic(util.Wrap("issue marshalling json", err))
 		}
 		req.Header.Add("Content-Type", "application/json")
 		req.Body = io.NopCloser(bytes.NewReader(b))
 	}
 
-	addCsrfHeaders(req)
-	if sessionCookie != nil {
-		req.AddCookie(sessionCookie)
+	for _, val := range r.cookies {
+		req.AddCookie(val)
+	}
+	for name, val := range r.headers {
+		req.Header.Add(name, val)
 	}
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return nil, util.Wrap("error making request", err)
+		panic(util.Wrap("error making request", err))
 	}
-	return resp, nil
 
+	for _, cookie := range resp.Cookies() {
+		r.cookies[cookie.Name] = cookie
+	}
+
+	r.lastResponse = resp
 }
 
-func AssertResponseEq(expectedStatusCode int, expectedPayload interface{}, resp *http.Response) error {
+func (r *RequestClient) HasSessionCookie() bool {
+	if val, ok := r.cookies["LOGIN_TOKEN"]; ok {
+		return val.Value != ""
+	}
+	return false
+}
+
+func (r *RequestClient) AssertLastResponseEq(expectedStatusCode int, expectedPayload interface{}) error {
+	resp := r.lastResponse
 	if err := AssertEq(resp.StatusCode, expectedStatusCode); err != nil {
 		return util.Wrap("status code mismatch", err)
 	}
-	body, err := readAllClose(resp.Body)
-	if err != nil {
-		return util.Wrap("issue reading body target", err)
-	}
+	body := readAllClose(resp.Body)
 	if expectedPayload != nil {
 		payloadAsJson, err := json.Marshal(expectedPayload)
 		if err != nil {
@@ -80,21 +120,14 @@ func AssertEq(received interface{}, expected interface{}) error {
 
 }
 
-func readAllClose(reader io.ReadCloser) ([]byte, error) {
+func readAllClose(reader io.ReadCloser) []byte {
 	body, err := ioutil.ReadAll(reader)
 	if err != nil {
-		return nil, util.Wrap("issue reading", err)
+		panic(util.Wrap("issue reading", err))
 	}
 	if err = reader.Close(); err != nil {
-		return nil, util.Wrap("issue closing", err)
+		panic(util.Wrap("issue closing", err))
 	}
 
-	return body, nil
-}
-func addCsrfHeaders(req *http.Request) {
-	req.Header.Add("X-CSRF-Token", "abcdef")
-	req.AddCookie(&http.Cookie{
-		Name:  "CSRF-Token",
-		Value: "abcdef",
-	})
+	return body
 }

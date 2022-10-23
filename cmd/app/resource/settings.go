@@ -49,7 +49,7 @@ func (r *SettingsResource) SetLanguage(requestTO *LanguageTO) error {
 		return util.Errorf("invalid language %s", language)
 	}
 
-	if err := userRepository.UpdateLanguage(userSession.OrPanic().User.AppUserID, language); err != nil {
+	if err := userRepository.SetLanguage(userSession.OrPanic().User.AppUserID, language); err != nil {
 		return util.Wrap("error updating language", err)
 	}
 	return nil

@@ -1,19 +1,13 @@
 package router
 
 import (
-	"net/http"
 	"time"
 	"user-manager/cmd/app/middleware"
 	"user-manager/cmd/app/resource"
 	domain_model "user-manager/domain-model"
-	"user-manager/util"
 
 	"github.com/gin-gonic/gin"
 )
-
-func todo(c *gin.Context) {
-	c.AbortWithError(http.StatusInternalServerError, util.Errorf("todo endpoint"))
-}
 
 func New() *gin.Engine {
 	r := gin.New()
@@ -46,8 +40,7 @@ func registerAuthGroup(auth *gin.RouterGroup) {
 	resource.RegisterSignUpResource(auth)
 	resource.RegisterLoginResource(auth)
 	resource.RegisterLogoutResource(auth)
-	// 	POST("request-password-reset", ginext.WrapEndpointWithoutResponseBody(auth.PostRequestPasswordReset)).
-	// 	POST("reset-password", ginext.WrapEndpoint(auth.PostResetPassword))
+	resource.RegisterResetPasswordResource(auth)
 }
 
 func registerAdminGroup(admin *gin.RouterGroup) {
