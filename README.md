@@ -14,158 +14,133 @@ To run the endpoint tests, run `run-tests` while a local instance is running.
 #### Current Endpoints
 ##### POST   /api/auth/sign-up
 Accepts sign-up data and creates a user account
-```golang
-type SignUpTO struct {
-	UserName string `json:"userName"`
-	Language string `json:"language"`
-	Email    string `json:"email"`
-	Password []byte `json:"password"`
+```typescript
+{
+  userName: string,
+  language: string,
+  email:    string,
+  password: string /* base64 encoded byte array */
 }
 ```
 ##### POST   /api/auth/login
 Logs in users who do not have 2FA enabled. If 2FA is enabled and the correct username password is submitted, informs user that 2FA is required.
-```golang
-type LoginTO struct {
-	Email    string `json:"email"`
-	Password []byte `json:"password"`
+```typescript
+{
+  email:    string,
+  password: string /* base64 encoded byte array */
 }
 
-type LoginResponseStatus string
-
-const (
-	LoggedIn             LoginResponseStatus = "logged-in"
-	SecondFactorRequired LoginResponseStatus = "second-factor-required"
-	InvalidCredentials   LoginResponseStatus = "invalid-credentials"
-)
+{ 
+  status:  "logged-in" | "second-factor-required" | "invalid-credentials" 
+}
 ```
 ##### POST   /api/auth/login-with-second-factor
 Logs in users who have 2FA enabled
-```golang
-type LoginWithSecondFactorTO struct {
-	LoginTO
-	SecondFactor   string `json:"secondFactor"`
-	RememberDevice bool   `json:"rememberDevice"`
+```typescript
+{
+  email:    string,
+  password: string /* base64 encoded byte array */
+  secondFactor:   string,
+  rememberDevice: bool,
 }
 
-type LoginWithSecondFactorResponseTO struct {
-	LoggedIn     bool      `json:"loggedIn"`
-	TimeoutUntil time.Time `json:"timeoutUntil,omitempty"`
+{
+  loggedIn:     bool,
+  timeoutUntil: number, /* unix timestamp */
 }
 ```
 ##### POST   /api/auth/logout
 Logs out users and deletes their sessions
-```golang
-type LogoutTO struct {
-	ForgetDevice bool `json:"forgetDevice"`
+```typescript
+{
+  forgetDevice: bool,
 }
 ```
 ##### POST   /api/auth/request-password-reset
 Triggers a password reset email
-```golang
-type PasswordResetRequestTO struct {
-	Email string `json:"email"`
+```typescript
+{
+  email: string,
 }
 ```
 ##### POST   /api/auth/reset-password
 Resets password when given the token from the reset email
-```golang
-type ResetPasswordTO struct {
-	Email       string `json:"email"`
-	Token       string `json:"token"`
-	NewPassword []byte `json:"newPassword"`
+```typescript
+{
+  email:       string,
+  token:       string,
+  password:    string /* base64 encoded byte array */
 }
 
-type ResetPasswordStatus string
 
-const (
-	Success      ResetPasswordStatus = "success"
-	InvalidToken ResetPasswordStatus = "invalid-token"
-)
-
-type ResetPasswordResponseTO struct {
-	Status ResetPasswordStatus `json:"status"`
+{
+  status:  "success" | "invalid-token"
 }
 ```
 
 ##### GET    /api/user-info
 Returns information on the current user and their roles
-```golang
-type UserInfoTO struct {
-	Roles         []domain_model.UserRole   `json:"roles"`
-	EmailVerified bool                `json:"emailVerified"`
-	Language      domain_model.UserLanguage `json:"language"`
+```typescript
+{
+  roles:         string[],
+  emailVerified: bool,
+  language:      "DE" | "EN",
 }
 ```
 ##### POST   /api/user/confirm-email
 Accepts an email confirmation token
-```golang
-type EmailConfirmationTO struct {
-	Token string `json:"token"`
+```typescript
+{
+  token: string
 }
 
-type EmailConfirmationStatus string
-
-const (
-	AlreadyConfirmed EmailConfirmationStatus = "already-confirmed"
-	NewlyConfirmed   EmailConfirmationStatus = "newly-confirmed"
-	InvalidToken     EmailConfirmationStatus = "invalid-token"
-)
-
-type EmailConfirmationResponseTO struct {
-	Status EmailConfirmationStatus `json:"status"`
+{
+  status:  "already-confirmed" | "newly-confirmed" | "invalid-token"
 }
 ```
 ##### POST   /api/user/re-trigger-confirmation-email
 Re-sends email confirmation token
-```golang
-type RetriggerConfirmationEmailResponseTO struct {
-	Sent bool `json:"sent"`
+```typescript
+{
+  sent: bool
 }
 ```
 
 ##### POST   /api/user/settings/language
 Allows users to set their language choice
-```golang
-type LanguageTO struct {
-	Language domain_model.UserLanguage `json:"language"`
+```typescript
+{
+  language: "DE" | "EN"
 }
 ```
 ##### POST   /api/user/settings/sudo
 Creates a short-lived 'sudo' session which allows adjusting sensitive settings
-```golang
-type SudoTO struct {
-	Password []byte `json:"password"`
+```typescript
+{
+  password:    string /* base64 encoded byte array */
 }
 
-type SudoResponseTO struct {
-	Success bool `json:"success"`
+{
+  success: bool
 }
 ```
 ##### POST   /api/user/settings/confirm-email-change
 Completes an email change flow, by accepting the token sent to the new email
-```golang
-type EmailChangeConfirmationTO struct {
-	Token string `json:"token"`
+```typescript
+{
+  token: string
 }
 
-type EmailChangeStatus string
-
-const (
-	NoEmailChangeInProgress EmailChangeStatus = "no-change-in-progress"
-	InvalidToken            EmailChangeStatus = "invalid-token"
-	NewEmailConfirmed       EmailChangeStatus = "new-email-confirmed"
-)
-
-type EmailChangeConfirmationResponseTO struct {
-	Status EmailChangeStatus `json:"status"`
-	Email  string            `json:"email"`
+{
+  status: "no-change-in-progress" | "invalid-token" | "new-email-confirmed"
+  email:  string
 }
 ```
 ##### POST   /api/user/settings/sensitive/initiate-email-change
 Allows user to set a new email for login and communcation
-```golang
-type ChangeEmailTO struct {
-	NewEmail string `json:"newEmail"`
+```typescript
+{
+  newEmail: string
 }
 ```
 
@@ -187,5 +162,3 @@ Access to the endpoint `GET /api/user` requires no authentication but may return
 Access to endpoints under `/api/user/` requires a valid `LOGIN_TOKEN` (obtained via login endpoint with correct credentials).
 Access to endpoints under `/api/user/settings` require the user's email adress to be verified.
 Access to endpoints under `/api/user/settings/sensitive` require a valid `SUDO_TOKEN` obtained via the sudo enpoint.
-
-
