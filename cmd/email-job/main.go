@@ -1,27 +1,25 @@
 package main
 
-//go:generate go run ../generate-sqlboiler/main.go ../../db/generated/models
+//go:generate go run ../migrator/main.go generate ../../db/generated/models
 import (
 	"bytes"
+	"database/sql"
 	"encoding/json"
 	"net/http"
-	config "user-manager/cmd/email-job/config"
-	"user-manager/db"
-	"user-manager/db/generated/models"
-	emailapi "user-manager/third-party-models/email-api"
-	"user-manager/util"
-
-	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
+	config "user-manager/cmd/email-job/config"
+	"user-manager/db"
+	. "user-manager/db/generated/models/postgres/public/enum"
+	"user-manager/db/generated/models/postgres/public/model"
+	. "user-manager/db/generated/models/postgres/public/table"
+	emailapi "user-manager/third-party-models/email-api"
+	"user-manager/util"
 
-	"database/sql"
-
+	. "github.com/go-jet/jet/v2/postgres"
 	_ "github.com/lib/pq"
-	"github.com/volatiletech/sqlboiler/v4/boil"
-	"github.com/volatiletech/sqlboiler/v4/queries/qm"
 )
 
 func main() {
@@ -68,7 +66,7 @@ func startJob(log util.Logger, dir string) error {
 
 func sendOneEmail(log util.Logger, database *sql.DB, config *config.Config) (ret error) {
 	shouldCommit := false
-	var maxNumFailedAttempts int16 = 3
+	maxNumFailedAttempts := int16(3)
 	ctx, cancelTimeout := db.DefaultQueryContext()
 	defer cancelTimeout()
 
@@ -91,19 +89,27 @@ func sendOneEmail(log util.Logger, database *sql.DB, config *config.Config) (ret
 		}
 	}()
 
-	mail, err := models.MailQueues(
-		models.MailQueueWhere.Status.EQ(models.EmailStatusPENDING),
-		qm.Or2(qm.Expr(models.MailQueueWhere.Status.EQ(models.EmailStatusERROR), models.MailQueueWhere.NumberOfFailedAttempts.LT(maxNumFailedAttempts))),
-		qm.OrderBy(models.MailQueueColumns.Priority+" DESC"),
-	).One(ctx, tx)
+	maybeMail, err := db.Fetch(
+		SELECT(MailQueue.AllColumns).
+			FROM(MailQueue).
+			WHERE(
+				MailQueue.Status.EQ(EmailStatus.Pending).
+					OR(
+						MailQueue.Status.EQ(EmailStatus.Error).
+							AND(MailQueue.NumberOfFailedAttempts.LT(Int16(maxNumFailedAttempts))))).
+			ORDER_BY(MailQueue.Priority.DESC()).
+			QueryContext,
+		func(x *model.MailQueue) *model.MailQueue { return x },
+		tx)
 
 	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil
-		}
 		return util.Wrap("issue getting email from db", err)
 	}
+	if maybeMail.IsEmpty() {
+		return
+	}
 
+	mail := maybeMail.OrPanic()
 	payload, err := json.Marshal(emailapi.EmailTO{
 		From:    mail.FromAddress,
 		To:      mail.ToAddress,
@@ -118,20 +124,23 @@ func sendOneEmail(log util.Logger, database *sql.DB, config *config.Config) (ret
 	_, err = http.Post(config.EmailApiUrl, "application/json", bytes.NewReader(payload))
 
 	// If sending the mail failed, log and continue
+	numberOfFailedAttempts := mail.NumberOfFailedAttempts
+	status := EmailStatus.Sent
 	if err != nil {
-		mail.Status = models.EmailStatusERROR
-		mail.NumberOfFailedAttempts++
+		status = EmailStatus.Error
+		numberOfFailedAttempts++
 		log.Warn(util.Wrap("issue sending email", err).Error())
-	} else {
-		mail.Status = models.EmailStatusSENT
 	}
 
-	rows, err := mail.Update(ctx, tx, boil.Infer())
+	err = db.ExecSingleMutation(
+		MailQueue.UPDATE(MailQueue.Status, MailQueue.NumberOfFailedAttempts, MailQueue.UpdatedAt).
+			SET(status, numberOfFailedAttempts, time.Now()).
+			WHERE(MailQueue.MailQueueID.EQ(Int64(mail.MailQueueID))).
+			ExecContext,
+		tx)
+
 	if err != nil {
 		return util.Wrap("issue updating email in db", err)
-	}
-	if rows != 1 {
-		return util.Wrap(fmt.Sprintf("wrong number of rows affected: %d", rows), err)
 	}
 
 	shouldCommit = true

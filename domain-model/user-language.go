@@ -1,16 +1,16 @@
 package domain_model
 
 import (
-	"user-manager/db/generated/models"
+	"user-manager/db/generated/models/postgres/public/model"
 	"user-manager/util/slices"
 )
 
-type UserLanguage models.UserLanguage
+type UserLanguage model.UserLanguage
 
 func (l UserLanguage) IsValid() bool {
-	return models.UserLanguage(l).IsValid() == nil
+	return slices.Contains(AllUserLanguages(), l)
 }
 
-func AllUserLanguage() []UserLanguage {
-	return slices.Map(models.AllUserLanguage(), func(m models.UserLanguage) UserLanguage { return UserLanguage(m) })
+func AllUserLanguages() []UserLanguage {
+	return []UserLanguage{UserLanguage(model.UserLanguage_En), UserLanguage(model.UserLanguage_De)}
 }

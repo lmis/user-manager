@@ -144,7 +144,7 @@ func (r *LoginResource) LoginWithSecondFactor(requestTO *LoginWithSecondFactorTO
 		tokenMatches := user.SecondFactorToken.IsPresent && totp.Validate(requestTO.SecondFactor, user.SecondFactorToken.OrPanic())
 
 		if throttling.IsPresent {
-			failedAttemptsSinceLastSuccess := 0
+			failedAttemptsSinceLastSuccess := int32(0)
 			timeoutUntil := nullable.Empty[time.Time]()
 			if !tokenMatches {
 				failedAttemptsSinceLastSuccess = throttling.OrPanic().FailedAttemptsSinceLastSuccess + 1

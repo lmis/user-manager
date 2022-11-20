@@ -1,16 +1,18 @@
 package domain_model
 
 import (
-	"user-manager/db/generated/models"
+	"user-manager/db/generated/models/postgres/public/model"
+
+	"github.com/go-jet/jet/v2/postgres"
 )
 
 type UserSessionID string
-type UserSessionType models.UserSessionType
+type UserSessionType model.UserSessionType
 
 const (
-	USER_SESSION_TYPE_LOGIN           = UserSessionType(models.UserSessionTypeLOGIN)
-	USER_SESSION_TYPE_SUDO            = UserSessionType(models.UserSessionTypeSUDO)
-	USER_SESSION_TYPE_REMEMBER_DEVICE = UserSessionType(models.UserSessionTypeREMEMBER_DEVICE)
+	USER_SESSION_TYPE_LOGIN           = UserSessionType(model.UserSessionType_Login)
+	USER_SESSION_TYPE_SUDO            = UserSessionType(model.UserSessionType_Sudo)
+	USER_SESSION_TYPE_REMEMBER_DEVICE = UserSessionType(model.UserSessionType_RememberDevice)
 )
 
 type UserSession struct {
@@ -19,10 +21,14 @@ type UserSession struct {
 	UserSessionType UserSessionType `json:"userSessionType"`
 }
 
-func FromUserSessionAppUserAndUserRolesModel(m *models.UserSession, u *models.AppUser, r models.AppUserRoleSlice) *UserSession {
-	return &UserSession{
-		UserSessionID:   UserSessionID(m.UserSessionID),
-		User:            FromAppUserAndUserRolesModel(u, r),
-		UserSessionType: UserSessionType(m.UserSessionType),
-	}
+func (u UserSessionType) String() string {
+	return model.UserSessionType(u).String()
+}
+
+func (u UserSessionType) ToStringExpression() postgres.StringExpression {
+	return postgres.NewEnumValue(model.UserSessionType(u).String())
+}
+
+func (u UserSessionID) ToStringExpression() postgres.StringExpression {
+	return postgres.String(string(u))
 }

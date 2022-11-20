@@ -1,6 +1,5 @@
 package main
 
-//go:generate go run ../generate-sqlboiler/main.go ../../db/generated/models
 import (
 	"embed"
 	"fmt"
@@ -9,8 +8,8 @@ import (
 	"user-manager/db"
 	"user-manager/util"
 
+	"github.com/go-jet/jet/v2/generator/postgres"
 	_ "github.com/lib/pq"
-
 	sql_migrate "github.com/rubenv/sql-migrate"
 )
 
@@ -69,7 +68,7 @@ func generateSqlBoiler(log util.Logger, dir string) error {
 	dbInfo := &db.DbInfo{
 		DbName:   "postgres",
 		Host:     "localhost",
-		Port:     "5432",
+		Port:     5432,
 		User:     "postgres",
 		Password: util.MakeRandomURLSafeB64(21),
 	}
@@ -96,45 +95,17 @@ func generateSqlBoiler(log util.Logger, dir string) error {
 		return util.Wrap("issue executing migration", err)
 	}
 
-	file, err := os.Create("/tmp/sqlboiler-config.toml")
-	if err != nil {
-		return util.Wrap("issue creating tmp file", err)
+	jetConfig := postgres.DBConnection{
+		Host:       dbInfo.Host,
+		Port:       dbInfo.Port,
+		User:       dbInfo.User,
+		Password:   dbInfo.Password,
+		DBName:     dbInfo.DbName,
+		SchemaName: "public",
+		SslMode:    "disable",
 	}
-	log.Info("Temporary file created in %s", file.Name())
-	defer func() {
-		if err = file.Close(); err != nil {
-			panic(util.Wrap("issue closing temp file", err))
-		}
-		log.Info("Removing file %s", file.Name())
-		if err = os.Remove(file.Name()); err != nil {
-			panic(util.Wrap("issue removing temp file", err))
-		}
-	}()
-
-	toml :=
-		fmt.Sprintf(`
-    output   = "%s"
-    wipe     = true
-    no-tests = true
-    add-enum-types = true
-	add-soft-deletes = true
-
-    [psql]
-    dbname = "%s"
-    host   = "%s"
-    port   = %s
-    user   = "%s"
-    pass   = "%s"
-    sslmode = "disable"
-    schema = "public"
-    blacklist = ["migrations"]
-    `, outputDir, dbInfo.DbName, dbInfo.Host, dbInfo.Port, dbInfo.User, dbInfo.Password)
-
-	if _, err := file.Write([]byte(toml)); err != nil {
-		return util.Wrap("issue writing to temp file", err)
-	}
-	if err := util.RunShellCommand(fmt.Sprintf("sqlboiler psql --config=%s", file.Name())); err != nil {
-		return util.Wrap("issue running sqlboiler", err)
+	if err = postgres.Generate(outputDir, jetConfig); err != nil {
+		return util.Wrap("issue running jet", err)
 	}
 	log.Info("Generated models under %s", outputDir)
 	return nil

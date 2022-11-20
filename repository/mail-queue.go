@@ -3,11 +3,10 @@ package repository
 import (
 	"database/sql"
 	"user-manager/db"
-	"user-manager/db/generated/models"
+	. "user-manager/db/generated/models/postgres/public/enum"
+	. "user-manager/db/generated/models/postgres/public/table"
 	domain_model "user-manager/domain-model"
 	"user-manager/util"
-
-	"github.com/volatiletech/sqlboiler/v4/boil"
 )
 
 type MailQueueRepository struct {
@@ -25,17 +24,18 @@ func (r *MailQueueRepository) InsertPending(
 	subject string,
 	priority domain_model.MailQueuePriority,
 ) error {
-	mail := models.MailQueue{
-		FromAddress: from,
-		ToAddress:   to,
-		Content:     content,
-		Subject:     subject,
-		Status:      models.EmailStatusPENDING,
-		Priority:    int16(priority),
-	}
-	ctx, cancel := db.DefaultQueryContext()
-	defer cancel()
-	if err := mail.Insert(ctx, r.tx, boil.Infer()); err != nil {
+	err := db.ExecSingleMutation(
+		MailQueue.INSERT(
+			MailQueue.FromAddress,
+			MailQueue.ToAddress,
+			MailQueue.Content,
+			MailQueue.Subject,
+			MailQueue.Status,
+			MailQueue.Priority).
+			VALUES(from, to, content, subject, EmailStatus.Pending, int16(priority)).
+			ExecContext,
+		r.tx)
+	if err != nil {
 		return util.Wrap("issue inserting email in db", err)
 	}
 

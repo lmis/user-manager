@@ -1,17 +1,16 @@
 package repository
 
 import (
-	"context"
 	"database/sql"
 	"time"
 	"user-manager/db"
-	"user-manager/db/generated/models"
+	"user-manager/db/generated/models/postgres/public/model"
+	. "user-manager/db/generated/models/postgres/public/table"
 	domain_model "user-manager/domain-model"
 	"user-manager/util"
 	"user-manager/util/nullable"
 
-	"github.com/volatiletech/null/v8"
-	"github.com/volatiletech/sqlboiler/v4/boil"
+	. "github.com/go-jet/jet/v2/postgres"
 )
 
 type SecondFactorThrottlingRepository struct {
@@ -23,36 +22,44 @@ func ProvideSecondFactorThrottlingRepository(tx *sql.Tx) *SecondFactorThrottling
 }
 
 func (r *SecondFactorThrottlingRepository) GetForUser(userId domain_model.AppUserID) (nullable.Nullable[*domain_model.SecondFactorThrottling], error) {
-	throttling, err := db.Fetch(func(ctx context.Context) (*models.SecondFactorThrottling, error) {
-		return models.SecondFactorThrottlings(
-			models.SecondFactorThrottlingWhere.AppUserID.EQ(int64(userId)),
-		).One(ctx, r.tx)
-	})
+	throttling, err := db.Fetch(
+		SELECT(
+			SecondFactorThrottling.SecondFactorThrottlingID,
+			SecondFactorThrottling.AppUserID,
+			SecondFactorThrottling.FailedAttemptsSinceLastSuccess,
+			SecondFactorThrottling.TimeoutUntil,
+		).
+			FROM(SecondFactorThrottling).
+			WHERE(SecondFactorThrottling.AppUserID.EQ(userId.ToIntegerExpression())).
+			QueryContext,
+		func(m *model.SecondFactorThrottling) *domain_model.SecondFactorThrottling {
+			return &domain_model.SecondFactorThrottling{
+				SecondFactorThrottlingID:       domain_model.SecondFactorThrottlingID(m.SecondFactorThrottlingID),
+				AppUserID:                      domain_model.AppUserID(m.AppUserID),
+				FailedAttemptsSinceLastSuccess: m.FailedAttemptsSinceLastSuccess,
+				TimeoutUntil:                   nullable.FromPointer(m.TimeoutUntil),
+			}
+		},
+		r.tx)
 	if err != nil {
 		return nullable.Empty[*domain_model.SecondFactorThrottling](), util.Wrap("error loading throttling", err)
 	}
-	if throttling.IsEmpty() {
-		return nullable.Empty[*domain_model.SecondFactorThrottling](), nil
-	}
-	return nullable.NeverNil(domain_model.FromSecondFactorThrottlingModel(throttling.OrPanic())), nil
+	return throttling, nil
 }
-func (r *SecondFactorThrottlingRepository) Update(throttlingId domain_model.SecondFactorThrottlingID, failedAttemptsSinceLastSuccess int, timeoutUntil nullable.Nullable[time.Time]) error {
-	throttling := models.SecondFactorThrottling{
-		SecondFactorThrottlingID:       int64(throttlingId),
-		FailedAttemptsSinceLastSuccess: failedAttemptsSinceLastSuccess}
-	if timeoutUntil.IsPresent {
-		throttling.TimeoutUntil = null.TimeFrom(timeoutUntil.OrPanic())
-	}
-	return db.ExecSingleMutation(func(ctx context.Context) (int64, error) {
-		return throttling.Update(ctx, r.tx, boil.Whitelist(
-			models.SecondFactorThrottlingColumns.FailedAttemptsSinceLastSuccess,
-			models.SecondFactorThrottlingColumns.TimeoutUntil))
-	})
+
+func (r *SecondFactorThrottlingRepository) Update(throttlingId domain_model.SecondFactorThrottlingID, failedAttemptsSinceLastSuccess int32, timeoutUntil nullable.Nullable[time.Time]) error {
+	return db.ExecSingleMutation(
+		SecondFactorThrottling.UPDATE(SecondFactorThrottling.FailedAttemptsSinceLastSuccess, SecondFactorThrottling.TimeoutUntil, SecondFactorThrottling.UpdatedAt).
+			SET(failedAttemptsSinceLastSuccess, timeoutUntil.ToPointer(), time.Now()).
+			WHERE(SecondFactorThrottling.SecondFactorThrottlingID.EQ(throttlingId.ToIntegerExpression())).
+			ExecContext,
+		r.tx)
 }
 
 func (r *SecondFactorThrottlingRepository) Insert(userId domain_model.AppUserID, failedAttemptsSinceLastSuccess int) error {
-	ctx, cancelTimeout := db.DefaultQueryContext()
-	defer cancelTimeout()
-	throttling := models.SecondFactorThrottling{AppUserID: int64(userId), FailedAttemptsSinceLastSuccess: failedAttemptsSinceLastSuccess}
-	return throttling.Insert(ctx, r.tx, boil.Infer())
+	return db.ExecSingleMutation(
+		SecondFactorThrottling.INSERT(SecondFactorThrottling.AppUserID, SecondFactorThrottling.FailedAttemptsSinceLastSuccess).
+			VALUES(userId.ToIntegerExpression(), failedAttemptsSinceLastSuccess).
+			ExecContext,
+		r.tx)
 }

@@ -2,8 +2,9 @@ package domain_model
 
 import (
 	"time"
-	"user-manager/db/generated/models"
 	"user-manager/util/nullable"
+
+	"github.com/go-jet/jet/v2/postgres"
 )
 
 type SecondFactorThrottlingID int64
@@ -11,15 +12,10 @@ type SecondFactorThrottlingID int64
 type SecondFactorThrottling struct {
 	SecondFactorThrottlingID       SecondFactorThrottlingID     `json:"secondFactorThrottlingId"`
 	AppUserID                      AppUserID                    `json:"appUserId"`
-	FailedAttemptsSinceLastSuccess int                          `json:"failedAttemptsSinceLastSuccess"`
+	FailedAttemptsSinceLastSuccess int32                        `json:"failedAttemptsSinceLastSuccess"`
 	TimeoutUntil                   nullable.Nullable[time.Time] `json:"timeoutUntil,omitempty"`
 }
 
-func FromSecondFactorThrottlingModel(m *models.SecondFactorThrottling) *SecondFactorThrottling {
-	return &SecondFactorThrottling{
-		SecondFactorThrottlingID:       SecondFactorThrottlingID(m.SecondFactorThrottlingID),
-		AppUserID:                      AppUserID(m.AppUserID),
-		FailedAttemptsSinceLastSuccess: m.FailedAttemptsSinceLastSuccess,
-		TimeoutUntil:                   nullable.FromNullTime(m.TimeoutUntil),
-	}
+func (a SecondFactorThrottlingID) ToIntegerExpression() postgres.IntegerExpression {
+	return postgres.Int64(int64(a))
 }

@@ -2,7 +2,6 @@ package service
 
 import (
 	"net/http"
-	"user-manager/db/generated/models"
 	domain_model "user-manager/domain-model"
 	"user-manager/util"
 	"user-manager/util/nullable"
@@ -55,13 +54,5 @@ func (s *SessionCookieService) GetSessionCookie(sessionType domain_model.UserSes
 }
 
 func (s *SessionCookieService) getCookieName(sessionType domain_model.UserSessionType) string {
-	switch models.UserSessionType(sessionType) {
-	case models.UserSessionTypeLOGIN:
-		return "LOGIN_TOKEN"
-	case models.UserSessionTypeREMEMBER_DEVICE:
-		return "DEVICE_TOKEN"
-	case models.UserSessionTypeSUDO:
-		return "SUDO_TOKEN"
-	}
-	panic(util.Errorf("Inexhaustive switch case for value %s", sessionType))
+	return sessionType.String() + "_TOKEN"
 }

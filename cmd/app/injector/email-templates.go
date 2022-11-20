@@ -28,7 +28,7 @@ func SetupEmailTemplatesProviders(log util.Logger, translationsFS embed.FS) erro
 	}
 	baseTemplate = t
 
-	for _, lang := range domain_model.AllUserLanguage() {
+	for _, lang := range domain_model.AllUserLanguages() {
 		file, err := translationsFS.ReadFile(fmt.Sprintf("translations/%s.yaml", lang))
 		if err != nil {
 			return util.Wrap(fmt.Sprintf("%s translations cannot be read", lang), err)

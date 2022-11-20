@@ -10,7 +10,7 @@ import (
 type DbInfo struct {
 	DbName   string `env:"DB_NAME"`
 	Host     string `env:"DB_HOST"`
-	Port     string `env:"DB_PORT"`
+	Port     int    `env:"DB_PORT"`
 	User     string `env:"DB_USER"`
 	Password string `env:"DB_PASSWORD"`
 }
@@ -23,7 +23,7 @@ func (dbInfo *DbInfo) OpenDbConnection(log util.Logger) (dbConnection *sql.DB, e
 		}
 	}()
 
-	psqlInfo := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
+	psqlInfo := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable",
 		dbInfo.Host,
 		dbInfo.Port,
 		dbInfo.User,

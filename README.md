@@ -1,5 +1,5 @@
 # user-manager
-A currently pretty useless backend written with gin and sqlboiler.
+A currently pretty useless backend written with gin and go-jet.
 
 ## Build and run
 1. Make sure you have docker daemon running

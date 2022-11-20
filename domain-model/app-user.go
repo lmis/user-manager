@@ -3,9 +3,9 @@ package domain_model
 import (
 	"encoding/json"
 	"time"
-	"user-manager/db/generated/models"
 	"user-manager/util/nullable"
-	"user-manager/util/slices"
+
+	"github.com/go-jet/jet/v2/postgres"
 )
 
 type AppUserID int64
@@ -33,20 +33,6 @@ func (u *AppUser) MarshallJSON() ([]byte, error) {
 	})
 }
 
-func FromAppUserAndUserRolesModel(m *models.AppUser, r models.AppUserRoleSlice) *AppUser {
-	return &AppUser{
-		AppUserID:                    AppUserID(m.AppUserID),
-		Language:                     UserLanguage(m.Language),
-		UserName:                     m.UserName,
-		PasswordHash:                 m.PasswordHash,
-		Email:                        m.Email,
-		EmailVerified:                m.EmailVerified,
-		EmailVerificationToken:       nullable.FromNullString(m.EmailVerificationToken),
-		NextEmail:                    nullable.FromNullString(m.NextEmail),
-		PasswordResetToken:           nullable.FromNullString(m.PasswordResetToken),
-		PasswordResetTokenValidUntil: nullable.FromNullTime(m.PasswordResetTokenValidUntil),
-		SecondFactorToken:            nullable.FromNullString(m.SecondFactorToken),
-		TemporarySecondFactorToken:   nullable.FromNullString(m.TemporarySecondFactorToken),
-		UserRoles:                    slices.Map(r, func(m *models.AppUserRole) UserRole { return UserRole(m.Role) }),
-	}
+func (a AppUserID) ToIntegerExpression() postgres.IntegerExpression {
+	return postgres.Int64(int64(a))
 }

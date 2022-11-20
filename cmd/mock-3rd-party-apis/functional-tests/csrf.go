@@ -4,7 +4,6 @@ import (
 	"user-manager/cmd/app/resource"
 	"user-manager/cmd/mock-3rd-party-apis/config"
 	mock_util "user-manager/cmd/mock-3rd-party-apis/util"
-	"user-manager/db/generated/models"
 	domain_model "user-manager/domain-model"
 	"user-manager/util"
 )
@@ -37,8 +36,14 @@ func TestCallWithMismatchingCsrfTokens(config *config.Config, emails mock_util.E
 	}
 
 	// Change language settings (logged in, with wrong tokens)
+	var otherLanguage domain_model.UserLanguage
+	for _, lang := range domain_model.AllUserLanguages() {
+		if lang != testUser.Language {
+			otherLanguage = lang
+		}
+	}
 	client.SetCsrfTokens("some", "other")
-	client.MakeApiRequest("POST", "user/settings/language", &resource.LanguageTO{Language: domain_model.UserLanguage(models.UserLanguageEN)})
+	client.MakeApiRequest("POST", "user/settings/language", &resource.LanguageTO{Language: otherLanguage})
 	if err := client.AssertLastResponseEq(400, nil); err != nil {
 		return util.Wrap("language response mismatch", err)
 	}

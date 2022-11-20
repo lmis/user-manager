@@ -1,6 +1,6 @@
 package main
 
-//go:generate go run ../generate-sqlboiler/main.go ../../db/generated/models
+//go:generate go run ../migrator/main.go generate ../../db/generated/models
 import (
 	"net/http"
 	"strconv"
@@ -8,7 +8,6 @@ import (
 	config "user-manager/cmd/mock-3rd-party-apis/config"
 	functional_tests "user-manager/cmd/mock-3rd-party-apis/functional-tests"
 	mock_util "user-manager/cmd/mock-3rd-party-apis/util"
-	"user-manager/db/generated/models"
 	domain_model "user-manager/domain-model"
 	email_api "user-manager/third-party-models/email-api"
 	"user-manager/util"
@@ -95,7 +94,7 @@ func registerFunctionalTests(config *config.Config, app *gin.Engine, emails mock
 		testUser = mock_util.TestUser{
 			Email:    "test-user-" + util.MakeRandomURLSafeB64(5) + "@example.com",
 			Password: []byte("hunter12"),
-			Language: domain_model.UserLanguage(models.UserLanguageDE),
+			Language: domain_model.AllUserLanguages()[1], // Test code that grabs the email content assumes German.
 		}
 	})
 	app.POST("/tests/:n/trigger", func(c *gin.Context) {

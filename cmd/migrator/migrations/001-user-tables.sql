@@ -6,7 +6,7 @@ CREATE TABLE app_user (
 	language                          USER_LANGUAGE               NOT NULL,
 	user_name                         TEXT                        NOT NULL,
 	password_hash                     TEXT                        NOT NULL,
-	email                             TEXT                        NOT NULL,
+	email                             TEXT                        UNIQUE NOT NULL,
 	email_verified                    BOOL                        NOT NULL,
 	email_verification_token          TEXT,
 	next_email                        TEXT,
@@ -15,7 +15,7 @@ CREATE TABLE app_user (
 	second_factor_token               TEXT,
 	temporary_second_factor_token     TEXT,
 	created_at                        TIMESTAMP WITH TIME ZONE    NOT NULL DEFAULT NOW(),
-	updated_at                        TIMESTAMP WITH TIME ZONE    NOT NULL
+	updated_at                        TIMESTAMP WITH TIME ZONE    NOT NULL DEFAULT NOW()
 );
 
 CREATE TABLE app_user_role (
@@ -23,7 +23,7 @@ CREATE TABLE app_user_role (
 	app_user_id                       BIGINT REFERENCES app_user(app_user_id)    NOT NULL,
 	role                              USER_ROLE                                  NOT NULL,
 	created_at                        TIMESTAMP WITH TIME ZONE                   NOT NULL DEFAULT NOW(),
-	deleted_at                        TIMESTAMP WITH TIME ZONE                   NOT NULL
+	deleted_at                        TIMESTAMP WITH TIME ZONE
 );
 
 CREATE TYPE USER_SESSION_TYPE AS ENUM ('LOGIN', 'SUDO', 'REMEMBER_DEVICE');
@@ -33,7 +33,7 @@ CREATE TABLE user_session (
 	user_session_type                 USER_SESSION_TYPE                          NOT NULL,
 	timeout_at                        TIMESTAMP WITH TIME ZONE                   NOT NULL,
 	created_at                        TIMESTAMP WITH TIME ZONE                   NOT NULL DEFAULT NOW(),
-	updated_at                        TIMESTAMP WITH TIME ZONE                   NOT NULL
+	updated_at                        TIMESTAMP WITH TIME ZONE                   NOT NULL DEFAULT NOW()
 );
 
 CREATE TABLE second_factor_throttling (
@@ -41,7 +41,7 @@ CREATE TABLE second_factor_throttling (
 	app_user_id                           BIGINT REFERENCES app_user(app_user_id)    UNIQUE NOT NULL,
 	failed_attempts_since_last_success    INTEGER                                    NOT NULL,
 	timeout_until                         TIMESTAMP WITH TIME ZONE,
-	updated_at                            TIMESTAMP WITH TIME ZONE                   NOT NULL
+	updated_at                            TIMESTAMP WITH TIME ZONE                   NOT NULL DEFAULT NOW()
 );
 
 -- +migrate Down
