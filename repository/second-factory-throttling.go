@@ -7,7 +7,7 @@ import (
 	"user-manager/db/generated/models/postgres/public/model"
 	. "user-manager/db/generated/models/postgres/public/table"
 	domain_model "user-manager/domain-model"
-	"user-manager/util"
+	"user-manager/util/errors"
 	"user-manager/util/nullable"
 
 	. "github.com/go-jet/jet/v2/postgres"
@@ -42,7 +42,7 @@ func (r *SecondFactorThrottlingRepository) GetForUser(userId domain_model.AppUse
 		},
 		r.tx)
 	if err != nil {
-		return nullable.Empty[*domain_model.SecondFactorThrottling](), util.Wrap("error loading throttling", err)
+		return nullable.Empty[*domain_model.SecondFactorThrottling](), errors.Wrap("error loading throttling", err)
 	}
 	return throttling, nil
 }

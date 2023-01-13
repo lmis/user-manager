@@ -1,11 +1,13 @@
-package util
+package exec
 
 import (
 	"os/exec"
+	"user-manager/util/errors"
+	"user-manager/util/logger"
 )
 
 func RunShellCommand(command string) error {
-	log := Log("SHELL_COMMAND")
+	log := logger.Log("SHELL_COMMAND")
 	log.Info("$ %s", command)
 	cmd := exec.Command("sh", "-c", command)
 
@@ -20,7 +22,7 @@ func RunShellCommand(command string) error {
 		if e, ok := err.(*exec.ExitError); ok {
 			message += " (" + string(e.Stderr) + ")"
 		}
-		return Wrap(message, err)
+		return errors.Wrap(message, err)
 	}
 
 	return nil

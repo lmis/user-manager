@@ -3,22 +3,22 @@ package functional_tests
 import (
 	"user-manager/cmd/app/resource"
 	"user-manager/cmd/mock-3rd-party-apis/config"
-	mock_util "user-manager/cmd/mock-3rd-party-apis/util"
+	"user-manager/cmd/mock-3rd-party-apis/util"
 	domain_model "user-manager/domain-model"
-	"user-manager/util"
+	"user-manager/util/errors"
 )
 
-func TestCallWithMismatchingCsrfTokens(config *config.Config, emails mock_util.Emails, testUser *mock_util.TestUser) error {
+func TestCallWithMismatchingCsrfTokens(config *config.Config, emails util.Emails, testUser *util.TestUser) error {
 	email := testUser.Email
 	password := testUser.Password
-	client := mock_util.NewRequestClient(config)
+	client := util.NewRequestClient(config)
 	client.SetCsrfTokens("some", "other")
 
 	// Check user with mismatching CSRF tokens
 	client.MakeApiRequest("GET", "user-info", nil)
 
 	if err := client.AssertLastResponseEq(400, nil); err != nil {
-		return util.Wrap("auth user response mismatch", err)
+		return errors.Wrap("auth user response mismatch", err)
 	}
 
 	// Login (with matching CSRF tokens)
@@ -28,11 +28,11 @@ func TestCallWithMismatchingCsrfTokens(config *config.Config, emails mock_util.E
 		Password: password,
 	})
 	if err := client.AssertLastResponseEq(200, resource.LoginResponseTO{Status: resource.LOGIN_RESPONSE_LOGGED_IN}); err != nil {
-		return util.Wrap("login response mismatch", err)
+		return errors.Wrap("login response mismatch", err)
 	}
 
 	if !client.HasSessionCookie() {
-		return util.Error("session cookie not found")
+		return errors.Error("session cookie not found")
 	}
 
 	// Change language settings (logged in, with wrong tokens)
@@ -45,7 +45,7 @@ func TestCallWithMismatchingCsrfTokens(config *config.Config, emails mock_util.E
 	client.SetCsrfTokens("some", "other")
 	client.MakeApiRequest("POST", "user/settings/language", &resource.LanguageTO{Language: otherLanguage})
 	if err := client.AssertLastResponseEq(400, nil); err != nil {
-		return util.Wrap("language response mismatch", err)
+		return errors.Wrap("language response mismatch", err)
 	}
 	return nil
 }

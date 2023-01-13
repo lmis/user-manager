@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"reflect"
 	domain_model "user-manager/domain-model"
-	"user-manager/util"
+	"user-manager/util/errors"
 	"user-manager/util/nullable"
 
 	"github.com/gin-gonic/gin"
@@ -25,11 +25,11 @@ type RequestContext struct {
 func GetRequestContext(c *gin.Context) *RequestContext {
 	val, ok := c.Get(REQUEST_CONTEXT_KEY)
 	if !ok {
-		panic(util.Error("missing request context"))
+		panic(errors.Error("missing request context"))
 	}
 	ctx, ok := val.(*RequestContext)
 	if !ok {
-		panic(util.Errorf("mistyped request context %s", reflect.TypeOf(val)))
+		panic(errors.Errorf("mistyped request context %s", reflect.TypeOf(val)))
 	}
 	return ctx
 }

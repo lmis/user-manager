@@ -3,7 +3,7 @@ package middleware
 import (
 	ginext "user-manager/cmd/app/gin-extensions"
 	domain_model "user-manager/domain-model"
-	"user-manager/util"
+	"user-manager/util/errors"
 	"user-manager/util/nullable"
 
 	"net/http"
@@ -31,7 +31,7 @@ func (m *VerifiedEmailAuthorizationMiddleware) Handle() {
 	securityLog := m.securityLog
 	if userSession.IsEmpty() || !userSession.OrPanic().User.EmailVerified {
 		securityLog.Info("Email not verified")
-		c.AbortWithError(http.StatusForbidden, util.Errorf("email not verified"))
+		c.AbortWithError(http.StatusForbidden, errors.Errorf("email not verified"))
 		return
 	}
 }

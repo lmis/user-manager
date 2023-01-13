@@ -3,7 +3,7 @@ package service
 import (
 	"net/http"
 	domain_model "user-manager/domain-model"
-	"user-manager/util"
+	"user-manager/util/errors"
 	"user-manager/util/nullable"
 
 	"github.com/gin-gonic/gin"
@@ -48,7 +48,7 @@ func (s *SessionCookieService) GetSessionCookie(sessionType domain_model.UserSes
 		if err == http.ErrNoCookie {
 			return nullable.Empty[domain_model.UserSessionID](), nil
 		}
-		return nullable.Empty[domain_model.UserSessionID](), util.Wrap("issue reading cookie", err)
+		return nullable.Empty[domain_model.UserSessionID](), errors.Wrap("issue reading cookie", err)
 	}
 	return nullable.Of(domain_model.UserSessionID(cookie.Value)), nil
 }

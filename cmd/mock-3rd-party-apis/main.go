@@ -7,25 +7,29 @@ import (
 	"user-manager/cmd/app/middleware"
 	config "user-manager/cmd/mock-3rd-party-apis/config"
 	functional_tests "user-manager/cmd/mock-3rd-party-apis/functional-tests"
-	mock_util "user-manager/cmd/mock-3rd-party-apis/util"
+	"user-manager/cmd/mock-3rd-party-apis/util"
 	domain_model "user-manager/domain-model"
 	email_api "user-manager/third-party-models/email-api"
-	"user-manager/util"
+	"user-manager/util/command"
+	"user-manager/util/errors"
+	httputil "user-manager/util/http"
+	"user-manager/util/logger"
+	"user-manager/util/random"
 
 	"github.com/gin-gonic/gin"
 	_ "github.com/lib/pq"
 )
 
 func main() {
-	util.Run("MOCK 3RD-PARTY APIS", startServer)
+	command.Run("MOCK 3RD-PARTY APIS", startServer)
 }
 
-func startServer(log util.Logger, dir string) error {
-	emails := make(mock_util.Emails)
+func startServer(log logger.Logger, dir string) error {
+	emails := make(util.Emails)
 	log.Info("Starting up")
 	config, err := config.GetConfig(log)
 	if err != nil {
-		return util.Wrap("cannot read config", err)
+		return errors.Wrap("cannot read config", err)
 	}
 
 	app := gin.New()
@@ -34,21 +38,21 @@ func startServer(log util.Logger, dir string) error {
 	registerMockEmailApi(log, app, emails)
 	registerFunctionalTests(config, app, emails)
 
-	if err = util.RunHttpServer(log, &http.Server{
+	if err = httputil.RunHttpServer(log, &http.Server{
 		Addr:    ":" + config.Port,
 		Handler: app,
 	}); err != nil {
-		return util.Wrap("issue running http server", err)
+		return errors.Wrap("issue running http server", err)
 	}
 
 	return nil
 }
 
-func registerMockEmailApi(log util.Logger, app *gin.Engine, emails mock_util.Emails) {
+func registerMockEmailApi(log logger.Logger, app *gin.Engine, emails util.Emails) {
 	app.POST("/mock-send-email", func(c *gin.Context) {
 		var email email_api.EmailTO
 		if err := c.BindJSON(&email); err != nil {
-			c.AbortWithError(http.StatusBadRequest, util.Wrap("cannot bind to EmailTO", err))
+			c.AbortWithError(http.StatusBadRequest, errors.Wrap("cannot bind to EmailTO", err))
 			return
 		}
 		m, ok := emails[email.To]
@@ -61,9 +65,9 @@ func registerMockEmailApi(log util.Logger, app *gin.Engine, emails mock_util.Ema
 	})
 }
 
-func registerFunctionalTests(config *config.Config, app *gin.Engine, emails mock_util.Emails) {
-	testUser := mock_util.TestUser{}
-	tests := []mock_util.FunctionalTest{
+func registerFunctionalTests(config *config.Config, app *gin.Engine, emails util.Emails) {
+	testUser := util.TestUser{}
+	tests := []util.FunctionalTest{
 		{
 			Description: "Sign-up",
 			Test:        functional_tests.TestSignUp,
@@ -91,8 +95,8 @@ func registerFunctionalTests(config *config.Config, app *gin.Engine, emails mock
 		c.String(http.StatusOK, tests[testNumber].Description)
 	})
 	app.POST("/tests/reset", func(c *gin.Context) {
-		testUser = mock_util.TestUser{
-			Email:    "test-user-" + util.MakeRandomURLSafeB64(5) + "@example.com",
+		testUser = util.TestUser{
+			Email:    "test-user-" + random.MakeRandomURLSafeB64(5) + "@example.com",
 			Password: []byte("hunter12"),
 			Language: domain_model.AllUserLanguages()[1], // Test code that grabs the email content assumes German.
 		}

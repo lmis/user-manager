@@ -3,7 +3,8 @@ package domain_model
 import (
 	"time"
 	"user-manager/db"
-	"user-manager/util"
+	"user-manager/util/env"
+	"user-manager/util/errors"
 )
 
 type Config struct {
@@ -38,8 +39,8 @@ func (conf *Config) IsStagingEnv() bool {
 func GetConfig() (*Config, error) {
 	config := &Config{}
 
-	if err := util.ParseEnv(config); err != nil {
-		return nil, util.Wrap("issue parsing environment", err)
+	if err := env.ParseEnv(config); err != nil {
+		return nil, errors.Wrap("issue parsing environment", err)
 	}
 
 	return config, nil

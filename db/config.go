@@ -4,7 +4,8 @@ import (
 	"database/sql"
 	"fmt"
 	"runtime/debug"
-	"user-manager/util"
+	"user-manager/util/errors"
+	"user-manager/util/logger"
 )
 
 type DbInfo struct {
@@ -15,11 +16,11 @@ type DbInfo struct {
 	Password string `env:"DB_PASSWORD"`
 }
 
-func (dbInfo *DbInfo) OpenDbConnection(log util.Logger) (dbConnection *sql.DB, err error) {
+func (dbInfo *DbInfo) OpenDbConnection(log logger.Logger) (dbConnection *sql.DB, err error) {
 	defer func() {
 		if p := recover(); p != nil {
 			CloseOrPanic(dbConnection)
-			err = util.Errorf("panicked %s\n%s", p, debug.Stack())
+			err = errors.Errorf("panicked %s\n%s", p, debug.Stack())
 		}
 	}()
 
@@ -32,12 +33,12 @@ func (dbInfo *DbInfo) OpenDbConnection(log util.Logger) (dbConnection *sql.DB, e
 
 	dbConnection, err = sql.Open("postgres", psqlInfo)
 	if err != nil {
-		return nil, util.Wrap("could not open db connection", err)
+		return nil, errors.Wrap("could not open db connection", err)
 	}
 
 	if err = CheckConnection(log, dbConnection); err != nil {
 		CloseOrPanic(dbConnection)
-		return nil, util.Wrap("could not check db connection", err)
+		return nil, errors.Wrap("could not check db connection", err)
 	}
 
 	return dbConnection, nil

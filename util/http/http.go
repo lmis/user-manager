@@ -1,24 +1,26 @@
-package util
+package http
 
 import (
 	"context"
-	"errors"
+	errs "errors"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
+	"user-manager/util/errors"
+	"user-manager/util/logger"
 )
 
-func RunHttpServer(log Logger, httpServer *http.Server) error {
+func RunHttpServer(log logger.Logger, httpServer *http.Server) error {
 	log.Info("Starting http server on %s", httpServer.Addr)
 	httpServerError := make(chan error, 1)
 	go func() {
 		if err := httpServer.ListenAndServe(); err != nil {
-			if errors.Is(err, http.ErrServerClosed) {
+			if errs.Is(err, http.ErrServerClosed) {
 				log.Info("Http server closed")
 			} else {
-				httpServerError <- Wrap("httpServer stopped with unexpected error", err)
+				httpServerError <- errors.Wrap("httpServer stopped with unexpected error", err)
 			}
 		}
 	}()
@@ -34,7 +36,7 @@ func RunHttpServer(log Logger, httpServer *http.Server) error {
 		ctx, cancel := context.WithTimeout(context.Background(), 45*time.Second)
 		defer cancel()
 		if err := httpServer.Shutdown(ctx); err != nil {
-			return Wrap("httpServer shutdown error", err)
+			return errors.Wrap("httpServer shutdown error", err)
 		}
 
 		log.Info("Http server has shutdown normally")

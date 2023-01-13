@@ -6,8 +6,9 @@ import (
 	domain_model "user-manager/domain-model"
 	"user-manager/repository"
 	"user-manager/service"
-	"user-manager/util"
+	"user-manager/util/errors"
 	"user-manager/util/nullable"
+	"user-manager/util/random"
 	"user-manager/util/slices"
 
 	"github.com/gin-gonic/gin"
@@ -63,7 +64,7 @@ func (r *LoginResource) Login(requestTO *LoginTO) (*LoginResponseTO, error) {
 
 	maybeUser, err := userRepository.GetUserForEmail(requestTO.Email)
 	if err != nil {
-		return nil, util.Wrap("error fetching user", err)
+		return nil, errors.Wrap("error fetching user", err)
 	}
 	if maybeUser.IsEmpty() {
 		securityLog.Info("Login attempt for non-existant user")
@@ -88,9 +89,9 @@ func (r *LoginResource) Login(requestTO *LoginTO) (*LoginResponseTO, error) {
 	}
 
 	securityLog.Info("Login")
-	sessionId := util.MakeRandomURLSafeB64(21)
+	sessionId := random.MakeRandomURLSafeB64(21)
 	if err = sessionRepository.InsertSession(sessionId, domain_model.USER_SESSION_TYPE_LOGIN, user.AppUserID, domain_model.LOGIN_SESSION_DURATION); err != nil {
-		return nil, util.Wrap("error inserting session", err)
+		return nil, errors.Wrap("error inserting session", err)
 	}
 
 	sessionCookieService.SetSessionCookie(nullable.Of(sessionId), domain_model.USER_SESSION_TYPE_LOGIN)
@@ -117,7 +118,7 @@ func (r *LoginResource) LoginWithSecondFactor(requestTO *LoginWithSecondFactorTO
 
 	maybeUser, err := userRepository.GetUserForEmail(requestTO.Email)
 	if err != nil {
-		return nil, util.Wrap("error finding user", err)
+		return nil, errors.Wrap("error finding user", err)
 	}
 	if maybeUser.IsEmpty() {
 		securityLog.Info("Login attempt for non-existant user")
@@ -133,7 +134,7 @@ func (r *LoginResource) LoginWithSecondFactor(requestTO *LoginWithSecondFactorTO
 	if requestTO.SecondFactor != "" {
 		throttling, err := secondFactorThrottlingRepository.GetForUser(user.AppUserID)
 		if err != nil {
-			return nil, util.Wrap("error loading throttling", err)
+			return nil, errors.Wrap("error loading throttling", err)
 		}
 
 		if throttling.IsPresent && throttling.OrPanic().TimeoutUntil.IsPresent && throttling.OrPanic().TimeoutUntil.OrPanic().After(time.Now()) {
@@ -154,11 +155,11 @@ func (r *LoginResource) LoginWithSecondFactor(requestTO *LoginWithSecondFactorTO
 				}
 			}
 			if err := secondFactorThrottlingRepository.Update(throttling.OrPanic().SecondFactorThrottlingID, failedAttemptsSinceLastSuccess, timeoutUntil); err != nil {
-				return nil, util.Wrap("issue updating throttling in db", err)
+				return nil, errors.Wrap("issue updating throttling in db", err)
 			}
 		} else if !tokenMatches {
 			if err := secondFactorThrottlingRepository.Insert(user.AppUserID, 1); err != nil {
-				return nil, util.Wrap("issue inserting throttling in db", err)
+				return nil, errors.Wrap("issue inserting throttling in db", err)
 			}
 		}
 
@@ -169,10 +170,10 @@ func (r *LoginResource) LoginWithSecondFactor(requestTO *LoginWithSecondFactorTO
 
 		if requestTO.RememberDevice {
 			securityLog.Info("2FA login with 'remember device' enabled, issuing device token")
-			deviceSessionId := util.MakeRandomURLSafeB64(21)
+			deviceSessionId := random.MakeRandomURLSafeB64(21)
 			err = sessionRepository.InsertSession(deviceSessionId, domain_model.USER_SESSION_TYPE_LOGIN, user.AppUserID, domain_model.DEVICE_SESSION_DURATION)
 			if err != nil {
-				return nil, util.Wrap("error inserting device session", err)
+				return nil, errors.Wrap("error inserting device session", err)
 			}
 
 			sessionCookieService.SetSessionCookie(nullable.Of(deviceSessionId), domain_model.USER_SESSION_TYPE_REMEMBER_DEVICE)
@@ -182,7 +183,7 @@ func (r *LoginResource) LoginWithSecondFactor(requestTO *LoginWithSecondFactorTO
 	} else {
 		maybeDeviceSessionId, err := sessionCookieService.GetSessionCookie(domain_model.USER_SESSION_TYPE_LOGIN)
 		if err != nil {
-			return nil, util.Wrap("issue reading device session cookie", err)
+			return nil, errors.Wrap("issue reading device session cookie", err)
 		}
 		if maybeDeviceSessionId.IsEmpty() {
 			return &LoginWithSecondFactorResponseTO{}, nil
@@ -191,7 +192,7 @@ func (r *LoginResource) LoginWithSecondFactor(requestTO *LoginWithSecondFactorTO
 		deviceSession, err := sessionRepository.GetSessionAndUser(maybeDeviceSessionId.OrPanic(), domain_model.USER_SESSION_TYPE_REMEMBER_DEVICE)
 
 		if err != nil {
-			return nil, util.Wrap("fetching device session failed", err)
+			return nil, errors.Wrap("fetching device session failed", err)
 		}
 		if deviceSession.IsEmpty() {
 			return &LoginWithSecondFactorResponseTO{}, nil
@@ -199,9 +200,9 @@ func (r *LoginResource) LoginWithSecondFactor(requestTO *LoginWithSecondFactorTO
 		securityLog.Info("Login passed with device token cookie")
 	}
 
-	sessionId := util.MakeRandomURLSafeB64(21)
+	sessionId := random.MakeRandomURLSafeB64(21)
 	if err = sessionRepository.InsertSession(sessionId, domain_model.USER_SESSION_TYPE_LOGIN, user.AppUserID, domain_model.LOGIN_SESSION_DURATION); err != nil {
-		return nil, util.Wrap("error inserting login session", err)
+		return nil, errors.Wrap("error inserting login session", err)
 	}
 
 	sessionCookieService.SetSessionCookie(nullable.Of(sessionId), domain_model.USER_SESSION_TYPE_LOGIN)

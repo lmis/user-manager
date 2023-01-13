@@ -8,7 +8,7 @@ import (
 	"user-manager/db/generated/models/postgres/public/model"
 	. "user-manager/db/generated/models/postgres/public/table"
 	domain_model "user-manager/domain-model"
-	"user-manager/util"
+	"user-manager/util/errors"
 	"user-manager/util/nullable"
 	"user-manager/util/slices"
 
@@ -148,7 +148,7 @@ func (r *UserRepository) Insert(userRole domain_model.UserRole, userName string,
 	res := &model.AppUser{}
 	err := stmt.QueryContext(ctx, r.tx, res)
 	if err != nil {
-		return util.Wrap("cannot insert user", err)
+		return errors.Wrap("cannot insert user", err)
 	}
 
 	return db.ExecSingleMutation(

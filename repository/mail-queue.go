@@ -6,7 +6,7 @@ import (
 	. "user-manager/db/generated/models/postgres/public/enum"
 	. "user-manager/db/generated/models/postgres/public/table"
 	domain_model "user-manager/domain-model"
-	"user-manager/util"
+	"user-manager/util/errors"
 )
 
 type MailQueueRepository struct {
@@ -36,7 +36,7 @@ func (r *MailQueueRepository) InsertPending(
 			ExecContext,
 		r.tx)
 	if err != nil {
-		return util.Wrap("issue inserting email in db", err)
+		return errors.Wrap("issue inserting email in db", err)
 	}
 
 	return nil

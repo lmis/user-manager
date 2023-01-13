@@ -5,7 +5,7 @@ import (
 	domain_model "user-manager/domain-model"
 	"user-manager/repository"
 	"user-manager/service"
-	"user-manager/util"
+	"user-manager/util/errors"
 	"user-manager/util/nullable"
 
 	"github.com/gin-gonic/gin"
@@ -46,29 +46,29 @@ func (r *LogoutResource) Logout(request LogoutTO) error {
 	sessionCookieService.RemoveSessionCookie(domain_model.USER_SESSION_TYPE_LOGIN)
 	if userSession.IsPresent {
 		if err := sessionRepository.Delete(userSession.OrPanic().UserSessionID); err != nil {
-			return util.Wrap("issue while deleting login session", err)
+			return errors.Wrap("issue while deleting login session", err)
 		}
 	}
 
 	sudoSessionId, err := sessionCookieService.GetSessionCookie(domain_model.USER_SESSION_TYPE_SUDO)
 	if err != nil {
-		return util.Wrap("issue reading sudo session cookie", err)
+		return errors.Wrap("issue reading sudo session cookie", err)
 	}
 	if sudoSessionId.IsPresent {
 		sessionCookieService.RemoveSessionCookie(domain_model.USER_SESSION_TYPE_SUDO)
 		if err := sessionRepository.Delete(domain_model.UserSessionID(sudoSessionId.OrPanic())); err != nil {
-			return util.Wrap("issue while deleting sudo session", err)
+			return errors.Wrap("issue while deleting sudo session", err)
 		}
 	}
 	if request.ForgetDevice {
 		deviceSessionId, err := sessionCookieService.GetSessionCookie(domain_model.USER_SESSION_TYPE_REMEMBER_DEVICE)
 		if err != nil {
-			return util.Wrap("issue reading device session cookie", err)
+			return errors.Wrap("issue reading device session cookie", err)
 		}
 		if deviceSessionId.IsPresent {
 			sessionCookieService.RemoveSessionCookie(domain_model.USER_SESSION_TYPE_REMEMBER_DEVICE)
 			if err := sessionRepository.Delete(domain_model.UserSessionID(deviceSessionId.OrPanic())); err != nil {
-				return util.Wrap("issue while deleting device session", err)
+				return errors.Wrap("issue while deleting device session", err)
 			}
 		}
 	}

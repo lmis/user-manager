@@ -6,7 +6,7 @@ import (
 	"text/template"
 	domain_model "user-manager/domain-model"
 	"user-manager/repository"
-	"user-manager/util"
+	"user-manager/util/errors"
 )
 
 type MailQueueService struct {
@@ -30,7 +30,7 @@ func (s *MailQueueService) SendVerificationEmail(language domain_model.UserLangu
 		"ServiceName":            config.ServiceName,
 	}
 	if err := s.enqueueBasicEmail(translation, translation.VerificationEmail, data, config.EmailFrom, email, domain_model.MAIL_QUEUE_PRIO_HIGH); err != nil {
-		return util.Wrap("error enqueuing basic email", err)
+		return errors.Wrap("error enqueuing basic email", err)
 	}
 	return nil
 }
@@ -43,7 +43,7 @@ func (s *MailQueueService) SendSignUpAttemptEmail(language domain_model.UserLang
 		"ServiceName": config.ServiceName,
 	}
 	if err := s.enqueueBasicEmail(translation, translation.SignUpAttemptedEmail, data, config.EmailFrom, email, domain_model.MAIL_QUEUE_PRIO_HIGH); err != nil {
-		return util.Wrap("error enqueuing basic email", err)
+		return errors.Wrap("error enqueuing basic email", err)
 	}
 	return nil
 }
@@ -59,7 +59,7 @@ func (s *MailQueueService) SendChangeVerificationEmail(language domain_model.Use
 		"NewEmail":                     newEmail,
 	}
 	if err := s.enqueueBasicEmail(translation, translation.ChangeVerificationEmail, data, config.EmailFrom, newEmail, domain_model.MAIL_QUEUE_PRIO_HIGH); err != nil {
-		return util.Wrap("error enqueuing basic email", err)
+		return errors.Wrap("error enqueuing basic email", err)
 	}
 	return nil
 }
@@ -73,7 +73,7 @@ func (s *MailQueueService) SendChangeNotificationEmail(language domain_model.Use
 		"NewEmail":    newEmail,
 	}
 	if err := s.enqueueBasicEmail(translation, translation.ChangeNotificationEmail, data, config.EmailFrom, email, domain_model.MAIL_QUEUE_PRIO_HIGH); err != nil {
-		return util.Wrap("error enqueuing basic email", err)
+		return errors.Wrap("error enqueuing basic email", err)
 	}
 	return nil
 }
@@ -88,7 +88,7 @@ func (s *MailQueueService) SendResetPasswordEmail(language domain_model.UserLang
 		"PasswordResetToken": resetToken,
 	}
 	if err := s.enqueueBasicEmail(translation, translation.ResetPasswordEmail, data, config.EmailFrom, email, domain_model.MAIL_QUEUE_PRIO_HIGH); err != nil {
-		return util.Wrap("error enqueuing basic email", err)
+		return errors.Wrap("error enqueuing basic email", err)
 	}
 	return nil
 }
@@ -96,11 +96,11 @@ func (s *MailQueueService) SendResetPasswordEmail(language domain_model.UserLang
 func (r *MailQueueService) executeTemplate(templateText string, data interface{}) (string, error) {
 	t, err := template.New("base").Parse(templateText)
 	if err != nil {
-		return "", util.Wrap("templateText canot be parsed", err)
+		return "", errors.Wrap("templateText canot be parsed", err)
 	}
 	writer := &strings.Builder{}
 	if err = t.Execute(writer, data); err != nil {
-		return "", util.Wrap("template execution error", err)
+		return "", errors.Wrap("template execution error", err)
 	}
 	return writer.String(), nil
 }
@@ -128,7 +128,7 @@ func (s *MailQueueService) enqueueBasicEmail(
 	if ok {
 		salutation, err = s.executeTemplate(translation.Salutation, data)
 		if err != nil {
-			return util.Wrap("issue translating salutation", err)
+			return errors.Wrap("issue translating salutation", err)
 		}
 	} else {
 		salutation = translation.SalutationAnonymous
@@ -136,12 +136,12 @@ func (s *MailQueueService) enqueueBasicEmail(
 	subject := ""
 	paragraphs := []string{}
 	if len(templates) < 2 {
-		return util.Errorf("invalid template. %s need at least subject and paragraph", templates)
+		return errors.Errorf("invalid template. %s need at least subject and paragraph", templates)
 	}
 	for i, t := range templates {
 		p, err := s.executeTemplate(t, data)
 		if err != nil {
-			return util.Wrap(fmt.Sprintf("issue translating template %d", i), err)
+			return errors.Wrap(fmt.Sprintf("issue translating template %d", i), err)
 		}
 		if i == 0 {
 			subject = p
@@ -155,11 +155,11 @@ func (s *MailQueueService) enqueueBasicEmail(
 		Paragraphs: paragraphs,
 		Footer:     translation.Footer,
 	}); err != nil {
-		return util.Wrap("issue executing base template", err)
+		return errors.Wrap("issue executing base template", err)
 	}
 
 	if err = mailQueueRepository.InsertPending(from, to, writer.String(), subject, priority); err != nil {
-		return util.Wrap("issue inserting pending email", err)
+		return errors.Wrap("issue inserting pending email", err)
 	}
 	return nil
 }

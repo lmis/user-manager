@@ -5,7 +5,8 @@ import (
 	domain_model "user-manager/domain-model"
 	"user-manager/repository"
 	"user-manager/service"
-	"user-manager/util"
+	"user-manager/util/errors"
+	"user-manager/util/random"
 
 	"github.com/gin-gonic/gin"
 )
@@ -45,33 +46,33 @@ func (r *SignUpResource) SignUp(requestTO *SignUpTO) error {
 
 	user, err := userRepository.GetUserForEmail(requestTO.Email)
 	if err != nil {
-		return util.Wrap("error fetching user", err)
+		return errors.Wrap("error fetching user", err)
 	}
 	if user.IsPresent {
 		securityLog.Info("User already exists")
 		if err = mailQueueService.SendSignUpAttemptEmail(user.OrPanic().Language, user.OrPanic().Email); err != nil {
-			return util.Wrap("error sending signup attempted email", err)
+			return errors.Wrap("error sending signup attempted email", err)
 		}
 		return nil
 	}
 
 	hash, err := authService.Hash(requestTO.Password)
 	if err != nil {
-		return util.Wrap("error hashing password", err)
+		return errors.Wrap("error hashing password", err)
 	}
 
 	language := domain_model.UserLanguage(requestTO.Language)
 	if !language.IsValid() {
-		return util.Errorf("unsupported language \"%s\"", string(language))
+		return errors.Errorf("unsupported language \"%s\"", string(language))
 	}
 
-	verificationToken := util.MakeRandomURLSafeB64(21)
+	verificationToken := random.MakeRandomURLSafeB64(21)
 	if err = userRepository.Insert(domain_model.USER_ROLE_USER, requestTO.UserName, requestTO.Email, false, verificationToken, hash, language); err != nil {
-		return util.Wrap("error inserting user", err)
+		return errors.Wrap("error inserting user", err)
 	}
 
 	if err = mailQueueService.SendVerificationEmail(language, requestTO.Email, verificationToken); err != nil {
-		return util.Wrap("error sending verification email", err)
+		return errors.Wrap("error sending verification email", err)
 	}
 
 	return nil

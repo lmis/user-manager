@@ -5,23 +5,23 @@ import (
 	"time"
 	"user-manager/cmd/app/resource"
 	"user-manager/cmd/mock-3rd-party-apis/config"
-	mock_util "user-manager/cmd/mock-3rd-party-apis/util"
+	"user-manager/cmd/mock-3rd-party-apis/util"
 	domain_model "user-manager/domain-model"
 	email_api "user-manager/third-party-models/email-api"
-	"user-manager/util"
+	"user-manager/util/errors"
 	"user-manager/util/slices"
 )
 
-func TestSignUp(config *config.Config, emails mock_util.Emails, testUser *mock_util.TestUser) error {
+func TestSignUp(config *config.Config, emails util.Emails, testUser *util.TestUser) error {
 	email := testUser.Email
 	password := testUser.Password
 	language := testUser.Language
-	client := mock_util.NewRequestClient(config)
+	client := util.NewRequestClient(config)
 
 	// Check user before sign-up
 	client.MakeApiRequest("GET", "user-info", nil)
 	if err := client.AssertLastResponseEq(200, resource.UserInfoTO{Roles: nil, EmailVerified: false, Language: ""}); err != nil {
-		return util.Wrap("response mismatch", err)
+		return errors.Wrap("response mismatch", err)
 	}
 
 	// Sign-up
@@ -32,7 +32,7 @@ func TestSignUp(config *config.Config, emails mock_util.Emails, testUser *mock_u
 		Password: password,
 	})
 	if err := client.AssertLastResponseEq(204, nil); err != nil {
-		return util.Wrap("signup response mismatch", err)
+		return errors.Wrap("signup response mismatch", err)
 	}
 
 	// Login
@@ -42,17 +42,17 @@ func TestSignUp(config *config.Config, emails mock_util.Emails, testUser *mock_u
 	})
 
 	if err := client.AssertLastResponseEq(200, resource.LoginResponseTO{Status: resource.LOGIN_RESPONSE_LOGGED_IN}); err != nil {
-		return util.Wrap("login response mismatch", err)
+		return errors.Wrap("login response mismatch", err)
 	}
 
 	if !client.HasSessionCookie() {
-		return util.Error("session cookie not found")
+		return errors.Error("session cookie not found")
 	}
 
 	// Check user
 	client.MakeApiRequest("GET", "user-info", nil)
 	if err := client.AssertLastResponseEq(200, resource.UserInfoTO{Roles: []domain_model.UserRole{domain_model.USER_ROLE_USER}, EmailVerified: false, Language: language}); err != nil {
-		return util.Wrap("user resonse mismatch", err)
+		return errors.Wrap("user resonse mismatch", err)
 	}
 
 	// Confirm with invalid token
@@ -60,7 +60,7 @@ func TestSignUp(config *config.Config, emails mock_util.Emails, testUser *mock_u
 		Token: "invalid",
 	})
 	if err := client.AssertLastResponseEq(200, resource.EmailConfirmationResponseTO{Status: resource.EMAIL_CONFIRMATION_RESPONSE_INVALID_TOKEN}); err != nil {
-		return util.Wrap("confirm email with invalid token response mismatch", err)
+		return errors.Wrap("confirm email with invalid token response mismatch", err)
 	}
 
 	// Grab token from email
@@ -77,13 +77,13 @@ func TestSignUp(config *config.Config, emails mock_util.Emails, testUser *mock_u
 	}
 
 	if token == "" {
-		return util.Error("token not found")
+		return errors.Error("token not found")
 	}
 
 	// Confirm with token
 	client.MakeApiRequest("POST", "user/confirm-email", resource.EmailConfirmationTO{Token: token})
 	if err := client.AssertLastResponseEq(200, resource.EmailConfirmationResponseTO{Status: resource.EMAIL_CONFIRMATION_RESPONSE_NEWLY_CONFIRMED}); err != nil {
-		return util.Wrap("confirm email response mismatch", err)
+		return errors.Wrap("confirm email response mismatch", err)
 	}
 
 	// Confirm again
@@ -91,26 +91,26 @@ func TestSignUp(config *config.Config, emails mock_util.Emails, testUser *mock_u
 		Token: token,
 	})
 	if err := client.AssertLastResponseEq(200, resource.EmailConfirmationResponseTO{Status: resource.EMAIL_CONFIRMATION_RESPONSE_ALREADY_CONFIRMED}); err != nil {
-		return util.Wrap("second confirm email response mismatch", err)
+		return errors.Wrap("second confirm email response mismatch", err)
 	}
 
 	// Check user
 	client.MakeApiRequest("GET", "user-info", nil)
 	if err := client.AssertLastResponseEq(200, resource.UserInfoTO{Roles: []domain_model.UserRole{domain_model.USER_ROLE_USER}, EmailVerified: true, Language: language}); err != nil {
-		return util.Wrap("user after confirmation response mismatch", err)
+		return errors.Wrap("user after confirmation response mismatch", err)
 	}
 	testUser.EmailVerified = true
 
 	// Logout
 	client.MakeApiRequest("POST", "auth/logout", resource.LogoutTO{})
 	if err := client.AssertLastResponseEq(204, nil); err != nil {
-		return util.Wrap("logout response mismatch", err)
+		return errors.Wrap("logout response mismatch", err)
 	}
 
 	// Check user
 	client.MakeApiRequest("GET", "user-info", nil)
 	if err := client.AssertLastResponseEq(200, resource.UserInfoTO{Roles: nil}); err != nil {
-		return util.Wrap("user after logout response mismatch", err)
+		return errors.Wrap("user after logout response mismatch", err)
 	}
 
 	// Signup again with same user
@@ -121,7 +121,7 @@ func TestSignUp(config *config.Config, emails mock_util.Emails, testUser *mock_u
 		Password: []byte("another-bad-password"),
 	})
 	if err := client.AssertLastResponseEq(204, nil); err != nil {
-		return util.Wrap("signup response mismatch", err)
+		return errors.Wrap("signup response mismatch", err)
 	}
 
 	// Grab email
@@ -136,7 +136,7 @@ func TestSignUp(config *config.Config, emails mock_util.Emails, testUser *mock_u
 	}
 
 	if !receivedNotificationEmail {
-		return util.Error("notification email not received")
+		return errors.Error("notification email not received")
 	}
 
 	return nil

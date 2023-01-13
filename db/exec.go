@@ -4,7 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"user-manager/util"
+	"user-manager/util/errors"
 	"user-manager/util/nullable"
 
 	"github.com/go-jet/jet/v2/qrm"
@@ -39,10 +39,10 @@ func ExecSingleMutation(query func(context.Context, qrm.Executable) (sql.Result,
 func CheckAffectedRows(r sql.Result, expectedRows int64) error {
 	rows, err := r.RowsAffected()
 	if err != nil {
-		return util.Wrap("cannot get affected rows", err)
+		return errors.Wrap("cannot get affected rows", err)
 	}
 	if rows != expectedRows {
-		return util.Wrap(fmt.Sprintf("wrong number of rows affected: %d, expected %d", rows, expectedRows), err)
+		return errors.Wrap(fmt.Sprintf("wrong number of rows affected: %d, expected %d", rows, expectedRows), err)
 	}
 	return nil
 }

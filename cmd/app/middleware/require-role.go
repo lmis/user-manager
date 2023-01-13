@@ -3,7 +3,7 @@ package middleware
 import (
 	ginext "user-manager/cmd/app/gin-extensions"
 	domain_model "user-manager/domain-model"
-	"user-manager/util"
+	"user-manager/util/errors"
 	"user-manager/util/nullable"
 	"user-manager/util/slices"
 
@@ -32,14 +32,14 @@ func (m *RequireRoleMiddleware) Handle(requiredRole domain_model.UserRole) {
 	userSession := m.userSession
 	if userSession.IsEmpty() {
 		securityLog.Info("Not a %s: unauthenticated", requiredRole)
-		c.AbortWithError(http.StatusUnauthorized, util.Error("not authenticated"))
+		c.AbortWithError(http.StatusUnauthorized, errors.Error("not authenticated"))
 		return
 	}
 
 	receivedRoles := userSession.OrPanic().User.UserRoles
 	if !slices.Contains(receivedRoles, requiredRole) {
 		securityLog.Info("Not a %s: wrong role (%v)", requiredRole, receivedRoles)
-		c.AbortWithError(http.StatusUnauthorized, util.Errorf("wrong role. required %s, received %v", requiredRole, receivedRoles))
+		c.AbortWithError(http.StatusUnauthorized, errors.Errorf("wrong role. required %s, received %v", requiredRole, receivedRoles))
 		return
 	}
 }

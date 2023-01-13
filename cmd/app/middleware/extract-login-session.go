@@ -7,7 +7,7 @@ import (
 	domain_model "user-manager/domain-model"
 	"user-manager/repository"
 	"user-manager/service"
-	"user-manager/util"
+	"user-manager/util/errors"
 
 	"github.com/gin-gonic/gin"
 )
@@ -33,7 +33,7 @@ func (m *ExtractLoginSessionMiddleware) Handle() {
 
 	sessionId, err := sessionCookieService.GetSessionCookie(domain_model.USER_SESSION_TYPE_LOGIN)
 	if err != nil {
-		c.AbortWithError(http.StatusInternalServerError, util.Wrap("getting session cookie failed", err))
+		c.AbortWithError(http.StatusInternalServerError, errors.Wrap("getting session cookie failed", err))
 		return
 	}
 
@@ -44,7 +44,7 @@ func (m *ExtractLoginSessionMiddleware) Handle() {
 	session, err := sessionRepository.GetSessionAndUser(sessionId.OrPanic(), domain_model.USER_SESSION_TYPE_LOGIN)
 
 	if err != nil {
-		c.AbortWithError(http.StatusInternalServerError, util.Wrap("fetching session failed", err))
+		c.AbortWithError(http.StatusInternalServerError, errors.Wrap("fetching session failed", err))
 		return
 	}
 
@@ -53,7 +53,7 @@ func (m *ExtractLoginSessionMiddleware) Handle() {
 		ginext.GetRequestContext(c).UserSession = session
 
 		if err := sessionRepository.UpdateSessionTimeout(session.OrPanic().UserSessionID, time.Now().Add(domain_model.LOGIN_SESSION_DURATION)); err != nil {
-			c.AbortWithError(http.StatusInternalServerError, util.Wrap("issue updating session timeout in db", err))
+			c.AbortWithError(http.StatusInternalServerError, errors.Wrap("issue updating session timeout in db", err))
 			return
 		}
 	}

@@ -5,8 +5,9 @@ import (
 	domain_model "user-manager/domain-model"
 	"user-manager/repository"
 	"user-manager/service"
-	"user-manager/util"
+	"user-manager/util/errors"
 	"user-manager/util/nullable"
+	"user-manager/util/random"
 
 	"github.com/gin-gonic/gin"
 	"golang.org/x/crypto/bcrypt"
@@ -46,11 +47,11 @@ func (r *SettingsResource) SetLanguage(requestTO *LanguageTO) error {
 
 	language := requestTO.Language
 	if !language.IsValid() {
-		return util.Errorf("invalid language %s", language)
+		return errors.Errorf("invalid language %s", language)
 	}
 
 	if err := userRepository.SetLanguage(userSession.OrPanic().User.AppUserID, language); err != nil {
-		return util.Wrap("error updating language", err)
+		return errors.Wrap("error updating language", err)
 	}
 	return nil
 }
@@ -76,9 +77,9 @@ func (r *SettingsResource) EnterSudoMode(requestTO *SudoTO) (*SudoResponseTO, er
 	}
 
 	securityLog.Info("Entering sudo mode")
-	sessionId := util.MakeRandomURLSafeB64(21)
+	sessionId := random.MakeRandomURLSafeB64(21)
 	if err := sessionRepository.InsertSession(sessionId, domain_model.USER_SESSION_TYPE_SUDO, user.AppUserID, domain_model.SUDO_SESSION_DURATION); err != nil {
-		return nil, util.Wrap("error inserting session", err)
+		return nil, errors.Wrap("error inserting session", err)
 	}
 
 	sessionCookieService.SetSessionCookie(nullable.Of(sessionId), domain_model.USER_SESSION_TYPE_SUDO)
@@ -113,7 +114,7 @@ func (r *SettingsResource) ConfirmEmailChange(request *EmailChangeConfirmationTO
 	}
 
 	if user.EmailVerificationToken.IsEmpty() {
-		return nil, util.Error("no verification token present on database")
+		return nil, errors.Error("no verification token present on database")
 	}
 
 	if request.Token != user.EmailVerificationToken.OrPanic() {
@@ -122,7 +123,7 @@ func (r *SettingsResource) ConfirmEmailChange(request *EmailChangeConfirmationTO
 	}
 
 	if err := userRepository.SetEmailAndClearNextEmail(user.AppUserID, user.NextEmail.OrPanic()); err != nil {
-		return nil, util.Wrap("issue setting email ", err)
+		return nil, errors.Wrap("issue setting email ", err)
 	}
 
 	return &EmailChangeConfirmationResponseTO{EMAIL_CHANGE_RESPONSE_NEW_EMAIL_CONFIRMED}, nil

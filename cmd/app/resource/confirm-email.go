@@ -5,8 +5,9 @@ import (
 	domain_model "user-manager/domain-model"
 	"user-manager/repository"
 	"user-manager/service"
-	"user-manager/util"
+	"user-manager/util/errors"
 	"user-manager/util/nullable"
+	"user-manager/util/random"
 
 	"github.com/gin-gonic/gin"
 )
@@ -59,7 +60,7 @@ func (r *EmailConfirmationResource) ConfirmEmail(request *EmailConfirmationTO) (
 	}
 
 	if user.EmailVerificationToken.IsEmpty() {
-		return nil, util.Error("no verification token present on database")
+		return nil, errors.Error("no verification token present on database")
 	}
 
 	if request.Token != user.EmailVerificationToken.OrPanic() {
@@ -68,7 +69,7 @@ func (r *EmailConfirmationResource) ConfirmEmail(request *EmailConfirmationTO) (
 	}
 
 	if err := userRepository.SetEmailToVerified(user.AppUserID); err != nil {
-		return nil, util.Wrap("issue setting email to verified", err)
+		return nil, errors.Wrap("issue setting email to verified", err)
 	}
 
 	return &EmailConfirmationResponseTO{EMAIL_CONFIRMATION_RESPONSE_NEWLY_CONFIRMED}, nil
@@ -89,12 +90,12 @@ func (r *EmailConfirmationResource) RetriggerVerificationEmail() (*RetriggerConf
 		return &RetriggerConfirmationEmailResponseTO{Sent: false}, nil
 	}
 
-	if err := userRepository.UpdateUserEmailVerificationToken(user.AppUserID, util.MakeRandomURLSafeB64(21)); err != nil {
-		return nil, util.Wrap("issue updating token", err)
+	if err := userRepository.UpdateUserEmailVerificationToken(user.AppUserID, random.MakeRandomURLSafeB64(21)); err != nil {
+		return nil, errors.Wrap("issue updating token", err)
 	}
 
 	if err := mailQueueService.SendVerificationEmail(user.Language, user.Email, user.EmailVerificationToken.OrPanic()); err != nil {
-		return nil, util.Wrap("error sending verification email", err)
+		return nil, errors.Wrap("error sending verification email", err)
 	}
 
 	return &RetriggerConfirmationEmailResponseTO{Sent: true}, nil

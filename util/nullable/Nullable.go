@@ -2,7 +2,7 @@ package nullable
 
 import (
 	"encoding/json"
-	"user-manager/util"
+	"user-manager/util/errors"
 )
 
 type Nullable[T interface{}] struct {
@@ -34,7 +34,7 @@ func (n Nullable[T]) OrPanic() T {
 	if n.IsPresent {
 		return n.val
 	}
-	panic(util.Error("accessing value of empty Nullable"))
+	panic(errors.Error("accessing value of empty Nullable"))
 }
 
 func (n Nullable[T]) IsEmpty() bool {
@@ -53,7 +53,7 @@ func FromPointer[T interface{}](val *T) Nullable[T] {
 
 func NeverNil[T interface{}](val *T) Nullable[*T] {
 	if val == nil {
-		panic(util.Error("nil value in NeverNil"))
+		panic(errors.Error("nil value in NeverNil"))
 	}
 	return Of(val)
 }

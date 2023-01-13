@@ -5,8 +5,9 @@ import (
 	domain_model "user-manager/domain-model"
 	"user-manager/repository"
 	"user-manager/service"
-	"user-manager/util"
+	"user-manager/util/errors"
 	"user-manager/util/nullable"
+	"user-manager/util/random"
 
 	"github.com/gin-gonic/gin"
 )
@@ -46,16 +47,16 @@ func (r *SensitiveSettingsResource) InitiateEmailChange(requestTO *ChangeEmailTO
 
 	securityLog.Info("Changing user email")
 
-	verificationToken := util.MakeRandomURLSafeB64(21)
+	verificationToken := random.MakeRandomURLSafeB64(21)
 	if err := userRepository.SetNextEmail(user.AppUserID, nextEmail, verificationToken); err != nil {
-		return util.Wrap("issue setting next email for user", err)
+		return errors.Wrap("issue setting next email for user", err)
 	}
 
 	if err := mailQueueService.SendChangeVerificationEmail(user.Language, nextEmail, verificationToken); err != nil {
-		return util.Wrap("error sending change verification email", err)
+		return errors.Wrap("error sending change verification email", err)
 	}
 	if err := mailQueueService.SendChangeNotificationEmail(user.Language, user.Email, nextEmail); err != nil {
-		return util.Wrap("error sending change notification email", err)
+		return errors.Wrap("error sending change notification email", err)
 	}
 
 	return nil

@@ -1,7 +1,9 @@
 package config
 
 import (
-	"user-manager/util"
+	"user-manager/util/env"
+	"user-manager/util/errors"
+	"user-manager/util/logger"
 )
 
 type Config struct {
@@ -9,11 +11,11 @@ type Config struct {
 	AppUrl string `env:"APP_URL"`
 }
 
-func GetConfig(log util.Logger) (*Config, error) {
+func GetConfig(log logger.Logger) (*Config, error) {
 	config := &Config{}
 
-	if err := util.ParseEnv(config); err != nil {
-		return nil, util.Wrap("error parsing env", err)
+	if err := env.ParseEnv(config); err != nil {
+		return nil, errors.Wrap("error parsing env", err)
 	}
 	return config, nil
 }

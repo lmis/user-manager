@@ -9,7 +9,7 @@ import (
 	"net/http"
 	"user-manager/cmd/mock-3rd-party-apis/config"
 	domain_model "user-manager/domain-model"
-	"user-manager/util"
+	"user-manager/util/errors"
 )
 
 type TestUser struct {
@@ -53,12 +53,12 @@ func (r *RequestClient) MakeApiRequest(method string, subpath string, payload in
 	config := r.config
 	req, err := http.NewRequest(method, fmt.Sprintf("%s/api/%s", config.AppUrl, subpath), nil)
 	if err != nil {
-		panic(util.Wrap("error building request", err))
+		panic(errors.Wrap("error building request", err))
 	}
 	if payload != nil {
 		b, err := json.Marshal(payload)
 		if err != nil {
-			panic(util.Wrap("issue marshalling json", err))
+			panic(errors.Wrap("issue marshalling json", err))
 		}
 		req.Header.Add("Content-Type", "application/json")
 		req.Body = io.NopCloser(bytes.NewReader(b))
@@ -72,7 +72,7 @@ func (r *RequestClient) MakeApiRequest(method string, subpath string, payload in
 	}
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		panic(util.Wrap("error making request", err))
+		panic(errors.Wrap("error making request", err))
 	}
 
 	for _, cookie := range resp.Cookies() {
@@ -92,20 +92,20 @@ func (r *RequestClient) HasSessionCookie() bool {
 func (r *RequestClient) AssertLastResponseEq(expectedStatusCode int, expectedPayload interface{}) error {
 	resp := r.lastResponse
 	if err := AssertEq(resp.StatusCode, expectedStatusCode); err != nil {
-		return util.Wrap("status code mismatch", err)
+		return errors.Wrap("status code mismatch", err)
 	}
 	body := readAllClose(resp.Body)
 	if expectedPayload != nil {
 		payloadAsJson, err := json.Marshal(expectedPayload)
 		if err != nil {
-			return util.Wrap("issue serializing expected payload", err)
+			return errors.Wrap("issue serializing expected payload", err)
 		}
 		if err := AssertEq(string(body), string(payloadAsJson)); err != nil {
-			return util.Wrap("payload mismatch", err)
+			return errors.Wrap("payload mismatch", err)
 		}
 	} else {
 		if err := AssertEq(len(body), 0); err != nil {
-			return util.Wrap("payload length mismatch", err)
+			return errors.Wrap("payload length mismatch", err)
 		}
 
 	}
@@ -114,7 +114,7 @@ func (r *RequestClient) AssertLastResponseEq(expectedStatusCode int, expectedPay
 
 func AssertEq(received interface{}, expected interface{}) error {
 	if received != expected {
-		return util.Errorf("expected %v got %v", expected, received)
+		return errors.Errorf("expected %v got %v", expected, received)
 	}
 	return nil
 
@@ -123,10 +123,10 @@ func AssertEq(received interface{}, expected interface{}) error {
 func readAllClose(reader io.ReadCloser) []byte {
 	body, err := ioutil.ReadAll(reader)
 	if err != nil {
-		panic(util.Wrap("issue reading", err))
+		panic(errors.Wrap("issue reading", err))
 	}
 	if err = reader.Close(); err != nil {
-		panic(util.Wrap("issue closing", err))
+		panic(errors.Wrap("issue closing", err))
 	}
 
 	return body

@@ -1,7 +1,7 @@
 package service
 
 import (
-	"user-manager/util"
+	"user-manager/util/errors"
 
 	"golang.org/x/crypto/bcrypt"
 )
@@ -15,12 +15,12 @@ func ProvideAuthService() *AuthService {
 
 func (s *AuthService) Hash(password []byte) (string, error) {
 	if len(password) < 8 {
-		return "", util.Errorf("password too short")
+		return "", errors.Errorf("password too short")
 
 	}
 	// See https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html#input-limits
 	if len(password) > 71 {
-		return "", util.Errorf("password too long")
+		return "", errors.Errorf("password too long")
 
 	}
 	hash, err := bcrypt.GenerateFromPassword(password, bcrypt.DefaultCost)

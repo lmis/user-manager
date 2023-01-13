@@ -5,7 +5,7 @@ import (
 	"net/http"
 	ginext "user-manager/cmd/app/gin-extensions"
 	domain_model "user-manager/domain-model"
-	"user-manager/util"
+	"user-manager/util/logger"
 
 	"time"
 
@@ -102,14 +102,14 @@ func getMetadata(logger *RequestLogger) *LogMetadata {
 	return &metadata
 }
 
-func (logger *RequestLogger) Info(format string, args ...interface{}) {
-	util.WriteLog(getMetadata(logger), util.LOG_LEVEL_INFO, format, args...)
+func (r *RequestLogger) Info(format string, args ...interface{}) {
+	logger.WriteLog(getMetadata(r), logger.LOG_LEVEL_INFO, format, args...)
 }
 
-func (logger *RequestLogger) Warn(format string, args ...interface{}) {
-	util.WriteLog(getMetadata(logger), util.LOG_LEVEL_WARN, format, args...)
+func (r *RequestLogger) Warn(format string, args ...interface{}) {
+	logger.WriteLog(getMetadata(r), logger.LOG_LEVEL_WARN, format, args...)
 }
 
-func (logger *RequestLogger) Err(e error) {
-	util.WriteLog(getMetadata(logger), util.LOG_LEVEL_ERROR, "%s", e.Error())
+func (r *RequestLogger) Err(e error) {
+	logger.WriteLog(getMetadata(r), logger.LOG_LEVEL_ERROR, "%s", e.Error())
 }

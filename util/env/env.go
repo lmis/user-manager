@@ -1,4 +1,4 @@
-package util
+package env
 
 import (
 	env "github.com/caarlos0/env/v6"

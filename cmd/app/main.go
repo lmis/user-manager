@@ -10,7 +10,10 @@ import (
 	"user-manager/cmd/app/router"
 	"user-manager/db"
 	domain_model "user-manager/domain-model"
-	"user-manager/util"
+	"user-manager/util/command"
+	"user-manager/util/errors"
+	httputil "user-manager/util/http"
+	"user-manager/util/logger"
 
 	"net/http"
 	"time"
@@ -24,20 +27,20 @@ var translationsFS embed.FS
 var database *sql.DB
 
 func main() {
-	util.Run("LIFECYCLE", runServer)
+	command.Run("LIFECYCLE", runServer)
 }
 
-func runServer(log util.Logger, dir string) error {
+func runServer(log logger.Logger, dir string) error {
 	log.Info("Starting up")
 
-	err := injector.SetupEmailTemplatesProviders(log, translationsFS)
+	err := injector.SetupEmailTemplatesProviders(translationsFS)
 	if err != nil {
-		return util.Wrap("cannot initialize email service", err)
+		return errors.Wrap("cannot initialize email service", err)
 	}
 
 	config, err := domain_model.GetConfig()
 	if err != nil {
-		return util.Wrap("cannot read config", err)
+		return errors.Wrap("cannot read config", err)
 	}
 	injector.SetupConfigProvider(config)
 
@@ -47,18 +50,18 @@ func runServer(log util.Logger, dir string) error {
 
 	database, err = config.DbInfo.OpenDbConnection(log)
 	if err != nil {
-		return util.Wrap("could not open db connection", err)
+		return errors.Wrap("could not open db connection", err)
 	}
 	defer db.CloseOrPanic(database)
 	injector.SetupDatabaseProvider(database)
 
-	if err = util.RunHttpServer(log, &http.Server{
+	if err = httputil.RunHttpServer(log, &http.Server{
 		Addr:         ":" + config.AppPort,
 		Handler:      router.New(),
 		ReadTimeout:  1 * time.Minute,
 		WriteTimeout: 1 * time.Minute,
 	}); err != nil {
-		return util.Wrap("error running http server", err)
+		return errors.Wrap("error running http server", err)
 	}
 
 	return nil
