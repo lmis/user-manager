@@ -4,6 +4,6 @@
 package main
 
 import (
-	_ "github.com/google/wire/cmd/wire"
-	_ "github.com/kisielk/errcheck"
+  _ "github.com/google/wire/cmd/wire"
+  _ "github.com/golangci/golangci-lint/cmd/golangci-lint"
 )

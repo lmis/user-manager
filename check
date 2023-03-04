@@ -7,5 +7,5 @@ echo "go fmt"
 go fmt ./...
 echo "go vet"
 go vet ./...
-echo "errcheck"
-go run github.com/kisielk/errcheck -exclude .errcheck-ignore -asserts $(go list ./... | grep -v db/generated/)
+echo "lint"
+go run github.com/golangci/golangci-lint/cmd/golangci-lint run 

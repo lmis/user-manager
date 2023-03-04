@@ -1,4 +1,0 @@
-// AbortWithError and Error also returns the Error
-(*github.com/gin-gonic/gin.Context).AbortWithError
-(*github.com/gin-gonic/gin.Context).Error
-
