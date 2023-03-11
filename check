@@ -2,7 +2,7 @@
 echo "go mod tidy"
 go mod tidy
 echo "go generate app"
-go generate cmd/app/main.go
+go generate ./...
 echo "go fmt"
 go fmt ./...
 echo "go vet"

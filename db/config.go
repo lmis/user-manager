@@ -1,5 +1,6 @@
 package db
 
+//go:generate go run ../cmd/migrator/main.go generate generated/models
 import (
 	"database/sql"
 	"fmt"

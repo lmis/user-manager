@@ -1,6 +1,5 @@
 package main
 
-//go:generate go run ../migrator/main.go generate ../../db/generated/models
 import (
 	"bytes"
 	"database/sql"

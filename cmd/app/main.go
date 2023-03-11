@@ -1,6 +1,5 @@
 package main
 
-//go:generate go run ../migrator/main.go generate ../../db/generated/models
 //go:generate go run github.com/google/wire/cmd/wire ./...
 
 import (
