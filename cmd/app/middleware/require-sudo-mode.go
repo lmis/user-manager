@@ -3,7 +3,6 @@ package middleware
 import (
 	"net/http"
 	"time"
-	ginext "user-manager/cmd/app/gin-extensions"
 	domain_model "user-manager/domain-model"
 	"user-manager/repository"
 	"user-manager/service"
@@ -23,7 +22,7 @@ func ProvideRequireSudoModeMiddleware(c *gin.Context, sessionCookieService *serv
 }
 
 func RegisterRequireSudoModeMiddleware(group *gin.RouterGroup) {
-	group.Use(ginext.WrapMiddleware(InitializeRequireSudoModeMiddleware))
+	group.Use(func(ctx *gin.Context) { InitializeRequireSudoModeMiddleware(ctx).Handle() })
 }
 
 func (m *RequireSudoModeMiddleware) Handle() {

@@ -1,7 +1,6 @@
 package middleware
 
 import (
-	ginext "user-manager/cmd/app/gin-extensions"
 	domain_model "user-manager/domain-model"
 	"user-manager/util/errors"
 	"user-manager/util/nullable"
@@ -22,7 +21,7 @@ func ProvideVerifiedEmailAuthorizationMiddleware(c *gin.Context, userSession nul
 }
 
 func RegisterVerifiedEmailAuthorizationMiddleware(group *gin.RouterGroup) {
-	group.Use(ginext.WrapMiddleware(InitializeVerifiedEmailAuthorizationMiddleware))
+	group.Use(func(ctx *gin.Context) { InitializeVerifiedEmailAuthorizationMiddleware(ctx).Handle() })
 }
 
 func (m *VerifiedEmailAuthorizationMiddleware) Handle() {

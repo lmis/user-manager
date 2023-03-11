@@ -1,7 +1,6 @@
 package middleware
 
 import (
-	ginext "user-manager/cmd/app/gin-extensions"
 	domain_model "user-manager/domain-model"
 	"user-manager/util/errors"
 	"user-manager/util/nullable"
@@ -23,7 +22,7 @@ func ProvideRequireRoleMiddleware(c *gin.Context, securityLog domain_model.Secur
 }
 
 func RegisterRequireRoleMiddlware(group *gin.RouterGroup, requiredRole domain_model.UserRole) {
-	group.Use(ginext.WrapMiddlewareWithArg(InitializeRequireRoleMiddleware, requiredRole))
+	group.Use(func(ctx *gin.Context) { InitializeRequireRoleMiddleware(ctx).Handle(requiredRole) })
 }
 
 func (m *RequireRoleMiddleware) Handle(requiredRole domain_model.UserRole) {

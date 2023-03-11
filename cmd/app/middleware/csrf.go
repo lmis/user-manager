@@ -2,7 +2,6 @@ package middleware
 
 import (
 	"net/http"
-	ginext "user-manager/cmd/app/gin-extensions"
 	domain_model "user-manager/domain-model"
 	"user-manager/util/errors"
 
@@ -19,7 +18,7 @@ func ProvideCsrfMiddleware(c *gin.Context, config *domain_model.Config) *CsrfMid
 }
 
 func RegisterCsrfMiddleware(group *gin.RouterGroup) {
-	group.Use(ginext.WrapMiddleware(InitializeCsrfMiddleware))
+	group.Use(func(ctx *gin.Context) { InitializeCsrfMiddleware(ctx).Handle() })
 }
 
 func (m *CsrfMiddleware) Handle() {

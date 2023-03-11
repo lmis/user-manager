@@ -23,7 +23,7 @@ func ProvideDatabaseMiddleware(c *gin.Context, database *sql.DB, log domain_mode
 }
 
 func RegisterDatabaseMiddleware(group *gin.RouterGroup) {
-	group.Use(ginext.WrapMiddleware(InitializeDatabaseMiddleware))
+	group.Use(func(ctx *gin.Context) { InitializeDatabaseMiddleware(ctx).Handle() })
 }
 func (m *DatabaseMiddleware) Handle() {
 	c := m.c

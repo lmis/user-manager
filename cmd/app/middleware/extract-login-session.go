@@ -23,7 +23,7 @@ func ProvideExtractLoginSessionMiddleware(c *gin.Context, sessionRepository *rep
 }
 
 func RegisterExtractLoginSessionMiddleware(group *gin.RouterGroup) {
-	group.Use(ginext.WrapMiddleware(InitializeExtractLoginSessionMiddleware))
+	group.Use(func(ctx *gin.Context) { InitializeExtractLoginSessionMiddleware(ctx).Handle() })
 }
 
 func (m *ExtractLoginSessionMiddleware) Handle() {
