@@ -30,7 +30,7 @@ func (r *UserInfoResource) Get() (*UserInfoTO, error) {
 	userSession := r.userSession
 
 	userTO := UserInfoTO{}
-	if userSession.IsPresent {
+	if userSession.IsPresent() {
 		userTO.Roles = userSession.OrPanic().User.UserRoles
 		userTO.EmailVerified = userSession.OrPanic().User.EmailVerified
 		userTO.Language = userSession.OrPanic().User.Language

@@ -48,7 +48,7 @@ func (m *ExtractLoginSessionMiddleware) Handle() {
 		return
 	}
 
-	if session.IsPresent {
+	if session.IsPresent() {
 
 		ginext.GetRequestContext(c).UserSession = session
 

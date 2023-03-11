@@ -48,7 +48,7 @@ func (r *SignUpResource) SignUp(requestTO *SignUpTO) error {
 	if err != nil {
 		return errors.Wrap("error fetching user", err)
 	}
-	if user.IsPresent {
+	if user.IsPresent() {
 		securityLog.Info("User already exists")
 		if err = mailQueueService.SendSignUpAttemptEmail(user.OrPanic().Language, user.OrPanic().Email); err != nil {
 			return errors.Wrap("error sending signup attempted email", err)

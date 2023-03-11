@@ -84,7 +84,7 @@ func (r *LoginResource) Login(requestTO *LoginTO) (*LoginResponseTO, error) {
 		return &LoginResponseTO{LOGIN_RESPONSE_INVALID_CREDENTIALS}, nil
 	}
 
-	if user.SecondFactorToken.IsPresent {
+	if user.SecondFactorToken.IsPresent() {
 		return &LoginResponseTO{LOGIN_RESPONSE_2FA_REQUIRED}, nil
 	}
 
@@ -137,14 +137,14 @@ func (r *LoginResource) LoginWithSecondFactor(requestTO *LoginWithSecondFactorTO
 			return nil, errors.Wrap("error loading throttling", err)
 		}
 
-		if throttling.IsPresent && throttling.OrPanic().TimeoutUntil.IsPresent && throttling.OrPanic().TimeoutUntil.OrPanic().After(time.Now()) {
+		if throttling.IsPresent() && throttling.OrPanic().TimeoutUntil.IsPresent() && throttling.OrPanic().TimeoutUntil.OrPanic().After(time.Now()) {
 			securityLog.Info("Throttled 2FA attempted")
 			return &LoginWithSecondFactorResponseTO{TimeoutUntil: throttling.OrPanic().TimeoutUntil.OrPanic()}, nil
 		}
 
-		tokenMatches := user.SecondFactorToken.IsPresent && totp.Validate(requestTO.SecondFactor, user.SecondFactorToken.OrPanic())
+		tokenMatches := user.SecondFactorToken.IsPresent() && totp.Validate(requestTO.SecondFactor, user.SecondFactorToken.OrPanic())
 
-		if throttling.IsPresent {
+		if throttling.IsPresent() {
 			failedAttemptsSinceLastSuccess := int32(0)
 			timeoutUntil := nullable.Empty[time.Time]()
 			if !tokenMatches {

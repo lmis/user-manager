@@ -28,7 +28,7 @@ func (s *SessionCookieService) SetSessionCookie(sessionID nullable.Nullable[stri
 
 	maxAge := -1
 	value := ""
-	if sessionID.IsPresent {
+	if sessionID.IsPresent() {
 		value = sessionID.OrPanic()
 		maxAge = int(domain_model.LOGIN_SESSION_DURATION.Seconds())
 	}
