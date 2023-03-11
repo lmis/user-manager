@@ -27,7 +27,7 @@ func main() {
 	command.Run("EMAILER", startJob)
 }
 
-func startJob(log logger.Logger, dir string) error {
+func startJob(log logger.Logger) error {
 	log.Info("Starting up")
 
 	config, err := config.GetConfig(log)

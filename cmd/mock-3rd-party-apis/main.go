@@ -23,7 +23,7 @@ func main() {
 	command.Run("MOCK 3RD-PARTY APIS", startServer)
 }
 
-func startServer(log logger.Logger, dir string) error {
+func startServer(log logger.Logger) error {
 	emails := make(util.Emails)
 	log.Info("Starting up")
 	config, err := config.GetConfig(log)

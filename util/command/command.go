@@ -2,13 +2,12 @@ package command
 
 import (
 	"os"
-	"path/filepath"
 	"runtime/debug"
 	"user-manager/util/errors"
 	"user-manager/util/logger"
 )
 
-type Command func(log logger.Logger, dir string) error
+type Command func(log logger.Logger) error
 
 func Run(topic string, command Command) {
 	logger.SetLogJSON(os.Getenv("LOG_JSON") != "")
@@ -24,14 +23,9 @@ func Run(topic string, command Command) {
 		os.Exit(exitCode)
 	}()
 
-	dir, err := filepath.Abs(filepath.Dir(os.Args[0]))
-	if err != nil {
-		log.Err(errors.Wrap("cannot get executable path", err))
-	}
-
-	if err := command(log, dir); err != nil {
+	if err := command(log); err != nil {
 		log.Err(errors.Wrap("command returned error", err))
-		log.Warn("Server exited abnormally")
+		log.Warn("Exited abnormally")
 		exitCode = 1
 	}
 }

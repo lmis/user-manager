@@ -29,7 +29,7 @@ func main() {
 	command.Run("LIFECYCLE", runServer)
 }
 
-func runServer(log logger.Logger, dir string) error {
+func runServer(log logger.Logger) error {
 	log.Info("Starting up")
 
 	err := injector.SetupEmailTemplatesProviders(translationsFS)

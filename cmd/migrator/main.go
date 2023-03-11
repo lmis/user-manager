@@ -4,6 +4,7 @@ import (
 	"embed"
 	"fmt"
 	"os"
+	"path/filepath"
 	"user-manager/cmd/migrator/config"
 	"user-manager/db"
 	"user-manager/util/command"
@@ -24,7 +25,12 @@ func main() {
 	command.Run("MIGRATOR", runMigrator)
 }
 
-func runMigrator(log logger.Logger, dir string) error {
+func runMigrator(log logger.Logger) error {
+	dir, err := filepath.Abs(filepath.Dir(os.Args[0]))
+	if err != nil {
+		log.Err(errors.Wrap("cannot get executable path", err))
+	}
+
 	if len(os.Args) > 1 && os.Args[1] == "generate" {
 		return generateSqlBoiler(log, dir)
 	}
