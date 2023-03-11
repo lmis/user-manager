@@ -16,7 +16,7 @@ import (
 type SettingsResource struct {
 	securityLog          domain_model.SecurityLog
 	sessionCookieService *service.SessionCookieService
-	userSession          nullable.Nullable[*domain_model.UserSession]
+	userSession          nullable.Nullable[domain_model.UserSession]
 	userRepository       *repository.UserRepository
 	sessionRepository    *repository.SessionRepository
 }
@@ -24,7 +24,7 @@ type SettingsResource struct {
 func ProvideSettingsResource(
 	securityLog domain_model.SecurityLog,
 	sessionCookieService *service.SessionCookieService,
-	userSession nullable.Nullable[*domain_model.UserSession],
+	userSession nullable.Nullable[domain_model.UserSession],
 	userRepository *repository.UserRepository,
 	sessionRepository *repository.SessionRepository,
 ) *SettingsResource {

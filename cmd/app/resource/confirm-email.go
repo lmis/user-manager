@@ -15,14 +15,14 @@ import (
 type EmailConfirmationResource struct {
 	securityLog      domain_model.SecurityLog
 	mailQueueService *service.MailQueueService
-	userSession      nullable.Nullable[*domain_model.UserSession]
+	userSession      nullable.Nullable[domain_model.UserSession]
 	userRepository   *repository.UserRepository
 }
 
 func ProvideEmailConfirmationResource(
 	securityLog domain_model.SecurityLog,
 	mailQueueService *service.MailQueueService,
-	userSession nullable.Nullable[*domain_model.UserSession],
+	userSession nullable.Nullable[domain_model.UserSession],
 	userRepository *repository.UserRepository,
 ) *EmailConfirmationResource {
 	return &EmailConfirmationResource{securityLog, mailQueueService, userSession, userRepository}

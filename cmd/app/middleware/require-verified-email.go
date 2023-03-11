@@ -12,11 +12,11 @@ import (
 
 type VerifiedEmailAuthorizationMiddleware struct {
 	c           *gin.Context
-	userSession nullable.Nullable[*domain_model.UserSession]
+	userSession nullable.Nullable[domain_model.UserSession]
 	securityLog domain_model.SecurityLog
 }
 
-func ProvideVerifiedEmailAuthorizationMiddleware(c *gin.Context, userSession nullable.Nullable[*domain_model.UserSession], securityLog domain_model.SecurityLog) *VerifiedEmailAuthorizationMiddleware {
+func ProvideVerifiedEmailAuthorizationMiddleware(c *gin.Context, userSession nullable.Nullable[domain_model.UserSession], securityLog domain_model.SecurityLog) *VerifiedEmailAuthorizationMiddleware {
 	return &VerifiedEmailAuthorizationMiddleware{c, userSession, securityLog}
 }
 

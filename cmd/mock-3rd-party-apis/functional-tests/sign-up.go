@@ -128,7 +128,7 @@ func TestSignUp(config *config.Config, emails util.Emails, testUser *util.TestUs
 	receivedNotificationEmail := false
 	for i := 0; !receivedNotificationEmail && i < 10; i++ {
 		// TODO: make independent of language
-		if slices.Any(emails[email], func(email *email_api.EmailTO) bool { return email.Subject == "Anmeldeversuch" }) {
+		if slices.Any(emails[email], func(email email_api.EmailTO) bool { return email.Subject == "Anmeldeversuch" }) {
 			receivedNotificationEmail = true
 		} else {
 			time.Sleep(500 * time.Millisecond)

@@ -21,7 +21,7 @@ func ProvideSecondFactorThrottlingRepository(tx *sql.Tx) *SecondFactorThrottling
 	return &SecondFactorThrottlingRepository{tx}
 }
 
-func (r *SecondFactorThrottlingRepository) GetForUser(userId domain_model.AppUserID) (nullable.Nullable[*domain_model.SecondFactorThrottling], error) {
+func (r *SecondFactorThrottlingRepository) GetForUser(userId domain_model.AppUserID) (nullable.Nullable[domain_model.SecondFactorThrottling], error) {
 	throttling, err := db.Fetch(
 		SELECT(
 			SecondFactorThrottling.SecondFactorThrottlingID,
@@ -32,8 +32,8 @@ func (r *SecondFactorThrottlingRepository) GetForUser(userId domain_model.AppUse
 			FROM(SecondFactorThrottling).
 			WHERE(SecondFactorThrottling.AppUserID.EQ(userId.ToIntegerExpression())).
 			QueryContext,
-		func(m *model.SecondFactorThrottling) *domain_model.SecondFactorThrottling {
-			return &domain_model.SecondFactorThrottling{
+		func(m *model.SecondFactorThrottling) domain_model.SecondFactorThrottling {
+			return domain_model.SecondFactorThrottling{
 				SecondFactorThrottlingID:       domain_model.SecondFactorThrottlingID(m.SecondFactorThrottlingID),
 				AppUserID:                      domain_model.AppUserID(m.AppUserID),
 				FailedAttemptsSinceLastSuccess: m.FailedAttemptsSinceLastSuccess,
@@ -42,7 +42,7 @@ func (r *SecondFactorThrottlingRepository) GetForUser(userId domain_model.AppUse
 		},
 		r.tx)
 	if err != nil {
-		return nullable.Empty[*domain_model.SecondFactorThrottling](), errors.Wrap("error loading throttling", err)
+		return nullable.Empty[domain_model.SecondFactorThrottling](), errors.Wrap("error loading throttling", err)
 	}
 	return throttling, nil
 }

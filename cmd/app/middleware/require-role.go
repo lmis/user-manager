@@ -14,10 +14,10 @@ import (
 type RequireRoleMiddleware struct {
 	c           *gin.Context
 	securityLog domain_model.SecurityLog
-	userSession nullable.Nullable[*domain_model.UserSession]
+	userSession nullable.Nullable[domain_model.UserSession]
 }
 
-func ProvideRequireRoleMiddleware(c *gin.Context, securityLog domain_model.SecurityLog, userSession nullable.Nullable[*domain_model.UserSession]) *RequireRoleMiddleware {
+func ProvideRequireRoleMiddleware(c *gin.Context, securityLog domain_model.SecurityLog, userSession nullable.Nullable[domain_model.UserSession]) *RequireRoleMiddleware {
 	return &RequireRoleMiddleware{c, securityLog, userSession}
 }
 

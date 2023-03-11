@@ -9,10 +9,10 @@ import (
 )
 
 type UserInfoResource struct {
-	userSession nullable.Nullable[*domain_model.UserSession]
+	userSession nullable.Nullable[domain_model.UserSession]
 }
 
-func ProvideUserInfoResource(userSession nullable.Nullable[*domain_model.UserSession]) *UserInfoResource {
+func ProvideUserInfoResource(userSession nullable.Nullable[domain_model.UserSession]) *UserInfoResource {
 	return &UserInfoResource{userSession}
 }
 

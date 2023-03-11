@@ -56,9 +56,9 @@ func registerMockEmailApi(log logger.Logger, app *gin.Engine, emails util.Emails
 		}
 		m, ok := emails[email.To]
 		if !ok {
-			emails[email.To] = []*email_api.EmailTO{&email}
+			emails[email.To] = []email_api.EmailTO{email}
 		} else {
-			emails[email.To] = append(m, &email)
+			emails[email.To] = append(m, email)
 		}
 		log.Info("Email received %v", email)
 	})

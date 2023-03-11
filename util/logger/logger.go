@@ -52,10 +52,6 @@ type SimpleLogger struct {
 	Topic string `json:"topic"`
 }
 
-func (logger *SimpleLogger) String() string {
-	return logger.Topic
-}
-
 func (logger *SimpleLogger) Info(format string, args ...interface{}) {
 	WriteLog(logger, LOG_LEVEL_INFO, format, args...)
 }

@@ -1,7 +1,6 @@
 package middleware
 
 import (
-	"fmt"
 	"net/http"
 	ginext "user-manager/cmd/app/gin-extensions"
 	domain_model "user-manager/domain-model"
@@ -64,10 +63,6 @@ type LogMetadata struct {
 	ErrorMessage  string                  `json:"errorMessage,omitempty"`
 	BodySize      int                     `json:"bodySize,omitempty"`
 	Status        int                     `json:"status,omitempty"`
-}
-
-func (m *LogMetadata) String() string {
-	return fmt.Sprintf("%s, %s %s (%d) | u=(%v %d) e=%s", m.Topic, m.Method, m.Path, m.Status, m.Roles, m.UserID, m.ErrorMessage)
 }
 
 type RequestLogger struct {

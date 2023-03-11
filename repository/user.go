@@ -23,7 +23,7 @@ func ProvideUserRepository(tx *sql.Tx) *UserRepository {
 	return &UserRepository{tx}
 }
 
-func (r *UserRepository) GetUserForEmail(email string) (nullable.Nullable[*domain_model.AppUser], error) {
+func (r *UserRepository) GetUserForEmail(email string) (nullable.Nullable[domain_model.AppUser], error) {
 	return db.Fetch(
 		SELECT(
 			AppUser.AppUserID,
@@ -48,8 +48,8 @@ func (r *UserRepository) GetUserForEmail(email string) (nullable.Nullable[*domai
 		func(m *struct {
 			model.AppUser
 			Roles []model.AppUserRole
-		}) *domain_model.AppUser {
-			return &domain_model.AppUser{
+		}) domain_model.AppUser {
+			return domain_model.AppUser{
 				AppUserID:                    domain_model.AppUserID(m.AppUserID),
 				Language:                     domain_model.UserLanguage(m.Language),
 				UserName:                     m.UserName,

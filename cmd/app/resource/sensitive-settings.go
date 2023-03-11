@@ -15,14 +15,14 @@ import (
 type SensitiveSettingsResource struct {
 	securityLog      domain_model.SecurityLog
 	mailQueueService *service.MailQueueService
-	userSession      nullable.Nullable[*domain_model.UserSession]
+	userSession      nullable.Nullable[domain_model.UserSession]
 	userRepository   *repository.UserRepository
 }
 
 func ProvideSensitiveSettingsResource(
 	securityLog domain_model.SecurityLog,
 	mailQueueService *service.MailQueueService,
-	userSession nullable.Nullable[*domain_model.UserSession],
+	userSession nullable.Nullable[domain_model.UserSession],
 	userRepository *repository.UserRepository,
 ) *SensitiveSettingsResource {
 	return &SensitiveSettingsResource{securityLog, mailQueueService, userSession, userRepository}

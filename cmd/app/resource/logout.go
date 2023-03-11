@@ -15,14 +15,14 @@ type LogoutResource struct {
 	securityLog          domain_model.SecurityLog
 	sessionCookieService *service.SessionCookieService
 	sessionRepository    *repository.SessionRepository
-	userSession          nullable.Nullable[*domain_model.UserSession]
+	userSession          nullable.Nullable[domain_model.UserSession]
 }
 
 func ProvideLogoutResource(
 	securityLog domain_model.SecurityLog,
 	sessionCookieService *service.SessionCookieService,
 	sessionRepository *repository.SessionRepository,
-	userSession nullable.Nullable[*domain_model.UserSession],
+	userSession nullable.Nullable[domain_model.UserSession],
 ) *LogoutResource {
 	return &LogoutResource{securityLog, sessionCookieService, sessionRepository, userSession}
 }

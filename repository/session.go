@@ -46,7 +46,7 @@ func (r *SessionRepository) Delete(sessionId domain_model.UserSessionID) error {
 		r.tx)
 }
 
-func (r *SessionRepository) GetSessionAndUser(sessionId domain_model.UserSessionID, sessionType domain_model.UserSessionType) (nullable.Nullable[*domain_model.UserSession], error) {
+func (r *SessionRepository) GetSessionAndUser(sessionId domain_model.UserSessionID, sessionType domain_model.UserSessionType) (nullable.Nullable[domain_model.UserSession], error) {
 	return db.Fetch(
 		SELECT(
 			UserSession.UserSessionID,
@@ -79,8 +79,8 @@ func (r *SessionRepository) GetSessionAndUser(sessionId domain_model.UserSession
 			model.UserSession
 			model.AppUser
 			Roles []model.AppUserRole
-		}) *domain_model.UserSession {
-			return &domain_model.UserSession{
+		}) domain_model.UserSession {
+			return domain_model.UserSession{
 				UserSessionID: domain_model.UserSessionID(m.UserSessionID),
 				User: &domain_model.AppUser{
 					AppUserID:                    domain_model.AppUserID(m.AppUser.AppUserID),
