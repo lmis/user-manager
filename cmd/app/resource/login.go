@@ -9,7 +9,6 @@ import (
 	"user-manager/util/errors"
 	"user-manager/util/nullable"
 	"user-manager/util/random"
-	"user-manager/util/slices"
 
 	"github.com/gin-gonic/gin"
 	"github.com/pquerna/otp/totp"
@@ -73,10 +72,11 @@ func (r *LoginResource) Login(requestTO *LoginTO) (*LoginResponseTO, error) {
 
 	user := maybeUser.OrPanic()
 
-	hasNonUserRole := slices.Any(user.UserRoles, func(role domain_model.UserRole) bool { return role != domain_model.USER_ROLE_USER })
-	if hasNonUserRole {
-		securityLog.Info("Login attempt without second factor for non-user %d", user.AppUserID)
-		return &LoginResponseTO{LOGIN_RESPONSE_INVALID_CREDENTIALS}, nil
+	for _, role := range user.UserRoles {
+		if role != domain_model.USER_ROLE_USER {
+			securityLog.Info("Login attempt without second factor for non-user %d", user.AppUserID)
+			return &LoginResponseTO{LOGIN_RESPONSE_INVALID_CREDENTIALS}, nil
+		}
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), requestTO.Password); err != nil {

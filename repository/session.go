@@ -8,7 +8,6 @@ import (
 	. "user-manager/db/generated/models/postgres/public/table"
 	domain_model "user-manager/domain-model"
 	"user-manager/util/nullable"
-	"user-manager/util/slices"
 
 	. "github.com/go-jet/jet/v2/postgres"
 )
@@ -80,7 +79,7 @@ func (r *SessionRepository) GetSessionAndUser(sessionId domain_model.UserSession
 			model.AppUser
 			Roles []model.AppUserRole
 		}) domain_model.UserSession {
-			return domain_model.UserSession{
+			userSession := domain_model.UserSession{
 				UserSessionID: domain_model.UserSessionID(m.UserSessionID),
 				User: &domain_model.AppUser{
 					AppUserID:                    domain_model.AppUserID(m.AppUser.AppUserID),
@@ -95,10 +94,14 @@ func (r *SessionRepository) GetSessionAndUser(sessionId domain_model.UserSession
 					PasswordResetTokenValidUntil: nullable.FromPointer(m.PasswordResetTokenValidUntil),
 					SecondFactorToken:            nullable.FromPointer(m.SecondFactorToken),
 					TemporarySecondFactorToken:   nullable.FromPointer(m.TemporarySecondFactorToken),
-					UserRoles:                    slices.Map(m.Roles, func(r model.AppUserRole) domain_model.UserRole { return domain_model.UserRole(r.Role) }),
+					UserRoles:                    make([]domain_model.UserRole, len(m.Roles)),
 				},
 				UserSessionType: domain_model.UserSessionType(m.UserSessionType),
 			}
+			for i, role := range m.Roles {
+				userSession.User.UserRoles[i] = domain_model.UserRole(role.Role)
+			}
+			return userSession
 		},
 		r.tx)
 }

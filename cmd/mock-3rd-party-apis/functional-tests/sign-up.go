@@ -7,9 +7,7 @@ import (
 	"user-manager/cmd/mock-3rd-party-apis/config"
 	"user-manager/cmd/mock-3rd-party-apis/util"
 	domain_model "user-manager/domain-model"
-	email_api "user-manager/third-party-models/email-api"
 	"user-manager/util/errors"
-	"user-manager/util/slices"
 )
 
 func TestSignUp(config *config.Config, emails util.Emails, testUser *util.TestUser) error {
@@ -128,9 +126,13 @@ func TestSignUp(config *config.Config, emails util.Emails, testUser *util.TestUs
 	receivedNotificationEmail := false
 	for i := 0; !receivedNotificationEmail && i < 10; i++ {
 		// TODO: make independent of language
-		if slices.Any(emails[email], func(email email_api.EmailTO) bool { return email.Subject == "Anmeldeversuch" }) {
-			receivedNotificationEmail = true
-		} else {
+		for _, email := range emails[email] {
+			if email.Subject == "Anmeldeversuch" {
+				receivedNotificationEmail = true
+				break
+			}
+		}
+		if !receivedNotificationEmail {
 			time.Sleep(500 * time.Millisecond)
 		}
 	}
