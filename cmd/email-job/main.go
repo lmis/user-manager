@@ -90,7 +90,7 @@ func sendOneEmail(log logger.Logger, database *sql.DB, config *config.Config) (r
 		}
 	}()
 
-	maybeMail, err := db.Fetch(
+	maybeMail, err := db.Fetch[model.MailQueue](
 		SELECT(MailQueue.AllColumns).
 			FROM(MailQueue).
 			WHERE(
@@ -100,7 +100,6 @@ func sendOneEmail(log logger.Logger, database *sql.DB, config *config.Config) (r
 							AND(MailQueue.NumberOfFailedAttempts.LT(Int16(maxNumFailedAttempts))))).
 			ORDER_BY(MailQueue.Priority.DESC()).
 			QueryContext,
-		func(x *model.MailQueue) *model.MailQueue { return x },
 		tx)
 
 	if err != nil {

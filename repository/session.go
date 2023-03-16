@@ -7,6 +7,7 @@ import (
 	"user-manager/db/generated/models/postgres/public/model"
 	. "user-manager/db/generated/models/postgres/public/table"
 	domain_model "user-manager/domain-model"
+	"user-manager/util/errors"
 	"user-manager/util/nullable"
 
 	. "github.com/go-jet/jet/v2/postgres"
@@ -46,7 +47,11 @@ func (r *SessionRepository) Delete(sessionId domain_model.UserSessionID) error {
 }
 
 func (r *SessionRepository) GetSessionAndUser(sessionId domain_model.UserSessionID, sessionType domain_model.UserSessionType) (nullable.Nullable[domain_model.UserSession], error) {
-	return db.Fetch(
+	maybeModel, err := db.Fetch[struct {
+		model.UserSession
+		model.AppUser
+		Roles []model.AppUserRole
+	}](
 		SELECT(
 			UserSession.UserSessionID,
 			UserSession.UserSessionType,
@@ -74,34 +79,37 @@ func (r *SessionRepository) GetSessionAndUser(sessionId domain_model.UserSession
 					AND(UserSession.UserSessionType.EQ(sessionType.ToStringExpression())),
 			).
 			QueryContext,
-		func(m *struct {
-			model.UserSession
-			model.AppUser
-			Roles []model.AppUserRole
-		}) domain_model.UserSession {
-			userSession := domain_model.UserSession{
-				UserSessionID: domain_model.UserSessionID(m.UserSessionID),
-				User: &domain_model.AppUser{
-					AppUserID:                    domain_model.AppUserID(m.AppUser.AppUserID),
-					Language:                     domain_model.UserLanguage(m.Language),
-					UserName:                     m.UserName,
-					PasswordHash:                 m.PasswordHash,
-					Email:                        m.Email,
-					EmailVerified:                m.EmailVerified,
-					EmailVerificationToken:       nullable.FromPointer(m.EmailVerificationToken),
-					NextEmail:                    nullable.FromPointer(m.NextEmail),
-					PasswordResetToken:           nullable.FromPointer(m.PasswordResetToken),
-					PasswordResetTokenValidUntil: nullable.FromPointer(m.PasswordResetTokenValidUntil),
-					SecondFactorToken:            nullable.FromPointer(m.SecondFactorToken),
-					TemporarySecondFactorToken:   nullable.FromPointer(m.TemporarySecondFactorToken),
-					UserRoles:                    make([]domain_model.UserRole, len(m.Roles)),
-				},
-				UserSessionType: domain_model.UserSessionType(m.UserSessionType),
-			}
-			for i, role := range m.Roles {
-				userSession.User.UserRoles[i] = domain_model.UserRole(role.Role)
-			}
-			return userSession
-		},
 		r.tx)
+	if err != nil {
+		return nullable.Empty[domain_model.UserSession](), errors.Wrap("error loading user session", err)
+	}
+
+	if maybeModel.IsEmpty() {
+		return nullable.Empty[domain_model.UserSession](), nil
+	}
+
+	m := maybeModel.OrPanic()
+	userSession := domain_model.UserSession{
+		UserSessionID: domain_model.UserSessionID(m.UserSessionID),
+		User: &domain_model.AppUser{
+			AppUserID:                    domain_model.AppUserID(m.AppUser.AppUserID),
+			Language:                     domain_model.UserLanguage(m.Language),
+			UserName:                     m.UserName,
+			PasswordHash:                 m.PasswordHash,
+			Email:                        m.Email,
+			EmailVerified:                m.EmailVerified,
+			EmailVerificationToken:       nullable.FromPointer(m.EmailVerificationToken),
+			NextEmail:                    nullable.FromPointer(m.NextEmail),
+			PasswordResetToken:           nullable.FromPointer(m.PasswordResetToken),
+			PasswordResetTokenValidUntil: nullable.FromPointer(m.PasswordResetTokenValidUntil),
+			SecondFactorToken:            nullable.FromPointer(m.SecondFactorToken),
+			TemporarySecondFactorToken:   nullable.FromPointer(m.TemporarySecondFactorToken),
+			UserRoles:                    make([]domain_model.UserRole, len(m.Roles)),
+		},
+		UserSessionType: domain_model.UserSessionType(m.UserSessionType),
+	}
+	for i, role := range m.Roles {
+		userSession.User.UserRoles[i] = domain_model.UserRole(role.Role)
+	}
+	return nullable.Of(userSession), nil
 }

@@ -22,7 +22,7 @@ func ProvideSecondFactorThrottlingRepository(tx *sql.Tx) *SecondFactorThrottling
 }
 
 func (r *SecondFactorThrottlingRepository) GetForUser(userId domain_model.AppUserID) (nullable.Nullable[domain_model.SecondFactorThrottling], error) {
-	throttling, err := db.Fetch(
+	maybeModel, err := db.Fetch[model.SecondFactorThrottling](
 		SELECT(
 			SecondFactorThrottling.SecondFactorThrottlingID,
 			SecondFactorThrottling.AppUserID,
@@ -32,19 +32,21 @@ func (r *SecondFactorThrottlingRepository) GetForUser(userId domain_model.AppUse
 			FROM(SecondFactorThrottling).
 			WHERE(SecondFactorThrottling.AppUserID.EQ(userId.ToIntegerExpression())).
 			QueryContext,
-		func(m *model.SecondFactorThrottling) domain_model.SecondFactorThrottling {
-			return domain_model.SecondFactorThrottling{
-				SecondFactorThrottlingID:       domain_model.SecondFactorThrottlingID(m.SecondFactorThrottlingID),
-				AppUserID:                      domain_model.AppUserID(m.AppUserID),
-				FailedAttemptsSinceLastSuccess: m.FailedAttemptsSinceLastSuccess,
-				TimeoutUntil:                   nullable.FromPointer(m.TimeoutUntil),
-			}
-		},
 		r.tx)
 	if err != nil {
 		return nullable.Empty[domain_model.SecondFactorThrottling](), errors.Wrap("error loading throttling", err)
 	}
-	return throttling, nil
+	if maybeModel.IsEmpty() {
+		return nullable.Empty[domain_model.SecondFactorThrottling](), nil
+	}
+
+	m := maybeModel.OrPanic()
+	return nullable.Of(domain_model.SecondFactorThrottling{
+		SecondFactorThrottlingID:       domain_model.SecondFactorThrottlingID(m.SecondFactorThrottlingID),
+		AppUserID:                      domain_model.AppUserID(m.AppUserID),
+		FailedAttemptsSinceLastSuccess: m.FailedAttemptsSinceLastSuccess,
+		TimeoutUntil:                   nullable.FromPointer(m.TimeoutUntil),
+	}), nil
 }
 
 func (r *SecondFactorThrottlingRepository) Update(throttlingId domain_model.SecondFactorThrottlingID, failedAttemptsSinceLastSuccess int32, timeoutUntil nullable.Nullable[time.Time]) error {

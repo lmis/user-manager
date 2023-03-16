@@ -23,7 +23,10 @@ func ProvideUserRepository(tx *sql.Tx) *UserRepository {
 }
 
 func (r *UserRepository) GetUserForEmail(email string) (nullable.Nullable[domain_model.AppUser], error) {
-	return db.Fetch(
+	maybeModel, err := db.Fetch[struct {
+		model.AppUser
+		Roles []model.AppUserRole
+	}](
 		SELECT(
 			AppUser.AppUserID,
 			AppUser.Language,
@@ -44,31 +47,34 @@ func (r *UserRepository) GetUserForEmail(email string) (nullable.Nullable[domain
 			).
 			WHERE(AppUser.Email.EQ(String(email))).
 			QueryContext,
-		func(m *struct {
-			model.AppUser
-			Roles []model.AppUserRole
-		}) domain_model.AppUser {
-			user := domain_model.AppUser{
-				AppUserID:                    domain_model.AppUserID(m.AppUserID),
-				Language:                     domain_model.UserLanguage(m.Language),
-				UserName:                     m.UserName,
-				PasswordHash:                 m.PasswordHash,
-				Email:                        m.Email,
-				EmailVerified:                m.EmailVerified,
-				EmailVerificationToken:       nullable.FromPointer(m.EmailVerificationToken),
-				NextEmail:                    nullable.FromPointer(m.NextEmail),
-				PasswordResetToken:           nullable.FromPointer(m.PasswordResetToken),
-				PasswordResetTokenValidUntil: nullable.FromPointer(m.PasswordResetTokenValidUntil),
-				SecondFactorToken:            nullable.FromPointer(m.SecondFactorToken),
-				TemporarySecondFactorToken:   nullable.FromPointer(m.TemporarySecondFactorToken),
-				UserRoles:                    make([]domain_model.UserRole, len(m.Roles)),
-			}
-			for i, role := range m.Roles {
-				user.UserRoles[i] = domain_model.UserRole(role.Role)
-			}
-			return user
-		},
 		r.tx)
+	if err != nil {
+		return nullable.Empty[domain_model.AppUser](), errors.Wrap("error loading user", err)
+	}
+
+	if maybeModel.IsEmpty() {
+		return nullable.Empty[domain_model.AppUser](), nil
+	}
+	m := maybeModel.OrPanic()
+	user := domain_model.AppUser{
+		AppUserID:                    domain_model.AppUserID(m.AppUserID),
+		Language:                     domain_model.UserLanguage(m.Language),
+		UserName:                     m.UserName,
+		PasswordHash:                 m.PasswordHash,
+		Email:                        m.Email,
+		EmailVerified:                m.EmailVerified,
+		EmailVerificationToken:       nullable.FromPointer(m.EmailVerificationToken),
+		NextEmail:                    nullable.FromPointer(m.NextEmail),
+		PasswordResetToken:           nullable.FromPointer(m.PasswordResetToken),
+		PasswordResetTokenValidUntil: nullable.FromPointer(m.PasswordResetTokenValidUntil),
+		SecondFactorToken:            nullable.FromPointer(m.SecondFactorToken),
+		TemporarySecondFactorToken:   nullable.FromPointer(m.TemporarySecondFactorToken),
+		UserRoles:                    make([]domain_model.UserRole, len(m.Roles)),
+	}
+	for i, role := range m.Roles {
+		user.UserRoles[i] = domain_model.UserRole(role.Role)
+	}
+	return nullable.Of(user), nil
 }
 
 func (r *UserRepository) UpdateUserEmailVerificationToken(appUserId domain_model.AppUserID, token string) error {

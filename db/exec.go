@@ -10,7 +10,7 @@ import (
 	"github.com/go-jet/jet/v2/qrm"
 )
 
-func Fetch[A interface{}, B interface{}](query func(context.Context, qrm.Queryable, interface{}) error, convert func(*A) B, tx *sql.Tx) (nullable.Nullable[B], error) {
+func Fetch[A interface{}](query func(context.Context, qrm.Queryable, interface{}) error, tx *sql.Tx) (nullable.Nullable[*A], error) {
 	dest := new(A)
 	ctx, cancelTimeout := DefaultQueryContext()
 	defer cancelTimeout()
@@ -18,12 +18,12 @@ func Fetch[A interface{}, B interface{}](query func(context.Context, qrm.Queryab
 
 	if err != nil {
 		if err == qrm.ErrNoRows || err == sql.ErrNoRows {
-			return nullable.Empty[B](), nil
+			return nullable.Empty[*A](), nil
 		}
-		return nullable.Empty[B](), err
+		return nullable.Empty[*A](), err
 	}
 
-	return nullable.Of(convert(dest)), nil
+	return nullable.Of(dest), nil
 }
 
 func ExecSingleMutation(query func(context.Context, qrm.Executable) (sql.Result, error), tx *sql.Tx) error {
