@@ -103,6 +103,7 @@ func WriteLog(metadata interface{}, level LogLevel, format string, args ...inter
 	colorStart := ""
 	colorEnd := ""
 	switch level {
+	case LOG_LEVEL_INFO:
 	case LOG_LEVEL_WARN:
 		colorStart = termCodeYellow
 	case LOG_LEVEL_ERROR:

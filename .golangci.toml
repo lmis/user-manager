@@ -7,3 +7,8 @@ exclude-functions = [
   "(*github.com/gin-gonic/gin.Context).AbortWithError",
   "(*github.com/gin-gonic/gin.Context).Error"
 ]
+
+[linters]
+enable = [
+  "exhaustive",
+]
