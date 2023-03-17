@@ -8,12 +8,12 @@ CREATE TABLE app_user (
 	password_hash                     TEXT                        NOT NULL,
 	email                             TEXT                        UNIQUE NOT NULL,
 	email_verified                    BOOL                        NOT NULL,
-	email_verification_token          TEXT,
-	next_email                        TEXT,
-	password_reset_token              TEXT,
+	email_verification_token          TEXT                        NOT NULL DEFAULT '',
+	next_email                        TEXT                        NOT NULL DEFAULT '',
+	password_reset_token              TEXT                        NOT NULL DEFAULT '',
 	password_reset_token_valid_until  TIMESTAMP WITH TIME ZONE,
-	second_factor_token               TEXT,
-	temporary_second_factor_token     TEXT,
+	second_factor_token               TEXT                        NOT NULL DEFAULT '',
+	temporary_second_factor_token     TEXT                        NOT NULL DEFAULT '',
 	created_at                        TIMESTAMP WITH TIME ZONE    NOT NULL DEFAULT NOW(),
 	updated_at                        TIMESTAMP WITH TIME ZONE    NOT NULL DEFAULT NOW()
 );

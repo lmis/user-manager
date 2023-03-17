@@ -90,33 +90,23 @@ func (r *SessionRepository) GetSessionAndUser(sessionID domain_model.UserSession
 	userSession := domain_model.UserSession{
 		UserSessionID: domain_model.UserSessionID(m.UserSessionID),
 		User: &domain_model.AppUser{
-			AppUserID:     domain_model.AppUserID(m.AppUser.AppUserID),
-			Language:      domain_model.UserLanguage(m.Language),
-			UserName:      m.UserName,
-			PasswordHash:  m.PasswordHash,
-			Email:         m.Email,
-			EmailVerified: m.EmailVerified,
-			UserRoles:     make([]domain_model.UserRole, len(m.Roles)),
+			AppUserID:                  domain_model.AppUserID(m.AppUser.AppUserID),
+			Language:                   domain_model.UserLanguage(m.Language),
+			UserName:                   m.UserName,
+			PasswordHash:               m.PasswordHash,
+			Email:                      m.Email,
+			EmailVerified:              m.EmailVerified,
+			EmailVerificationToken:     m.EmailVerificationToken,
+			NextEmail:                  m.NextEmail,
+			PasswordResetToken:         m.PasswordResetToken,
+			SecondFactorToken:          m.SecondFactorToken,
+			TemporarySecondFactorToken: m.TemporarySecondFactorToken,
+			UserRoles:                  make([]domain_model.UserRole, len(m.Roles)),
 		},
 		UserSessionType: domain_model.UserSessionType(m.UserSessionType),
 	}
-	if m.EmailVerificationToken != nil {
-		userSession.User.EmailVerificationToken = *m.EmailVerificationToken
-	}
-	if m.NextEmail != nil {
-		userSession.User.NextEmail = *m.NextEmail
-	}
-	if m.PasswordResetToken != nil {
-		userSession.User.PasswordResetToken = *m.PasswordResetToken
-	}
 	if m.PasswordResetTokenValidUntil != nil {
 		userSession.User.PasswordResetTokenValidUntil = *m.PasswordResetTokenValidUntil
-	}
-	if m.SecondFactorToken != nil {
-		userSession.User.SecondFactorToken = *m.SecondFactorToken
-	}
-	if m.TemporarySecondFactorToken != nil {
-		userSession.User.TemporarySecondFactorToken = *m.TemporarySecondFactorToken
 	}
 	for i, role := range m.Roles {
 		userSession.User.UserRoles[i] = domain_model.UserRole(role.Role)

@@ -55,32 +55,23 @@ func (r *UserRepository) GetUserForEmail(email string) (domain_model.AppUser, er
 		return domain_model.AppUser{}, nil
 	}
 	user := domain_model.AppUser{
-		AppUserID:     domain_model.AppUserID(m.AppUserID),
-		Language:      domain_model.UserLanguage(m.Language),
-		UserName:      m.UserName,
-		PasswordHash:  m.PasswordHash,
-		Email:         m.Email,
-		EmailVerified: m.EmailVerified,
-		UserRoles:     make([]domain_model.UserRole, len(m.Roles)),
-	}
-	if m.EmailVerificationToken != nil {
-		user.EmailVerificationToken = *m.EmailVerificationToken
-	}
-	if m.NextEmail != nil {
-		user.NextEmail = *m.NextEmail
-	}
-	if m.PasswordResetToken != nil {
-		user.PasswordResetToken = *m.PasswordResetToken
+		AppUserID:                  domain_model.AppUserID(m.AppUserID),
+		Language:                   domain_model.UserLanguage(m.Language),
+		UserName:                   m.UserName,
+		PasswordHash:               m.PasswordHash,
+		Email:                      m.Email,
+		EmailVerified:              m.EmailVerified,
+		EmailVerificationToken:     m.EmailVerificationToken,
+		NextEmail:                  m.NextEmail,
+		PasswordResetToken:         m.PasswordResetToken,
+		SecondFactorToken:          m.SecondFactorToken,
+		TemporarySecondFactorToken: m.TemporarySecondFactorToken,
+		UserRoles:                  make([]domain_model.UserRole, len(m.Roles)),
 	}
 	if m.PasswordResetTokenValidUntil != nil {
 		user.PasswordResetTokenValidUntil = *m.PasswordResetTokenValidUntil
 	}
-	if m.SecondFactorToken != nil {
-		user.SecondFactorToken = *m.SecondFactorToken
-	}
-	if m.TemporarySecondFactorToken != nil {
-		user.TemporarySecondFactorToken = *m.TemporarySecondFactorToken
-	}
+
 	for i, role := range m.Roles {
 		user.UserRoles[i] = domain_model.UserRole(role.Role)
 	}
@@ -99,7 +90,7 @@ func (r *UserRepository) UpdateUserEmailVerificationToken(appUserID domain_model
 func (r *UserRepository) SetEmailToVerified(appUserID domain_model.AppUserID) error {
 	return db.ExecSingleMutation(
 		AppUser.UPDATE(AppUser.EmailVerificationToken, AppUser.EmailVerified, AppUser.UpdatedAt).
-			SET(nil, true, time.Now()).
+			SET("", true, time.Now()).
 			WHERE(AppUser.AppUserID.EQ(appUserID.ToIntegerExpression())).
 			ExecContext,
 		r.tx)
@@ -117,7 +108,7 @@ func (r *UserRepository) SetNextEmail(appUserID domain_model.AppUserID, nextEmai
 func (r *UserRepository) SetEmailAndClearNextEmail(appUserID domain_model.AppUserID, email string) error {
 	return db.ExecSingleMutation(
 		AppUser.UPDATE(AppUser.EmailVerificationToken, AppUser.NextEmail, AppUser.Email, AppUser.UpdatedAt).
-			SET(nil, nil, email, time.Now()).
+			SET("", "", email, time.Now()).
 			WHERE(AppUser.AppUserID.EQ(appUserID.ToIntegerExpression())).
 			ExecContext,
 		r.tx)
@@ -135,7 +126,7 @@ func (r *UserRepository) SetPasswordResetToken(appUserID domain_model.AppUserID,
 func (r *UserRepository) SetPasswordHash(appUserID domain_model.AppUserID, hash string) error {
 	return db.ExecSingleMutation(
 		AppUser.UPDATE(AppUser.PasswordHash, AppUser.PasswordResetToken, AppUser.PasswordResetTokenValidUntil, AppUser.UpdatedAt).
-			SET(hash, nil, nil, time.Now()).
+			SET(hash, "", nil, time.Now()).
 			WHERE(AppUser.AppUserID.EQ(appUserID.ToIntegerExpression())).
 			ExecContext,
 		r.tx)
