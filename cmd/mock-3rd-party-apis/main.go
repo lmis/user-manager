@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"strconv"
 	"user-manager/cmd/app/middleware"
-	config "user-manager/cmd/mock-3rd-party-apis/config"
+	"user-manager/cmd/mock-3rd-party-apis/config"
 	functional_tests "user-manager/cmd/mock-3rd-party-apis/functional-tests"
 	"user-manager/cmd/mock-3rd-party-apis/util"
 	domain_model "user-manager/domain-model"

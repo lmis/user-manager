@@ -21,32 +21,32 @@ func ProvideSessionRepository(tx *sql.Tx) *SessionRepository {
 	return &SessionRepository{tx}
 }
 
-func (r *SessionRepository) InsertSession(sessionId string, sessionType domain_model.UserSessionType, appUserId domain_model.AppUserID, duration time.Duration) error {
+func (r *SessionRepository) InsertSession(sessionID string, sessionType domain_model.UserSessionType, appUserID domain_model.AppUserID, duration time.Duration) error {
 	return db.ExecSingleMutation(
 		UserSession.INSERT(UserSession.UserSessionID, UserSession.AppUserID, UserSession.TimeoutAt, UserSession.UserSessionType).
-			VALUES(sessionId, appUserId.ToIntegerExpression(), time.Now().Add(duration), model.UserSessionType(sessionType)).
+			VALUES(sessionID, appUserID.ToIntegerExpression(), time.Now().Add(duration), model.UserSessionType(sessionType)).
 			ExecContext,
 		r.tx)
 }
 
-func (r *SessionRepository) UpdateSessionTimeout(sessionId domain_model.UserSessionID, timeout time.Time) error {
+func (r *SessionRepository) UpdateSessionTimeout(sessionID domain_model.UserSessionID, timeout time.Time) error {
 	return db.ExecSingleMutation(
 		UserSession.UPDATE(UserSession.TimeoutAt, UserSession.UpdatedAt).
 			SET(timeout, time.Now()).
-			WHERE(UserSession.UserSessionID.EQ(sessionId.ToStringExpression())).
+			WHERE(UserSession.UserSessionID.EQ(sessionID.ToStringExpression())).
 			ExecContext,
 		r.tx)
 }
 
-func (r *SessionRepository) Delete(sessionId domain_model.UserSessionID) error {
+func (r *SessionRepository) Delete(sessionID domain_model.UserSessionID) error {
 	return db.ExecSingleMutation(
 		UserSession.DELETE().
-			WHERE(UserSession.UserSessionID.EQ(sessionId.ToStringExpression())).
+			WHERE(UserSession.UserSessionID.EQ(sessionID.ToStringExpression())).
 			ExecContext,
 		r.tx)
 }
 
-func (r *SessionRepository) GetSessionAndUser(sessionId domain_model.UserSessionID, sessionType domain_model.UserSessionType) (nullable.Nullable[domain_model.UserSession], error) {
+func (r *SessionRepository) GetSessionAndUser(sessionID domain_model.UserSessionID, sessionType domain_model.UserSessionType) (nullable.Nullable[domain_model.UserSession], error) {
 	maybeModel, err := db.Fetch[struct {
 		model.UserSession
 		model.AppUser
@@ -74,7 +74,7 @@ func (r *SessionRepository) GetSessionAndUser(sessionId domain_model.UserSession
 				INNER_JOIN(AppUserRole, AppUserRole.AppUserID.EQ(AppUser.AppUserID)),
 			).
 			WHERE(
-				UserSession.UserSessionID.EQ(sessionId.ToStringExpression()).
+				UserSession.UserSessionID.EQ(sessionID.ToStringExpression()).
 					AND(UserSession.TimeoutAt.GT(TimestampzT(time.Now()))).
 					AND(UserSession.UserSessionType.EQ(sessionType.ToStringExpression())),
 			).

@@ -77,65 +77,65 @@ func (r *UserRepository) GetUserForEmail(email string) (nullable.Nullable[domain
 	return nullable.Of(user), nil
 }
 
-func (r *UserRepository) UpdateUserEmailVerificationToken(appUserId domain_model.AppUserID, token string) error {
+func (r *UserRepository) UpdateUserEmailVerificationToken(appUserID domain_model.AppUserID, token string) error {
 	return db.ExecSingleMutation(
 		AppUser.UPDATE(AppUser.EmailVerificationToken, AppUser.UpdatedAt).
 			SET(token, time.Now()).
-			WHERE(AppUser.AppUserID.EQ(appUserId.ToIntegerExpression())).
+			WHERE(AppUser.AppUserID.EQ(appUserID.ToIntegerExpression())).
 			ExecContext,
 		r.tx)
 }
 
-func (r *UserRepository) SetEmailToVerified(appUserId domain_model.AppUserID) error {
+func (r *UserRepository) SetEmailToVerified(appUserID domain_model.AppUserID) error {
 	return db.ExecSingleMutation(
 		AppUser.UPDATE(AppUser.EmailVerificationToken, AppUser.EmailVerified, AppUser.UpdatedAt).
 			SET(nil, true, time.Now()).
-			WHERE(AppUser.AppUserID.EQ(appUserId.ToIntegerExpression())).
+			WHERE(AppUser.AppUserID.EQ(appUserID.ToIntegerExpression())).
 			ExecContext,
 		r.tx)
 }
 
-func (r *UserRepository) SetNextEmail(appUserId domain_model.AppUserID, nextEmail string, verificationToken string) error {
+func (r *UserRepository) SetNextEmail(appUserID domain_model.AppUserID, nextEmail string, verificationToken string) error {
 	return db.ExecSingleMutation(
 		AppUser.UPDATE(AppUser.EmailVerificationToken, AppUser.NextEmail, AppUser.UpdatedAt).
 			SET(verificationToken, nextEmail, time.Now()).
-			WHERE(AppUser.AppUserID.EQ(appUserId.ToIntegerExpression())).
+			WHERE(AppUser.AppUserID.EQ(appUserID.ToIntegerExpression())).
 			ExecContext,
 		r.tx)
 }
 
-func (r *UserRepository) SetEmailAndClearNextEmail(appUserId domain_model.AppUserID, email string) error {
+func (r *UserRepository) SetEmailAndClearNextEmail(appUserID domain_model.AppUserID, email string) error {
 	return db.ExecSingleMutation(
 		AppUser.UPDATE(AppUser.EmailVerificationToken, AppUser.NextEmail, AppUser.Email, AppUser.UpdatedAt).
 			SET(nil, nil, email, time.Now()).
-			WHERE(AppUser.AppUserID.EQ(appUserId.ToIntegerExpression())).
+			WHERE(AppUser.AppUserID.EQ(appUserID.ToIntegerExpression())).
 			ExecContext,
 		r.tx)
 }
 
-func (r *UserRepository) SetPasswordResetToken(appUserId domain_model.AppUserID, token string, validUntil time.Time) error {
+func (r *UserRepository) SetPasswordResetToken(appUserID domain_model.AppUserID, token string, validUntil time.Time) error {
 	return db.ExecSingleMutation(
 		AppUser.UPDATE(AppUser.PasswordResetToken, AppUser.PasswordResetTokenValidUntil, AppUser.UpdatedAt).
 			SET(token, validUntil, time.Now()).
-			WHERE(AppUser.AppUserID.EQ(appUserId.ToIntegerExpression())).
+			WHERE(AppUser.AppUserID.EQ(appUserID.ToIntegerExpression())).
 			ExecContext,
 		r.tx)
 }
 
-func (r *UserRepository) SetPasswordHash(appUserId domain_model.AppUserID, hash string) error {
+func (r *UserRepository) SetPasswordHash(appUserID domain_model.AppUserID, hash string) error {
 	return db.ExecSingleMutation(
 		AppUser.UPDATE(AppUser.PasswordHash, AppUser.PasswordResetToken, AppUser.PasswordResetTokenValidUntil, AppUser.UpdatedAt).
 			SET(hash, nil, nil, time.Now()).
-			WHERE(AppUser.AppUserID.EQ(appUserId.ToIntegerExpression())).
+			WHERE(AppUser.AppUserID.EQ(appUserID.ToIntegerExpression())).
 			ExecContext,
 		r.tx)
 }
 
-func (r *UserRepository) SetLanguage(appUserId domain_model.AppUserID, language domain_model.UserLanguage) error {
+func (r *UserRepository) SetLanguage(appUserID domain_model.AppUserID, language domain_model.UserLanguage) error {
 	return db.ExecSingleMutation(
 		AppUser.UPDATE(AppUser.Language, AppUser.UpdatedAt).
 			SET(model.UserLanguage(language), time.Now()).
-			WHERE(AppUser.AppUserID.EQ(appUserId.ToIntegerExpression())).
+			WHERE(AppUser.AppUserID.EQ(appUserID.ToIntegerExpression())).
 			ExecContext,
 		r.tx)
 }

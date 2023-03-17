@@ -50,24 +50,24 @@ func (r *LogoutResource) Logout(request LogoutTO) error {
 		}
 	}
 
-	sudoSessionId, err := sessionCookieService.GetSessionCookie(domain_model.USER_SESSION_TYPE_SUDO)
+	sudoSessionID, err := sessionCookieService.GetSessionCookie(domain_model.USER_SESSION_TYPE_SUDO)
 	if err != nil {
 		return errors.Wrap("issue reading sudo session cookie", err)
 	}
-	if sudoSessionId.IsPresent() {
+	if sudoSessionID.IsPresent() {
 		sessionCookieService.RemoveSessionCookie(domain_model.USER_SESSION_TYPE_SUDO)
-		if err := sessionRepository.Delete(domain_model.UserSessionID(sudoSessionId.OrPanic())); err != nil {
+		if err := sessionRepository.Delete(domain_model.UserSessionID(sudoSessionID.OrPanic())); err != nil {
 			return errors.Wrap("issue while deleting sudo session", err)
 		}
 	}
 	if request.ForgetDevice {
-		deviceSessionId, err := sessionCookieService.GetSessionCookie(domain_model.USER_SESSION_TYPE_REMEMBER_DEVICE)
+		deviceSessionID, err := sessionCookieService.GetSessionCookie(domain_model.USER_SESSION_TYPE_REMEMBER_DEVICE)
 		if err != nil {
 			return errors.Wrap("issue reading device session cookie", err)
 		}
-		if deviceSessionId.IsPresent() {
+		if deviceSessionID.IsPresent() {
 			sessionCookieService.RemoveSessionCookie(domain_model.USER_SESSION_TYPE_REMEMBER_DEVICE)
-			if err := sessionRepository.Delete(domain_model.UserSessionID(deviceSessionId.OrPanic())); err != nil {
+			if err := sessionRepository.Delete(domain_model.UserSessionID(deviceSessionID.OrPanic())); err != nil {
 				return errors.Wrap("issue while deleting device session", err)
 			}
 		}

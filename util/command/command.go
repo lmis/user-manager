@@ -11,7 +11,7 @@ type Command func(log logger.Logger) error
 
 func Run(topic string, command Command) {
 	logger.SetLogJSON(os.Getenv("LOG_JSON") != "")
-	log := logger.Log(topic)
+	log := logger.NewLogger(topic)
 	exitCode := 0
 
 	defer func() {

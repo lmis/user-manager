@@ -77,12 +77,12 @@ func (r *SettingsResource) EnterSudoMode(requestTO *SudoTO) (*SudoResponseTO, er
 	}
 
 	securityLog.Info("Entering sudo mode")
-	sessionId := random.MakeRandomURLSafeB64(21)
-	if err := sessionRepository.InsertSession(sessionId, domain_model.USER_SESSION_TYPE_SUDO, user.AppUserID, domain_model.SUDO_SESSION_DURATION); err != nil {
+	sessionID := random.MakeRandomURLSafeB64(21)
+	if err := sessionRepository.InsertSession(sessionID, domain_model.USER_SESSION_TYPE_SUDO, user.AppUserID, domain_model.SUDO_SESSION_DURATION); err != nil {
 		return nil, errors.Wrap("error inserting session", err)
 	}
 
-	sessionCookieService.SetSessionCookie(nullable.Of(sessionId), domain_model.USER_SESSION_TYPE_SUDO)
+	sessionCookieService.SetSessionCookie(nullable.Of(sessionID), domain_model.USER_SESSION_TYPE_SUDO)
 	return &SudoResponseTO{Success: true}, nil
 }
 

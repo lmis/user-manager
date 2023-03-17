@@ -89,12 +89,12 @@ func (r *LoginResource) Login(requestTO *LoginTO) (*LoginResponseTO, error) {
 	}
 
 	securityLog.Info("Login")
-	sessionId := random.MakeRandomURLSafeB64(21)
-	if err = sessionRepository.InsertSession(sessionId, domain_model.USER_SESSION_TYPE_LOGIN, user.AppUserID, domain_model.LOGIN_SESSION_DURATION); err != nil {
+	sessionID := random.MakeRandomURLSafeB64(21)
+	if err = sessionRepository.InsertSession(sessionID, domain_model.USER_SESSION_TYPE_LOGIN, user.AppUserID, domain_model.LOGIN_SESSION_DURATION); err != nil {
 		return nil, errors.Wrap("error inserting session", err)
 	}
 
-	sessionCookieService.SetSessionCookie(nullable.Of(sessionId), domain_model.USER_SESSION_TYPE_LOGIN)
+	sessionCookieService.SetSessionCookie(nullable.Of(sessionID), domain_model.USER_SESSION_TYPE_LOGIN)
 	return &LoginResponseTO{LOGIN_RESPONSE_LOGGED_IN}, nil
 }
 
@@ -170,26 +170,26 @@ func (r *LoginResource) LoginWithSecondFactor(requestTO *LoginWithSecondFactorTO
 
 		if requestTO.RememberDevice {
 			securityLog.Info("2FA login with 'remember device' enabled, issuing device token")
-			deviceSessionId := random.MakeRandomURLSafeB64(21)
-			err = sessionRepository.InsertSession(deviceSessionId, domain_model.USER_SESSION_TYPE_LOGIN, user.AppUserID, domain_model.DEVICE_SESSION_DURATION)
+			deviceSessionID := random.MakeRandomURLSafeB64(21)
+			err = sessionRepository.InsertSession(deviceSessionID, domain_model.USER_SESSION_TYPE_LOGIN, user.AppUserID, domain_model.DEVICE_SESSION_DURATION)
 			if err != nil {
 				return nil, errors.Wrap("error inserting device session", err)
 			}
 
-			sessionCookieService.SetSessionCookie(nullable.Of(deviceSessionId), domain_model.USER_SESSION_TYPE_REMEMBER_DEVICE)
+			sessionCookieService.SetSessionCookie(nullable.Of(deviceSessionID), domain_model.USER_SESSION_TYPE_REMEMBER_DEVICE)
 		}
 
 		securityLog.Info("Login passed with 2FA token")
 	} else {
-		maybeDeviceSessionId, err := sessionCookieService.GetSessionCookie(domain_model.USER_SESSION_TYPE_LOGIN)
+		maybeDeviceSessionID, err := sessionCookieService.GetSessionCookie(domain_model.USER_SESSION_TYPE_LOGIN)
 		if err != nil {
 			return nil, errors.Wrap("issue reading device session cookie", err)
 		}
-		if maybeDeviceSessionId.IsEmpty() {
+		if maybeDeviceSessionID.IsEmpty() {
 			return &LoginWithSecondFactorResponseTO{}, nil
 		}
 
-		deviceSession, err := sessionRepository.GetSessionAndUser(maybeDeviceSessionId.OrPanic(), domain_model.USER_SESSION_TYPE_REMEMBER_DEVICE)
+		deviceSession, err := sessionRepository.GetSessionAndUser(maybeDeviceSessionID.OrPanic(), domain_model.USER_SESSION_TYPE_REMEMBER_DEVICE)
 
 		if err != nil {
 			return nil, errors.Wrap("fetching device session failed", err)
@@ -200,11 +200,11 @@ func (r *LoginResource) LoginWithSecondFactor(requestTO *LoginWithSecondFactorTO
 		securityLog.Info("Login passed with device token cookie")
 	}
 
-	sessionId := random.MakeRandomURLSafeB64(21)
-	if err = sessionRepository.InsertSession(sessionId, domain_model.USER_SESSION_TYPE_LOGIN, user.AppUserID, domain_model.LOGIN_SESSION_DURATION); err != nil {
+	sessionID := random.MakeRandomURLSafeB64(21)
+	if err = sessionRepository.InsertSession(sessionID, domain_model.USER_SESSION_TYPE_LOGIN, user.AppUserID, domain_model.LOGIN_SESSION_DURATION); err != nil {
 		return nil, errors.Wrap("error inserting login session", err)
 	}
 
-	sessionCookieService.SetSessionCookie(nullable.Of(sessionId), domain_model.USER_SESSION_TYPE_LOGIN)
+	sessionCookieService.SetSessionCookie(nullable.Of(sessionID), domain_model.USER_SESSION_TYPE_LOGIN)
 	return &LoginWithSecondFactorResponseTO{LoggedIn: true}, nil
 }

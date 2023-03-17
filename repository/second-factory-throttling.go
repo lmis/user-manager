@@ -21,7 +21,7 @@ func ProvideSecondFactorThrottlingRepository(tx *sql.Tx) *SecondFactorThrottling
 	return &SecondFactorThrottlingRepository{tx}
 }
 
-func (r *SecondFactorThrottlingRepository) GetForUser(userId domain_model.AppUserID) (nullable.Nullable[domain_model.SecondFactorThrottling], error) {
+func (r *SecondFactorThrottlingRepository) GetForUser(userID domain_model.AppUserID) (nullable.Nullable[domain_model.SecondFactorThrottling], error) {
 	maybeModel, err := db.Fetch[model.SecondFactorThrottling](
 		SELECT(
 			SecondFactorThrottling.SecondFactorThrottlingID,
@@ -30,7 +30,7 @@ func (r *SecondFactorThrottlingRepository) GetForUser(userId domain_model.AppUse
 			SecondFactorThrottling.TimeoutUntil,
 		).
 			FROM(SecondFactorThrottling).
-			WHERE(SecondFactorThrottling.AppUserID.EQ(userId.ToIntegerExpression())).
+			WHERE(SecondFactorThrottling.AppUserID.EQ(userID.ToIntegerExpression())).
 			QueryContext,
 		r.tx)
 	if err != nil {
@@ -49,19 +49,19 @@ func (r *SecondFactorThrottlingRepository) GetForUser(userId domain_model.AppUse
 	}), nil
 }
 
-func (r *SecondFactorThrottlingRepository) Update(throttlingId domain_model.SecondFactorThrottlingID, failedAttemptsSinceLastSuccess int32, timeoutUntil nullable.Nullable[time.Time]) error {
+func (r *SecondFactorThrottlingRepository) Update(throttlingID domain_model.SecondFactorThrottlingID, failedAttemptsSinceLastSuccess int32, timeoutUntil nullable.Nullable[time.Time]) error {
 	return db.ExecSingleMutation(
 		SecondFactorThrottling.UPDATE(SecondFactorThrottling.FailedAttemptsSinceLastSuccess, SecondFactorThrottling.TimeoutUntil, SecondFactorThrottling.UpdatedAt).
 			SET(failedAttemptsSinceLastSuccess, timeoutUntil.ToPointer(), time.Now()).
-			WHERE(SecondFactorThrottling.SecondFactorThrottlingID.EQ(throttlingId.ToIntegerExpression())).
+			WHERE(SecondFactorThrottling.SecondFactorThrottlingID.EQ(throttlingID.ToIntegerExpression())).
 			ExecContext,
 		r.tx)
 }
 
-func (r *SecondFactorThrottlingRepository) Insert(userId domain_model.AppUserID, failedAttemptsSinceLastSuccess int) error {
+func (r *SecondFactorThrottlingRepository) Insert(userID domain_model.AppUserID, failedAttemptsSinceLastSuccess int) error {
 	return db.ExecSingleMutation(
 		SecondFactorThrottling.INSERT(SecondFactorThrottling.AppUserID, SecondFactorThrottling.FailedAttemptsSinceLastSuccess).
-			VALUES(userId.ToIntegerExpression(), failedAttemptsSinceLastSuccess).
+			VALUES(userID.ToIntegerExpression(), failedAttemptsSinceLastSuccess).
 			ExecContext,
 		r.tx)
 }

@@ -31,17 +31,17 @@ func (m *ExtractLoginSessionMiddleware) Handle() {
 	sessionCookieService := m.sessionCookieService
 	sessionRepository := m.sessionRepository
 
-	sessionId, err := sessionCookieService.GetSessionCookie(domain_model.USER_SESSION_TYPE_LOGIN)
+	sessionID, err := sessionCookieService.GetSessionCookie(domain_model.USER_SESSION_TYPE_LOGIN)
 	if err != nil {
 		c.AbortWithError(http.StatusInternalServerError, errors.Wrap("getting session cookie failed", err))
 		return
 	}
 
-	if sessionId.IsEmpty() {
+	if sessionID.IsEmpty() {
 		return
 	}
 
-	session, err := sessionRepository.GetSessionAndUser(sessionId.OrPanic(), domain_model.USER_SESSION_TYPE_LOGIN)
+	session, err := sessionRepository.GetSessionAndUser(sessionID.OrPanic(), domain_model.USER_SESSION_TYPE_LOGIN)
 
 	if err != nil {
 		c.AbortWithError(http.StatusInternalServerError, errors.Wrap("fetching session failed", err))

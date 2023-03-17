@@ -53,7 +53,7 @@ func LoggerMiddlware(c *gin.Context) {
 
 type LogMetadata struct {
 	Topic         string                  `json:"topic"`
-	CorrelationId string                  `json:"correlationId"`
+	CorrelationID string                  `json:"correlationID"`
 	Latency       time.Duration           `json:"latency,omitempty"`
 	Path          string                  `json:"path,omitempty"`
 	UserID        int                     `json:"userID,omitempty"`
@@ -81,7 +81,7 @@ func getMetadata(logger *RequestLogger) *LogMetadata {
 
 	metadata := LogMetadata{
 		Topic:         topic,
-		CorrelationId: c.GetHeader("X-Correlation-Id"),
+		CorrelationID: c.GetHeader("X-Correlation-ID"),
 		Path:          path,
 		ClientIP:      c.ClientIP(),
 		Method:        c.Request.Method,

@@ -9,7 +9,7 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
-	config "user-manager/cmd/email-job/config"
+	"user-manager/cmd/email-job/config"
 	"user-manager/db"
 	. "user-manager/db/generated/models/postgres/public/enum"
 	"user-manager/db/generated/models/postgres/public/model"

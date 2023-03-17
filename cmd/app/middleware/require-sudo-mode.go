@@ -30,18 +30,18 @@ func (m *RequireSudoModeMiddleware) Handle() {
 	sessionCookieService := m.sessionCookieService
 	sessionRepository := m.sessionRepository
 
-	sudoSessionId, err := sessionCookieService.GetSessionCookie(domain_model.USER_SESSION_TYPE_SUDO)
+	sudoSessionID, err := sessionCookieService.GetSessionCookie(domain_model.USER_SESSION_TYPE_SUDO)
 	if err != nil {
 		c.AbortWithError(http.StatusInternalServerError, errors.Wrap("getting session cookie failed", err))
 		return
 	}
 
-	if sudoSessionId.IsEmpty() {
+	if sudoSessionID.IsEmpty() {
 		c.AbortWithError(http.StatusForbidden, errors.Error("sudo session cookie missing"))
 		return
 	}
 
-	session, err := sessionRepository.GetSessionAndUser(sudoSessionId.OrPanic(), domain_model.USER_SESSION_TYPE_SUDO)
+	session, err := sessionRepository.GetSessionAndUser(sudoSessionID.OrPanic(), domain_model.USER_SESSION_TYPE_SUDO)
 	if err != nil {
 		c.AbortWithError(http.StatusInternalServerError, errors.Wrap("getting sudo session failed", err))
 		return

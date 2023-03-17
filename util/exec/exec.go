@@ -7,7 +7,7 @@ import (
 )
 
 func RunShellCommand(command string) error {
-	log := logger.Log("SHELL_COMMAND")
+	log := logger.NewLogger("SHELL_COMMAND")
 	log.Info("$ %s", command)
 	cmd := exec.Command("sh", "-c", command)
 

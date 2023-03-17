@@ -65,7 +65,7 @@ func (logger *SimpleLogger) Err(e error) {
 
 }
 
-func Log(topic string) Logger {
+func NewLogger(topic string) Logger {
 	return &SimpleLogger{
 		topic,
 	}

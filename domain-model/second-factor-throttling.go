@@ -10,8 +10,8 @@ import (
 type SecondFactorThrottlingID int64
 
 type SecondFactorThrottling struct {
-	SecondFactorThrottlingID       SecondFactorThrottlingID     `json:"secondFactorThrottlingId"`
-	AppUserID                      AppUserID                    `json:"appUserId"`
+	SecondFactorThrottlingID       SecondFactorThrottlingID     `json:"secondFactorThrottlingID"`
+	AppUserID                      AppUserID                    `json:"appUserID"`
 	FailedAttemptsSinceLastSuccess int32                        `json:"failedAttemptsSinceLastSuccess"`
 	TimeoutUntil                   nullable.Nullable[time.Time] `json:"timeoutUntil,omitempty"`
 }
