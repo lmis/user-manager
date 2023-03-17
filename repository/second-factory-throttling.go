@@ -8,7 +8,6 @@ import (
 	. "user-manager/db/generated/models/postgres/public/table"
 	domain_model "user-manager/domain-model"
 	"user-manager/util/errors"
-	"user-manager/util/nullable"
 
 	. "github.com/go-jet/jet/v2/postgres"
 )
@@ -21,8 +20,8 @@ func ProvideSecondFactorThrottlingRepository(tx *sql.Tx) *SecondFactorThrottling
 	return &SecondFactorThrottlingRepository{tx}
 }
 
-func (r *SecondFactorThrottlingRepository) GetForUser(userID domain_model.AppUserID) (nullable.Nullable[domain_model.SecondFactorThrottling], error) {
-	maybeModel, err := db.Fetch[model.SecondFactorThrottling](
+func (r *SecondFactorThrottlingRepository) GetForUser(userID domain_model.AppUserID) (domain_model.SecondFactorThrottling, error) {
+	m, err := db.FetchMaybe[model.SecondFactorThrottling](
 		SELECT(
 			SecondFactorThrottling.SecondFactorThrottlingID,
 			SecondFactorThrottling.AppUserID,
@@ -34,25 +33,27 @@ func (r *SecondFactorThrottlingRepository) GetForUser(userID domain_model.AppUse
 			QueryContext,
 		r.tx)
 	if err != nil {
-		return nullable.Empty[domain_model.SecondFactorThrottling](), errors.Wrap("error loading throttling", err)
+		return domain_model.SecondFactorThrottling{}, errors.Wrap("error loading throttling", err)
 	}
-	if maybeModel.IsEmpty() {
-		return nullable.Empty[domain_model.SecondFactorThrottling](), nil
+	if m == nil {
+		return domain_model.SecondFactorThrottling{}, nil
 	}
 
-	m := maybeModel.OrPanic()
-	return nullable.Of(domain_model.SecondFactorThrottling{
+	throttling := domain_model.SecondFactorThrottling{
 		SecondFactorThrottlingID:       domain_model.SecondFactorThrottlingID(m.SecondFactorThrottlingID),
 		AppUserID:                      domain_model.AppUserID(m.AppUserID),
 		FailedAttemptsSinceLastSuccess: m.FailedAttemptsSinceLastSuccess,
-		TimeoutUntil:                   nullable.FromPointer(m.TimeoutUntil),
-	}), nil
+	}
+	if m.TimeoutUntil != nil {
+		throttling.TimeoutUntil = *m.TimeoutUntil
+	}
+	return throttling, nil
 }
 
-func (r *SecondFactorThrottlingRepository) Update(throttlingID domain_model.SecondFactorThrottlingID, failedAttemptsSinceLastSuccess int32, timeoutUntil nullable.Nullable[time.Time]) error {
+func (r *SecondFactorThrottlingRepository) Update(throttlingID domain_model.SecondFactorThrottlingID, failedAttemptsSinceLastSuccess int32, maybeTimeoutUtnil *time.Time) error {
 	return db.ExecSingleMutation(
 		SecondFactorThrottling.UPDATE(SecondFactorThrottling.FailedAttemptsSinceLastSuccess, SecondFactorThrottling.TimeoutUntil, SecondFactorThrottling.UpdatedAt).
-			SET(failedAttemptsSinceLastSuccess, timeoutUntil.ToPointer(), time.Now()).
+			SET(failedAttemptsSinceLastSuccess, maybeTimeoutUtnil, time.Now()).
 			WHERE(SecondFactorThrottling.SecondFactorThrottlingID.EQ(throttlingID.ToIntegerExpression())).
 			ExecContext,
 		r.tx)

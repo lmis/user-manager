@@ -70,7 +70,7 @@ func generateSqlBoiler(log logger.Logger, dir string) error {
 		outputDir = os.Args[2]
 	}
 	if outputDir == "" {
-		return errors.Errorf("no output directory provided as commandline argument")
+		return errors.Error("no output directory provided as commandline argument")
 	}
 
 	log.Info("Starting local postgres docker container")

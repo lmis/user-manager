@@ -6,7 +6,6 @@ import (
 	"user-manager/repository"
 	"user-manager/service"
 	"user-manager/util/errors"
-	"user-manager/util/nullable"
 	"user-manager/util/random"
 
 	"github.com/gin-gonic/gin"
@@ -15,14 +14,14 @@ import (
 type EmailConfirmationResource struct {
 	securityLog      domain_model.SecurityLog
 	mailQueueService *service.MailQueueService
-	userSession      nullable.Nullable[domain_model.UserSession]
+	userSession      domain_model.UserSession
 	userRepository   *repository.UserRepository
 }
 
 func ProvideEmailConfirmationResource(
 	securityLog domain_model.SecurityLog,
 	mailQueueService *service.MailQueueService,
-	userSession nullable.Nullable[domain_model.UserSession],
+	userSession domain_model.UserSession,
 	userRepository *repository.UserRepository,
 ) *EmailConfirmationResource {
 	return &EmailConfirmationResource{securityLog, mailQueueService, userSession, userRepository}
@@ -51,7 +50,7 @@ type EmailConfirmationResponseTO struct {
 
 func (r *EmailConfirmationResource) ConfirmEmail(request *EmailConfirmationTO) (*EmailConfirmationResponseTO, error) {
 	securityLog := r.securityLog
-	user := r.userSession.OrPanic().User
+	user := r.userSession.User
 	userRepository := r.userRepository
 
 	if user.EmailVerified {
@@ -59,11 +58,11 @@ func (r *EmailConfirmationResource) ConfirmEmail(request *EmailConfirmationTO) (
 		return &EmailConfirmationResponseTO{EMAIL_CONFIRMATION_RESPONSE_ALREADY_CONFIRMED}, nil
 	}
 
-	if user.EmailVerificationToken.IsEmpty() {
+	if user.EmailVerificationToken == "" {
 		return nil, errors.Error("no verification token present on database")
 	}
 
-	if request.Token != user.EmailVerificationToken.OrPanic() {
+	if request.Token != user.EmailVerificationToken {
 		securityLog.Info("Invalid email verification token")
 		return &EmailConfirmationResponseTO{EMAIL_CONFIRMATION_RESPONSE_INVALID_TOKEN}, nil
 	}
@@ -80,7 +79,7 @@ type RetriggerConfirmationEmailResponseTO struct {
 }
 
 func (r *EmailConfirmationResource) RetriggerVerificationEmail() (*RetriggerConfirmationEmailResponseTO, error) {
-	user := r.userSession.OrPanic().User
+	user := r.userSession.User
 	securityLog := r.securityLog
 	userRepository := r.userRepository
 	mailQueueService := r.mailQueueService
@@ -94,7 +93,10 @@ func (r *EmailConfirmationResource) RetriggerVerificationEmail() (*RetriggerConf
 		return nil, errors.Wrap("issue updating token", err)
 	}
 
-	if err := mailQueueService.SendVerificationEmail(user.Language, user.Email, user.EmailVerificationToken.OrPanic()); err != nil {
+	if user.EmailVerificationToken == "" {
+		return nil, errors.Errorf("missing email verification token")
+	}
+	if err := mailQueueService.SendVerificationEmail(user.Language, user.Email, user.EmailVerificationToken); err != nil {
 		return nil, errors.Wrap("error sending verification email", err)
 	}
 

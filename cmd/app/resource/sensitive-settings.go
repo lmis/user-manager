@@ -6,7 +6,7 @@ import (
 	"user-manager/repository"
 	"user-manager/service"
 	"user-manager/util/errors"
-	"user-manager/util/nullable"
+
 	"user-manager/util/random"
 
 	"github.com/gin-gonic/gin"
@@ -15,14 +15,14 @@ import (
 type SensitiveSettingsResource struct {
 	securityLog      domain_model.SecurityLog
 	mailQueueService *service.MailQueueService
-	userSession      nullable.Nullable[domain_model.UserSession]
+	userSession      domain_model.UserSession
 	userRepository   *repository.UserRepository
 }
 
 func ProvideSensitiveSettingsResource(
 	securityLog domain_model.SecurityLog,
 	mailQueueService *service.MailQueueService,
-	userSession nullable.Nullable[domain_model.UserSession],
+	userSession domain_model.UserSession,
 	userRepository *repository.UserRepository,
 ) *SensitiveSettingsResource {
 	return &SensitiveSettingsResource{securityLog, mailQueueService, userSession, userRepository}
@@ -42,9 +42,13 @@ func (r *SensitiveSettingsResource) InitiateEmailChange(requestTO *ChangeEmailTO
 	mailQueueService := r.mailQueueService
 	userRepository := r.userRepository
 
-	user := userSession.OrPanic().User
+	user := userSession.User
 	nextEmail := requestTO.NewEmail
 
+	if user.AppUserID == 0 {
+		return errors.Error("missing user")
+
+	}
 	securityLog.Info("Changing user email")
 
 	verificationToken := random.MakeRandomURLSafeB64(21)

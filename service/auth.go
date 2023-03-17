@@ -15,12 +15,12 @@ func ProvideAuthService() *AuthService {
 
 func (s *AuthService) Hash(password []byte) (string, error) {
 	if len(password) < 8 {
-		return "", errors.Errorf("password too short")
+		return "", errors.Error("password too short")
 
 	}
 	// See https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html#input-limits
 	if len(password) > 71 {
-		return "", errors.Errorf("password too long")
+		return "", errors.Error("password too long")
 
 	}
 	hash, err := bcrypt.GenerateFromPassword(password, bcrypt.DefaultCost)

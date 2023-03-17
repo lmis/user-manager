@@ -6,7 +6,7 @@ import (
 	"user-manager/repository"
 	"user-manager/service"
 	"user-manager/util/errors"
-	"user-manager/util/nullable"
+
 	"user-manager/util/random"
 
 	"github.com/gin-gonic/gin"
@@ -16,7 +16,7 @@ import (
 type SettingsResource struct {
 	securityLog          domain_model.SecurityLog
 	sessionCookieService *service.SessionCookieService
-	userSession          nullable.Nullable[domain_model.UserSession]
+	userSession          domain_model.UserSession
 	userRepository       *repository.UserRepository
 	sessionRepository    *repository.SessionRepository
 }
@@ -24,7 +24,7 @@ type SettingsResource struct {
 func ProvideSettingsResource(
 	securityLog domain_model.SecurityLog,
 	sessionCookieService *service.SessionCookieService,
-	userSession nullable.Nullable[domain_model.UserSession],
+	userSession domain_model.UserSession,
 	userRepository *repository.UserRepository,
 	sessionRepository *repository.SessionRepository,
 ) *SettingsResource {
@@ -45,12 +45,16 @@ func (r *SettingsResource) SetLanguage(requestTO *LanguageTO) error {
 	userRepository := r.userRepository
 	userSession := r.userSession
 
+	if userSession.UserSessionID == "" {
+		return errors.Error("no user")
+	}
+
 	language := requestTO.Language
 	if !language.IsValid() {
 		return errors.Errorf("invalid language %s", language)
 	}
 
-	if err := userRepository.SetLanguage(userSession.OrPanic().User.AppUserID, language); err != nil {
+	if err := userRepository.SetLanguage(userSession.User.AppUserID, language); err != nil {
 		return errors.Wrap("error updating language", err)
 	}
 	return nil
@@ -70,7 +74,11 @@ func (r *SettingsResource) EnterSudoMode(requestTO *SudoTO) (*SudoResponseTO, er
 	sessionRepository := r.sessionRepository
 	sessionCookieService := r.sessionCookieService
 
-	user := userSession.OrPanic().User
+	if userSession.UserSessionID == "" {
+		return nil, errors.Error("no user")
+	}
+
+	user := userSession.User
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), requestTO.Password); err != nil {
 		securityLog.Info("Password mismatch in sudo attempt for user %s", user.AppUserID)
 		return &SudoResponseTO{}, nil
@@ -82,7 +90,7 @@ func (r *SettingsResource) EnterSudoMode(requestTO *SudoTO) (*SudoResponseTO, er
 		return nil, errors.Wrap("error inserting session", err)
 	}
 
-	sessionCookieService.SetSessionCookie(nullable.Of(sessionID), domain_model.USER_SESSION_TYPE_SUDO)
+	sessionCookieService.SetSessionCookie(sessionID, domain_model.USER_SESSION_TYPE_SUDO)
 	return &SudoResponseTO{Success: true}, nil
 }
 
@@ -107,22 +115,25 @@ func (r *SettingsResource) ConfirmEmailChange(request *EmailChangeConfirmationTO
 	userSession := r.userSession
 	userRepository := r.userRepository
 
-	user := userSession.OrPanic().User
+	if userSession.UserSessionID == "" {
+		return nil, errors.Error("no user")
+	}
+	user := userSession.User
 
-	if user.NextEmail.IsEmpty() {
+	if user.NextEmail == "" {
 		return &EmailChangeConfirmationResponseTO{EMAIL_CHANGE_RESPONSE_NO_CHANGE_IN_PROGRESS}, nil
 	}
 
-	if user.EmailVerificationToken.IsEmpty() {
+	if user.EmailVerificationToken == "" {
 		return nil, errors.Error("no verification token present on database")
 	}
 
-	if request.Token != user.EmailVerificationToken.OrPanic() {
+	if request.Token != user.EmailVerificationToken {
 		securityLog.Info("Invalid email verification token")
 		return &EmailChangeConfirmationResponseTO{EMAIL_CHANGE_RESPONSE_INVALID_TOKEN}, nil
 	}
 
-	if err := userRepository.SetEmailAndClearNextEmail(user.AppUserID, user.NextEmail.OrPanic()); err != nil {
+	if err := userRepository.SetEmailAndClearNextEmail(user.AppUserID, user.NextEmail); err != nil {
 		return nil, errors.Wrap("issue setting email ", err)
 	}
 

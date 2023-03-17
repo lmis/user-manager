@@ -23,9 +23,9 @@ func InitializeEmailConfirmationResource(c *gin.Context) *EmailConfirmationResou
 	v := injector.ProvideTranslations()
 	template := injector.ProvideBaseTemplate()
 	mailQueueService := service.ProvideMailQueueService(mailQueueRepository, config, v, template)
-	nullable := injector.ProvideUserSession(c)
+	userSession := injector.ProvideUserSession(c)
 	userRepository := repository.ProvideUserRepository(tx)
-	emailConfirmationResource := ProvideEmailConfirmationResource(securityLog, mailQueueService, nullable, userRepository)
+	emailConfirmationResource := ProvideEmailConfirmationResource(securityLog, mailQueueService, userSession, userRepository)
 	return emailConfirmationResource
 }
 
@@ -56,8 +56,8 @@ func InitializeSignUpResource(c *gin.Context) *SignUpResource {
 }
 
 func InitializeUserInfoResource(c *gin.Context) *UserInfoResource {
-	nullable := injector.ProvideUserSession(c)
-	userInfoResource := ProvideUserInfoResource(nullable)
+	userSession := injector.ProvideUserSession(c)
+	userInfoResource := ProvideUserInfoResource(userSession)
 	return userInfoResource
 }
 
@@ -67,8 +67,8 @@ func InitializeLogoutResource(c *gin.Context) *LogoutResource {
 	sessionCookieService := service.ProvideSessionCookieService(c, config)
 	tx := injector.ProvideTx(c)
 	sessionRepository := repository.ProvideSessionRepository(tx)
-	nullable := injector.ProvideUserSession(c)
-	logoutResource := ProvideLogoutResource(securityLog, sessionCookieService, sessionRepository, nullable)
+	userSession := injector.ProvideUserSession(c)
+	logoutResource := ProvideLogoutResource(securityLog, sessionCookieService, sessionRepository, userSession)
 	return logoutResource
 }
 
@@ -76,11 +76,11 @@ func InitializeSettingsResource(c *gin.Context) *SettingsResource {
 	securityLog := injector.ProvideSecurityLog(c)
 	config := injector.ProvideConfig()
 	sessionCookieService := service.ProvideSessionCookieService(c, config)
-	nullable := injector.ProvideUserSession(c)
+	userSession := injector.ProvideUserSession(c)
 	tx := injector.ProvideTx(c)
 	userRepository := repository.ProvideUserRepository(tx)
 	sessionRepository := repository.ProvideSessionRepository(tx)
-	settingsResource := ProvideSettingsResource(securityLog, sessionCookieService, nullable, userRepository, sessionRepository)
+	settingsResource := ProvideSettingsResource(securityLog, sessionCookieService, userSession, userRepository, sessionRepository)
 	return settingsResource
 }
 
@@ -92,9 +92,9 @@ func InitializeSensitiveSettingsResource(c *gin.Context) *SensitiveSettingsResou
 	v := injector.ProvideTranslations()
 	template := injector.ProvideBaseTemplate()
 	mailQueueService := service.ProvideMailQueueService(mailQueueRepository, config, v, template)
-	nullable := injector.ProvideUserSession(c)
+	userSession := injector.ProvideUserSession(c)
 	userRepository := repository.ProvideUserRepository(tx)
-	sensitiveSettingsResource := ProvideSensitiveSettingsResource(securityLog, mailQueueService, nullable, userRepository)
+	sensitiveSettingsResource := ProvideSensitiveSettingsResource(securityLog, mailQueueService, userSession, userRepository)
 	return sensitiveSettingsResource
 }
 

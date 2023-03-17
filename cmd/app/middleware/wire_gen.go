@@ -39,8 +39,8 @@ func InitializeExtractLoginSessionMiddleware(c *gin.Context) *ExtractLoginSessio
 
 func InitializeRequireRoleMiddleware(c *gin.Context) *RequireRoleMiddleware {
 	securityLog := injector.ProvideSecurityLog(c)
-	nullable := injector.ProvideUserSession(c)
-	requireRoleMiddleware := ProvideRequireRoleMiddleware(c, securityLog, nullable)
+	userSession := injector.ProvideUserSession(c)
+	requireRoleMiddleware := ProvideRequireRoleMiddleware(c, securityLog, userSession)
 	return requireRoleMiddleware
 }
 
@@ -54,8 +54,8 @@ func InitializeRequireSudoModeMiddleware(c *gin.Context) *RequireSudoModeMiddlew
 }
 
 func InitializeVerifiedEmailAuthorizationMiddleware(c *gin.Context) *VerifiedEmailAuthorizationMiddleware {
-	nullable := injector.ProvideUserSession(c)
+	userSession := injector.ProvideUserSession(c)
 	securityLog := injector.ProvideSecurityLog(c)
-	verifiedEmailAuthorizationMiddleware := ProvideVerifiedEmailAuthorizationMiddleware(c, nullable, securityLog)
+	verifiedEmailAuthorizationMiddleware := ProvideVerifiedEmailAuthorizationMiddleware(c, userSession, securityLog)
 	return verifiedEmailAuthorizationMiddleware
 }

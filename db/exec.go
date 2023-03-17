@@ -5,12 +5,11 @@ import (
 	"database/sql"
 	"fmt"
 	"user-manager/util/errors"
-	"user-manager/util/nullable"
 
 	"github.com/go-jet/jet/v2/qrm"
 )
 
-func Fetch[A interface{}](query func(context.Context, qrm.Queryable, interface{}) error, tx *sql.Tx) (nullable.Nullable[*A], error) {
+func FetchMaybe[A interface{}](query func(context.Context, qrm.Queryable, interface{}) error, tx *sql.Tx) (*A, error) {
 	dest := new(A)
 	ctx, cancelTimeout := DefaultQueryContext()
 	defer cancelTimeout()
@@ -18,12 +17,12 @@ func Fetch[A interface{}](query func(context.Context, qrm.Queryable, interface{}
 
 	if err != nil {
 		if err == qrm.ErrNoRows || err == sql.ErrNoRows {
-			return nullable.Empty[*A](), nil
+			return nil, nil
 		}
-		return nullable.Empty[*A](), err
+		return nil, err
 	}
 
-	return nullable.Of(dest), nil
+	return dest, nil
 }
 
 func ExecSingleMutation(query func(context.Context, qrm.Executable) (sql.Result, error), tx *sql.Tx) error {

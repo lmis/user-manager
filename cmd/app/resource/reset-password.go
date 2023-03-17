@@ -49,16 +49,15 @@ func (r *ResetPasswordResource) RequestPasswordReset(requestTO *PasswordResetReq
 
 	securityLog.Info("Password reset requested")
 
-	maybeUser, err := userRepository.GetUserForEmail(requestTO.Email)
+	user, err := userRepository.GetUserForEmail(requestTO.Email)
 	if err != nil {
 		return errors.Wrap("error finding user for email", err)
 	}
-	if maybeUser.IsEmpty() {
+	if user.AppUserID == 0 {
 		securityLog.Info("Password reset request for non-existing email")
 		return nil
 	}
 
-	user := maybeUser.OrPanic()
 	token := random.MakeRandomURLSafeB64(21)
 	if err := userRepository.SetPasswordResetToken(user.AppUserID, token, time.Now().Add(domain_model.PASSWORD_RESET_TOKEN_DURATION)); err != nil {
 		return errors.Wrap("issue persisting password reset token", err)
@@ -93,21 +92,20 @@ func (r *ResetPasswordResource) ResetPassword(requestTO *ResetPasswordTO) (*Rese
 	authService := r.authService
 	securityLog.Info("Password reset")
 
-	maybeUser, err := userRepository.GetUserForEmail(requestTO.Email)
+	user, err := userRepository.GetUserForEmail(requestTO.Email)
 	if err != nil {
 		return nil, errors.Wrap("error finding user", err)
 	}
 
-	if maybeUser.IsEmpty() {
+	if user.AppUserID == 0 {
 		securityLog.Info("Password reset attempt for non-existing email")
 		return &ResetPasswordResponseTO{RESET_PASSWORD_RESPONSE_INVALID}, nil
 	}
-	user := maybeUser.OrPanic()
-	if user.PasswordResetToken.IsEmpty() || user.PasswordResetToken.OrPanic() != requestTO.Token {
+	if user.PasswordResetToken == "" || user.PasswordResetToken != requestTO.Token {
 		securityLog.Info("Password reset attempt with wrong token")
 		return &ResetPasswordResponseTO{RESET_PASSWORD_RESPONSE_INVALID}, nil
 	}
-	if user.PasswordResetTokenValidUntil.IsEmpty() || user.PasswordResetTokenValidUntil.OrPanic().Before(time.Now()) {
+	if user.PasswordResetTokenValidUntil.Before(time.Now()) {
 		securityLog.Info("Password reset attempt with expired token")
 		return &ResetPasswordResponseTO{RESET_PASSWORD_RESPONSE_INVALID}, nil
 	}

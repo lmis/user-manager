@@ -36,23 +36,23 @@ func (m *RequireSudoModeMiddleware) Handle() {
 		return
 	}
 
-	if sudoSessionID.IsEmpty() {
+	if sudoSessionID == "" {
 		c.AbortWithError(http.StatusForbidden, errors.Error("sudo session cookie missing"))
 		return
 	}
 
-	session, err := sessionRepository.GetSessionAndUser(sudoSessionID.OrPanic(), domain_model.USER_SESSION_TYPE_SUDO)
+	session, err := sessionRepository.GetSessionAndUser(sudoSessionID, domain_model.USER_SESSION_TYPE_SUDO)
 	if err != nil {
 		c.AbortWithError(http.StatusInternalServerError, errors.Wrap("getting sudo session failed", err))
 		return
 	}
 
-	if session.IsEmpty() {
+	if session.UserSessionID == "" {
 		c.AbortWithError(http.StatusForbidden, errors.Error("sudo session not found on db"))
 		return
 	}
 
-	if err := sessionRepository.UpdateSessionTimeout(session.OrPanic().UserSessionID, time.Now().Add(domain_model.SUDO_SESSION_DURATION)); err != nil {
+	if err := sessionRepository.UpdateSessionTimeout(session.UserSessionID, time.Now().Add(domain_model.SUDO_SESSION_DURATION)); err != nil {
 		c.AbortWithError(http.StatusInternalServerError, errors.Wrap("issue updating session timeout in db", err))
 		return
 	}

@@ -37,22 +37,21 @@ func (m *ExtractLoginSessionMiddleware) Handle() {
 		return
 	}
 
-	if sessionID.IsEmpty() {
+	if sessionID == "" {
 		return
 	}
 
-	session, err := sessionRepository.GetSessionAndUser(sessionID.OrPanic(), domain_model.USER_SESSION_TYPE_LOGIN)
-
+	session, err := sessionRepository.GetSessionAndUser(sessionID, domain_model.USER_SESSION_TYPE_LOGIN)
 	if err != nil {
 		c.AbortWithError(http.StatusInternalServerError, errors.Wrap("fetching session failed", err))
 		return
 	}
 
-	if session.IsPresent() {
+	if session.UserSessionID != "" {
 
 		ginext.GetRequestContext(c).UserSession = session
 
-		if err := sessionRepository.UpdateSessionTimeout(session.OrPanic().UserSessionID, time.Now().Add(domain_model.LOGIN_SESSION_DURATION)); err != nil {
+		if err := sessionRepository.UpdateSessionTimeout(session.UserSessionID, time.Now().Add(domain_model.LOGIN_SESSION_DURATION)); err != nil {
 			c.AbortWithError(http.StatusInternalServerError, errors.Wrap("issue updating session timeout in db", err))
 			return
 		}

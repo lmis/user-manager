@@ -90,7 +90,7 @@ func sendOneEmail(log logger.Logger, database *sql.DB, config *config.Config) (r
 		}
 	}()
 
-	maybeMail, err := db.Fetch[model.MailQueue](
+	mail, err := db.FetchMaybe[model.MailQueue](
 		SELECT(MailQueue.AllColumns).
 			FROM(MailQueue).
 			WHERE(
@@ -105,11 +105,10 @@ func sendOneEmail(log logger.Logger, database *sql.DB, config *config.Config) (r
 	if err != nil {
 		return errors.Wrap("issue getting email from db", err)
 	}
-	if maybeMail.IsEmpty() {
+	if mail == nil {
 		return
 	}
 
-	mail := maybeMail.OrPanic()
 	payload, err := json.Marshal(emailapi.EmailTO{
 		From:    mail.FromAddress,
 		To:      mail.ToAddress,

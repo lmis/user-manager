@@ -3,7 +3,6 @@ package domain_model
 import (
 	"encoding/json"
 	"time"
-	"user-manager/util/nullable"
 
 	"github.com/go-jet/jet/v2/postgres"
 )
@@ -17,12 +16,12 @@ type AppUser struct {
 	PasswordHash                 string
 	Email                        string
 	EmailVerified                bool
-	EmailVerificationToken       nullable.Nullable[string]
-	NextEmail                    nullable.Nullable[string]
-	PasswordResetToken           nullable.Nullable[string]
-	PasswordResetTokenValidUntil nullable.Nullable[time.Time]
-	SecondFactorToken            nullable.Nullable[string]
-	TemporarySecondFactorToken   nullable.Nullable[string]
+	EmailVerificationToken       string
+	NextEmail                    string
+	PasswordResetToken           string
+	PasswordResetTokenValidUntil time.Time
+	SecondFactorToken            string
+	TemporarySecondFactorToken   string
 	UserRoles                    []UserRole
 }
 

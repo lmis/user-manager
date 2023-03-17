@@ -6,7 +6,6 @@ import (
 	"user-manager/repository"
 	"user-manager/service"
 	"user-manager/util/errors"
-	"user-manager/util/nullable"
 
 	"github.com/gin-gonic/gin"
 )
@@ -15,14 +14,14 @@ type LogoutResource struct {
 	securityLog          domain_model.SecurityLog
 	sessionCookieService *service.SessionCookieService
 	sessionRepository    *repository.SessionRepository
-	userSession          nullable.Nullable[domain_model.UserSession]
+	userSession          domain_model.UserSession
 }
 
 func ProvideLogoutResource(
 	securityLog domain_model.SecurityLog,
 	sessionCookieService *service.SessionCookieService,
 	sessionRepository *repository.SessionRepository,
-	userSession nullable.Nullable[domain_model.UserSession],
+	userSession domain_model.UserSession,
 ) *LogoutResource {
 	return &LogoutResource{securityLog, sessionCookieService, sessionRepository, userSession}
 }
@@ -44,8 +43,8 @@ func (r *LogoutResource) Logout(request LogoutTO) error {
 	securityLog.Info("Logout")
 
 	sessionCookieService.RemoveSessionCookie(domain_model.USER_SESSION_TYPE_LOGIN)
-	if userSession.IsPresent() {
-		if err := sessionRepository.Delete(userSession.OrPanic().UserSessionID); err != nil {
+	if userSession.UserSessionID != "" {
+		if err := sessionRepository.Delete(userSession.UserSessionID); err != nil {
 			return errors.Wrap("issue while deleting login session", err)
 		}
 	}
@@ -54,9 +53,9 @@ func (r *LogoutResource) Logout(request LogoutTO) error {
 	if err != nil {
 		return errors.Wrap("issue reading sudo session cookie", err)
 	}
-	if sudoSessionID.IsPresent() {
+	if sudoSessionID != "" {
 		sessionCookieService.RemoveSessionCookie(domain_model.USER_SESSION_TYPE_SUDO)
-		if err := sessionRepository.Delete(domain_model.UserSessionID(sudoSessionID.OrPanic())); err != nil {
+		if err := sessionRepository.Delete(domain_model.UserSessionID(sudoSessionID)); err != nil {
 			return errors.Wrap("issue while deleting sudo session", err)
 		}
 	}
@@ -65,9 +64,9 @@ func (r *LogoutResource) Logout(request LogoutTO) error {
 		if err != nil {
 			return errors.Wrap("issue reading device session cookie", err)
 		}
-		if deviceSessionID.IsPresent() {
+		if deviceSessionID != "" {
 			sessionCookieService.RemoveSessionCookie(domain_model.USER_SESSION_TYPE_REMEMBER_DEVICE)
-			if err := sessionRepository.Delete(domain_model.UserSessionID(deviceSessionID.OrPanic())); err != nil {
+			if err := sessionRepository.Delete(domain_model.UserSessionID(deviceSessionID)); err != nil {
 				return errors.Wrap("issue while deleting device session", err)
 			}
 		}

@@ -5,7 +5,6 @@ import (
 	"reflect"
 	domain_model "user-manager/domain-model"
 	"user-manager/util/errors"
-	"user-manager/util/nullable"
 
 	"github.com/gin-gonic/gin"
 )
@@ -15,7 +14,7 @@ const (
 )
 
 type RequestContext struct {
-	UserSession nullable.Nullable[domain_model.UserSession]
+	UserSession domain_model.UserSession
 	Tx          *sql.Tx
 	Log         domain_model.Log
 	SecurityLog domain_model.SecurityLog

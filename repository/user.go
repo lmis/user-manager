@@ -9,7 +9,6 @@ import (
 	. "user-manager/db/generated/models/postgres/public/table"
 	domain_model "user-manager/domain-model"
 	"user-manager/util/errors"
-	"user-manager/util/nullable"
 
 	. "github.com/go-jet/jet/v2/postgres"
 )
@@ -22,8 +21,8 @@ func ProvideUserRepository(tx *sql.Tx) *UserRepository {
 	return &UserRepository{tx}
 }
 
-func (r *UserRepository) GetUserForEmail(email string) (nullable.Nullable[domain_model.AppUser], error) {
-	maybeModel, err := db.Fetch[struct {
+func (r *UserRepository) GetUserForEmail(email string) (domain_model.AppUser, error) {
+	m, err := db.FetchMaybe[struct {
 		model.AppUser
 		Roles []model.AppUserRole
 	}](
@@ -49,32 +48,43 @@ func (r *UserRepository) GetUserForEmail(email string) (nullable.Nullable[domain
 			QueryContext,
 		r.tx)
 	if err != nil {
-		return nullable.Empty[domain_model.AppUser](), errors.Wrap("error loading user", err)
+		return domain_model.AppUser{}, errors.Wrap("error loading user", err)
 	}
 
-	if maybeModel.IsEmpty() {
-		return nullable.Empty[domain_model.AppUser](), nil
+	if m == nil {
+		return domain_model.AppUser{}, nil
 	}
-	m := maybeModel.OrPanic()
 	user := domain_model.AppUser{
-		AppUserID:                    domain_model.AppUserID(m.AppUserID),
-		Language:                     domain_model.UserLanguage(m.Language),
-		UserName:                     m.UserName,
-		PasswordHash:                 m.PasswordHash,
-		Email:                        m.Email,
-		EmailVerified:                m.EmailVerified,
-		EmailVerificationToken:       nullable.FromPointer(m.EmailVerificationToken),
-		NextEmail:                    nullable.FromPointer(m.NextEmail),
-		PasswordResetToken:           nullable.FromPointer(m.PasswordResetToken),
-		PasswordResetTokenValidUntil: nullable.FromPointer(m.PasswordResetTokenValidUntil),
-		SecondFactorToken:            nullable.FromPointer(m.SecondFactorToken),
-		TemporarySecondFactorToken:   nullable.FromPointer(m.TemporarySecondFactorToken),
-		UserRoles:                    make([]domain_model.UserRole, len(m.Roles)),
+		AppUserID:     domain_model.AppUserID(m.AppUserID),
+		Language:      domain_model.UserLanguage(m.Language),
+		UserName:      m.UserName,
+		PasswordHash:  m.PasswordHash,
+		Email:         m.Email,
+		EmailVerified: m.EmailVerified,
+		UserRoles:     make([]domain_model.UserRole, len(m.Roles)),
+	}
+	if m.EmailVerificationToken != nil {
+		user.EmailVerificationToken = *m.EmailVerificationToken
+	}
+	if m.NextEmail != nil {
+		user.NextEmail = *m.NextEmail
+	}
+	if m.PasswordResetToken != nil {
+		user.PasswordResetToken = *m.PasswordResetToken
+	}
+	if m.PasswordResetTokenValidUntil != nil {
+		user.PasswordResetTokenValidUntil = *m.PasswordResetTokenValidUntil
+	}
+	if m.SecondFactorToken != nil {
+		user.SecondFactorToken = *m.SecondFactorToken
+	}
+	if m.TemporarySecondFactorToken != nil {
+		user.TemporarySecondFactorToken = *m.TemporarySecondFactorToken
 	}
 	for i, role := range m.Roles {
 		user.UserRoles[i] = domain_model.UserRole(role.Role)
 	}
-	return nullable.Of(user), nil
+	return user, nil
 }
 
 func (r *UserRepository) UpdateUserEmailVerificationToken(appUserID domain_model.AppUserID, token string) error {
