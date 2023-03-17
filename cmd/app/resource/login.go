@@ -55,7 +55,7 @@ type LoginResponseTO struct {
 	Status LoginResponseStatus `json:"status"`
 }
 
-func (r *LoginResource) Login(requestTO *LoginTO) (*LoginResponseTO, error) {
+func (r *LoginResource) Login(requestTO LoginTO) (LoginResponseTO, error) {
 	securityLog := r.securityLog
 	sessionCookieService := r.sessionCookieService
 	userRepository := r.userRepository
@@ -63,37 +63,37 @@ func (r *LoginResource) Login(requestTO *LoginTO) (*LoginResponseTO, error) {
 
 	user, err := userRepository.GetUserForEmail(requestTO.Email)
 	if err != nil {
-		return nil, errors.Wrap("error fetching user", err)
+		return LoginResponseTO{}, errors.Wrap("error fetching user", err)
 	}
 	if user.AppUserID == 0 {
 		securityLog.Info("Login attempt for non-existant user")
-		return &LoginResponseTO{LOGIN_RESPONSE_INVALID_CREDENTIALS}, nil
+		return LoginResponseTO{LOGIN_RESPONSE_INVALID_CREDENTIALS}, nil
 	}
 
 	for _, role := range user.UserRoles {
 		if role != domain_model.USER_ROLE_USER {
 			securityLog.Info("Login attempt without second factor for non-user %d", user.AppUserID)
-			return &LoginResponseTO{LOGIN_RESPONSE_INVALID_CREDENTIALS}, nil
+			return LoginResponseTO{LOGIN_RESPONSE_INVALID_CREDENTIALS}, nil
 		}
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), requestTO.Password); err != nil {
 		securityLog.Info("Password mismatch for user %s", user.AppUserID)
-		return &LoginResponseTO{LOGIN_RESPONSE_INVALID_CREDENTIALS}, nil
+		return LoginResponseTO{LOGIN_RESPONSE_INVALID_CREDENTIALS}, nil
 	}
 
 	if user.SecondFactorToken != "" {
-		return &LoginResponseTO{LOGIN_RESPONSE_2FA_REQUIRED}, nil
+		return LoginResponseTO{LOGIN_RESPONSE_2FA_REQUIRED}, nil
 	}
 
 	securityLog.Info("Login")
 	sessionID := random.MakeRandomURLSafeB64(21)
 	if err = sessionRepository.InsertSession(sessionID, domain_model.USER_SESSION_TYPE_LOGIN, user.AppUserID, domain_model.LOGIN_SESSION_DURATION); err != nil {
-		return nil, errors.Wrap("error inserting session", err)
+		return LoginResponseTO{}, errors.Wrap("error inserting session", err)
 	}
 
 	sessionCookieService.SetSessionCookie(sessionID, domain_model.USER_SESSION_TYPE_LOGIN)
-	return &LoginResponseTO{LOGIN_RESPONSE_LOGGED_IN}, nil
+	return LoginResponseTO{LOGIN_RESPONSE_LOGGED_IN}, nil
 }
 
 type LoginWithSecondFactorTO struct {
@@ -107,7 +107,7 @@ type LoginWithSecondFactorResponseTO struct {
 	TimeoutUntil time.Time `json:"timeoutUntil,omitempty"`
 }
 
-func (r *LoginResource) LoginWithSecondFactor(requestTO *LoginWithSecondFactorTO) (*LoginWithSecondFactorResponseTO, error) {
+func (r *LoginResource) LoginWithSecondFactor(requestTO LoginWithSecondFactorTO) (LoginWithSecondFactorResponseTO, error) {
 	sessionCookieService := r.sessionCookieService
 	sessionRepository := r.sessionRepository
 	userRepository := r.userRepository
@@ -116,27 +116,27 @@ func (r *LoginResource) LoginWithSecondFactor(requestTO *LoginWithSecondFactorTO
 
 	user, err := userRepository.GetUserForEmail(requestTO.Email)
 	if err != nil {
-		return nil, errors.Wrap("error finding user", err)
+		return LoginWithSecondFactorResponseTO{}, errors.Wrap("error finding user", err)
 	}
 	if user.AppUserID == 0 {
 		securityLog.Info("Login attempt for non-existant user")
-		return &LoginWithSecondFactorResponseTO{}, nil
+		return LoginWithSecondFactorResponseTO{}, nil
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), requestTO.Password); err != nil {
 		securityLog.Info("password missmatch")
-		return &LoginWithSecondFactorResponseTO{}, nil
+		return LoginWithSecondFactorResponseTO{}, nil
 	}
 
 	if requestTO.SecondFactor != "" {
 		throttling, err := secondFactorThrottlingRepository.GetForUser(user.AppUserID)
 		if err != nil {
-			return nil, errors.Wrap("error loading throttling", err)
+			return LoginWithSecondFactorResponseTO{}, errors.Wrap("error loading throttling", err)
 		}
 
 		if throttling.AppUserID != 0 && throttling.TimeoutUntil.After(time.Now()) {
 			securityLog.Info("Throttled 2FA attempted")
-			return &LoginWithSecondFactorResponseTO{TimeoutUntil: throttling.TimeoutUntil}, nil
+			return LoginWithSecondFactorResponseTO{TimeoutUntil: throttling.TimeoutUntil}, nil
 		}
 
 		tokenMatches := user.SecondFactorToken != "" && totp.Validate(requestTO.SecondFactor, user.SecondFactorToken)
@@ -152,17 +152,17 @@ func (r *LoginResource) LoginWithSecondFactor(requestTO *LoginWithSecondFactorTO
 				}
 			}
 			if err := secondFactorThrottlingRepository.Update(throttling.SecondFactorThrottlingID, failedAttemptsSinceLastSuccess, maybeTimeoutUntil); err != nil {
-				return nil, errors.Wrap("issue updating throttling in db", err)
+				return LoginWithSecondFactorResponseTO{}, errors.Wrap("issue updating throttling in db", err)
 			}
 		} else if !tokenMatches {
 			if err := secondFactorThrottlingRepository.Insert(user.AppUserID, 1); err != nil {
-				return nil, errors.Wrap("issue inserting throttling in db", err)
+				return LoginWithSecondFactorResponseTO{}, errors.Wrap("issue inserting throttling in db", err)
 			}
 		}
 
 		if !tokenMatches {
 			securityLog.Info("2FA mismatch")
-			return &LoginWithSecondFactorResponseTO{}, nil
+			return LoginWithSecondFactorResponseTO{}, nil
 		}
 
 		if requestTO.RememberDevice {
@@ -170,7 +170,7 @@ func (r *LoginResource) LoginWithSecondFactor(requestTO *LoginWithSecondFactorTO
 			deviceSessionID := random.MakeRandomURLSafeB64(21)
 			err = sessionRepository.InsertSession(deviceSessionID, domain_model.USER_SESSION_TYPE_LOGIN, user.AppUserID, domain_model.DEVICE_SESSION_DURATION)
 			if err != nil {
-				return nil, errors.Wrap("error inserting device session", err)
+				return LoginWithSecondFactorResponseTO{}, errors.Wrap("error inserting device session", err)
 			}
 
 			sessionCookieService.SetSessionCookie(deviceSessionID, domain_model.USER_SESSION_TYPE_REMEMBER_DEVICE)
@@ -180,28 +180,28 @@ func (r *LoginResource) LoginWithSecondFactor(requestTO *LoginWithSecondFactorTO
 	} else {
 		maybeDeviceSessionID, err := sessionCookieService.GetSessionCookie(domain_model.USER_SESSION_TYPE_LOGIN)
 		if err != nil {
-			return nil, errors.Wrap("issue reading device session cookie", err)
+			return LoginWithSecondFactorResponseTO{}, errors.Wrap("issue reading device session cookie", err)
 		}
 		if maybeDeviceSessionID == "" {
-			return &LoginWithSecondFactorResponseTO{}, nil
+			return LoginWithSecondFactorResponseTO{}, nil
 		}
 
 		deviceSession, err := sessionRepository.GetSessionAndUser(maybeDeviceSessionID, domain_model.USER_SESSION_TYPE_REMEMBER_DEVICE)
 
 		if err != nil {
-			return nil, errors.Wrap("fetching device session failed", err)
+			return LoginWithSecondFactorResponseTO{}, errors.Wrap("fetching device session failed", err)
 		}
 		if deviceSession.UserSessionID == "" {
-			return &LoginWithSecondFactorResponseTO{}, nil
+			return LoginWithSecondFactorResponseTO{}, nil
 		}
 		securityLog.Info("Login passed with device token cookie")
 	}
 
 	sessionID := random.MakeRandomURLSafeB64(21)
 	if err = sessionRepository.InsertSession(sessionID, domain_model.USER_SESSION_TYPE_LOGIN, user.AppUserID, domain_model.LOGIN_SESSION_DURATION); err != nil {
-		return nil, errors.Wrap("error inserting login session", err)
+		return LoginWithSecondFactorResponseTO{}, errors.Wrap("error inserting login session", err)
 	}
 
 	sessionCookieService.SetSessionCookie(sessionID, domain_model.USER_SESSION_TYPE_LOGIN)
-	return &LoginWithSecondFactorResponseTO{LoggedIn: true}, nil
+	return LoginWithSecondFactorResponseTO{LoggedIn: true}, nil
 }

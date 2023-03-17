@@ -110,32 +110,32 @@ type EmailChangeConfirmationResponseTO struct {
 	Status EmailChangeStatus `json:"status"`
 }
 
-func (r *SettingsResource) ConfirmEmailChange(request *EmailChangeConfirmationTO) (*EmailChangeConfirmationResponseTO, error) {
+func (r *SettingsResource) ConfirmEmailChange(request EmailChangeConfirmationTO) (EmailChangeConfirmationResponseTO, error) {
 	securityLog := r.securityLog
 	userSession := r.userSession
 	userRepository := r.userRepository
 
 	if userSession.UserSessionID == "" {
-		return nil, errors.Error("no user")
+		return EmailChangeConfirmationResponseTO{}, errors.Error("no user")
 	}
 	user := userSession.User
 
 	if user.NextEmail == "" {
-		return &EmailChangeConfirmationResponseTO{EMAIL_CHANGE_RESPONSE_NO_CHANGE_IN_PROGRESS}, nil
+		return EmailChangeConfirmationResponseTO{EMAIL_CHANGE_RESPONSE_NO_CHANGE_IN_PROGRESS}, nil
 	}
 
 	if user.EmailVerificationToken == "" {
-		return nil, errors.Error("no verification token present on database")
+		return EmailChangeConfirmationResponseTO{}, errors.Error("no verification token present on database")
 	}
 
 	if request.Token != user.EmailVerificationToken {
 		securityLog.Info("Invalid email verification token")
-		return &EmailChangeConfirmationResponseTO{EMAIL_CHANGE_RESPONSE_INVALID_TOKEN}, nil
+		return EmailChangeConfirmationResponseTO{EMAIL_CHANGE_RESPONSE_INVALID_TOKEN}, nil
 	}
 
 	if err := userRepository.SetEmailAndClearNextEmail(user.AppUserID, user.NextEmail); err != nil {
-		return nil, errors.Wrap("issue setting email ", err)
+		return EmailChangeConfirmationResponseTO{}, errors.Wrap("issue setting email ", err)
 	}
 
-	return &EmailChangeConfirmationResponseTO{EMAIL_CHANGE_RESPONSE_NEW_EMAIL_CONFIRMED}, nil
+	return EmailChangeConfirmationResponseTO{EMAIL_CHANGE_RESPONSE_NEW_EMAIL_CONFIRMED}, nil
 }

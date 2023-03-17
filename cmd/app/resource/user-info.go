@@ -25,7 +25,7 @@ type UserInfoTO struct {
 	Language      domain_model.UserLanguage `json:"language"`
 }
 
-func (r *UserInfoResource) Get() (*UserInfoTO, error) {
+func (r *UserInfoResource) Get() (UserInfoTO, error) {
 	userSession := r.userSession
 
 	userTO := UserInfoTO{}
@@ -34,5 +34,5 @@ func (r *UserInfoResource) Get() (*UserInfoTO, error) {
 		userTO.EmailVerified = userSession.User.EmailVerified
 		userTO.Language = userSession.User.Language
 	}
-	return &userTO, nil
+	return userTO, nil
 }

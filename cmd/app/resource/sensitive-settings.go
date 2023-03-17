@@ -36,7 +36,7 @@ type ChangeEmailTO struct {
 	NewEmail string `json:"newEmail"`
 }
 
-func (r *SensitiveSettingsResource) InitiateEmailChange(requestTO *ChangeEmailTO) error {
+func (r *SensitiveSettingsResource) InitiateEmailChange(requestTO ChangeEmailTO) error {
 	securityLog := r.securityLog
 	userSession := r.userSession
 	mailQueueService := r.mailQueueService

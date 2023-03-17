@@ -38,7 +38,7 @@ type SignUpTO struct {
 	Password []byte `json:"password"`
 }
 
-func (r *SignUpResource) SignUp(requestTO *SignUpTO) error {
+func (r *SignUpResource) SignUp(requestTO SignUpTO) error {
 	securityLog := r.securityLog
 	userRepository := r.userRepository
 	mailQueueService := r.mailQueueService

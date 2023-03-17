@@ -86,7 +86,7 @@ type ResetPasswordResponseTO struct {
 	Status ResetPasswordStatus `json:"status"`
 }
 
-func (r *ResetPasswordResource) ResetPassword(requestTO *ResetPasswordTO) (*ResetPasswordResponseTO, error) {
+func (r *ResetPasswordResource) ResetPassword(requestTO ResetPasswordTO) (ResetPasswordResponseTO, error) {
 	securityLog := r.securityLog
 	userRepository := r.userRepository
 	authService := r.authService
@@ -94,30 +94,30 @@ func (r *ResetPasswordResource) ResetPassword(requestTO *ResetPasswordTO) (*Rese
 
 	user, err := userRepository.GetUserForEmail(requestTO.Email)
 	if err != nil {
-		return nil, errors.Wrap("error finding user", err)
+		return ResetPasswordResponseTO{}, errors.Wrap("error finding user", err)
 	}
 
 	if user.AppUserID == 0 {
 		securityLog.Info("Password reset attempt for non-existing email")
-		return &ResetPasswordResponseTO{RESET_PASSWORD_RESPONSE_INVALID}, nil
+		return ResetPasswordResponseTO{RESET_PASSWORD_RESPONSE_INVALID}, nil
 	}
 	if user.PasswordResetToken == "" || user.PasswordResetToken != requestTO.Token {
 		securityLog.Info("Password reset attempt with wrong token")
-		return &ResetPasswordResponseTO{RESET_PASSWORD_RESPONSE_INVALID}, nil
+		return ResetPasswordResponseTO{RESET_PASSWORD_RESPONSE_INVALID}, nil
 	}
 	if user.PasswordResetTokenValidUntil.Before(time.Now()) {
 		securityLog.Info("Password reset attempt with expired token")
-		return &ResetPasswordResponseTO{RESET_PASSWORD_RESPONSE_INVALID}, nil
+		return ResetPasswordResponseTO{RESET_PASSWORD_RESPONSE_INVALID}, nil
 	}
 
 	hash, err := authService.Hash(requestTO.NewPassword)
 	if err != nil {
-		return nil, errors.Wrap("issue making password hash", err)
+		return ResetPasswordResponseTO{}, errors.Wrap("issue making password hash", err)
 	}
 
 	if err := userRepository.SetPasswordHash(user.AppUserID, hash); err != nil {
-		return nil, errors.Wrap("issue setting password hash", err)
+		return ResetPasswordResponseTO{}, errors.Wrap("issue setting password hash", err)
 	}
 
-	return &ResetPasswordResponseTO{RESET_PASSWORD_RESPONSE_SUCCESS}, nil
+	return ResetPasswordResponseTO{RESET_PASSWORD_RESPONSE_SUCCESS}, nil
 }
