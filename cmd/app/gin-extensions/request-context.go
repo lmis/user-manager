@@ -15,7 +15,6 @@ const (
 )
 
 type RequestContext struct {
-	Config      *domain_model.Config
 	UserSession nullable.Nullable[domain_model.UserSession]
 	Tx          *sql.Tx
 	Log         domain_model.Log
