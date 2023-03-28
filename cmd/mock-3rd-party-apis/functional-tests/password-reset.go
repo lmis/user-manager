@@ -6,7 +6,7 @@ import (
 	"user-manager/cmd/app/resource"
 	"user-manager/cmd/mock-3rd-party-apis/config"
 	"user-manager/cmd/mock-3rd-party-apis/util"
-	domain_model "user-manager/domain-model"
+	dm "user-manager/domain-model"
 	"user-manager/util/errors"
 )
 
@@ -16,7 +16,7 @@ func TestPasswordReset(config *config.Config, emails util.Emails, testUser *util
 	newPassword := []byte("hunter13")
 	client := util.NewRequestClient(config)
 
-	// Trigger reset for non-existant email
+	// Trigger reset for non-existent email
 	client.MakeApiRequest("POST", "auth/request-password-reset", resource.SignUpTO{
 		Email: "does-not-exist",
 	})
@@ -37,7 +37,7 @@ func TestPasswordReset(config *config.Config, emails util.Emails, testUser *util
 		Email:    email,
 		Password: password,
 	})
-	if err := client.AssertLastResponseEq(200, resource.LoginResponseTO{Status: resource.LOGIN_RESPONSE_LOGGED_IN}); err != nil {
+	if err := client.AssertLastResponseEq(200, resource.LoginResponseTO{Status: resource.LoginResponseLoggedIn}); err != nil {
 		return errors.Wrap("login response mismatch", err)
 	}
 
@@ -47,7 +47,7 @@ func TestPasswordReset(config *config.Config, emails util.Emails, testUser *util
 
 	// Check user
 	client.MakeApiRequest("GET", "user-info", nil)
-	if err := client.AssertLastResponseEq(200, resource.UserInfoTO{Roles: []domain_model.UserRole{domain_model.USER_ROLE_USER}, EmailVerified: testUser.EmailVerified, Language: testUser.Language}); err != nil {
+	if err := client.AssertLastResponseEq(200, resource.UserInfoTO{Roles: []dm.UserRole{dm.UserRoleUser}, EmailVerified: testUser.EmailVerified, Language: testUser.Language}); err != nil {
 		return errors.Wrap("auth role response mismatch", err)
 	}
 
@@ -80,7 +80,7 @@ func TestPasswordReset(config *config.Config, emails util.Emails, testUser *util
 		Token:       "not-correct",
 		NewPassword: newPassword,
 	})
-	if err := client.AssertLastResponseEq(200, resource.ResetPasswordResponseTO{Status: resource.RESET_PASSWORD_RESPONSE_INVALID}); err != nil {
+	if err := client.AssertLastResponseEq(200, resource.ResetPasswordResponseTO{Status: resource.ResetPasswordResponseInvalid}); err != nil {
 		return errors.Wrap("wrong token reset password response mismatch", err)
 	}
 
@@ -89,7 +89,7 @@ func TestPasswordReset(config *config.Config, emails util.Emails, testUser *util
 		Email:    email,
 		Password: newPassword,
 	})
-	if err := client.AssertLastResponseEq(200, resource.LoginResponseTO{Status: resource.LOGIN_RESPONSE_INVALID_CREDENTIALS}); err != nil {
+	if err := client.AssertLastResponseEq(200, resource.LoginResponseTO{Status: resource.LoginResponseInvalidCredentials}); err != nil {
 		return errors.Wrap("login response mismatch", err)
 	}
 
@@ -99,7 +99,7 @@ func TestPasswordReset(config *config.Config, emails util.Emails, testUser *util
 		Token:       token,
 		NewPassword: newPassword,
 	})
-	if err := client.AssertLastResponseEq(200, resource.ResetPasswordResponseTO{Status: resource.RESET_PASSWORD_RESPONSE_SUCCESS}); err != nil {
+	if err := client.AssertLastResponseEq(200, resource.ResetPasswordResponseTO{Status: resource.ResetPasswordResponseSuccess}); err != nil {
 		return errors.Wrap("right token reset password response mismatch", err)
 	}
 
@@ -108,7 +108,7 @@ func TestPasswordReset(config *config.Config, emails util.Emails, testUser *util
 		Email:    email,
 		Password: password,
 	})
-	if err := client.AssertLastResponseEq(200, resource.LoginResponseTO{Status: resource.LOGIN_RESPONSE_INVALID_CREDENTIALS}); err != nil {
+	if err := client.AssertLastResponseEq(200, resource.LoginResponseTO{Status: resource.LoginResponseInvalidCredentials}); err != nil {
 		return errors.Wrap("login response mismatch", err)
 	}
 
@@ -117,7 +117,7 @@ func TestPasswordReset(config *config.Config, emails util.Emails, testUser *util
 		Email:    email,
 		Password: newPassword,
 	})
-	if err := client.AssertLastResponseEq(200, resource.LoginResponseTO{Status: resource.LOGIN_RESPONSE_LOGGED_IN}); err != nil {
+	if err := client.AssertLastResponseEq(200, resource.LoginResponseTO{Status: resource.LoginResponseLoggedIn}); err != nil {
 		return errors.Wrap("login response with new password mismatch", err)
 	}
 	if !client.HasSessionCookie() {
@@ -126,7 +126,7 @@ func TestPasswordReset(config *config.Config, emails util.Emails, testUser *util
 
 	// Check user
 	client.MakeApiRequest("GET", "user-info", nil)
-	if err := client.AssertLastResponseEq(200, resource.UserInfoTO{Roles: []domain_model.UserRole{domain_model.USER_ROLE_USER}, EmailVerified: testUser.EmailVerified, Language: testUser.Language}); err != nil {
+	if err := client.AssertLastResponseEq(200, resource.UserInfoTO{Roles: []dm.UserRole{dm.UserRoleUser}, EmailVerified: testUser.EmailVerified, Language: testUser.Language}); err != nil {
 		return errors.Wrap("auth role response mismatch", err)
 	}
 

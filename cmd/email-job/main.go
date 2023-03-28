@@ -14,7 +14,7 @@ import (
 	. "user-manager/db/generated/models/postgres/public/enum"
 	"user-manager/db/generated/models/postgres/public/model"
 	. "user-manager/db/generated/models/postgres/public/table"
-	emailapi "user-manager/third-party-models/email-api"
+	email "user-manager/third-party-models/email-api"
 	"user-manager/util/command"
 	"user-manager/util/errors"
 	"user-manager/util/logger"
@@ -30,12 +30,12 @@ func main() {
 func startJob(log logger.Logger) error {
 	log.Info("Starting up")
 
-	config, err := config.GetConfig(log)
+	conf, err := config.GetConfig()
 	if err != nil {
 		return errors.Wrap("issue reading config", err)
 	}
 
-	connection, err := config.DbInfo.OpenDbConnection(log)
+	connection, err := conf.DbInfo.OpenDbConnection(log)
 	if err != nil {
 		return errors.Wrap("issue opening db connection", err)
 	}
@@ -57,7 +57,7 @@ func startJob(log logger.Logger) error {
 			if timeSinceLastEmailSent < minTimeBetweenSendingEmails {
 				time.Sleep(minTimeBetweenSendingEmails - timeSinceLastEmailSent)
 			}
-			if err = sendOneEmail(log, connection, config); err != nil {
+			if err = sendOneEmail(log, connection, conf); err != nil {
 				return errors.Wrap("issue sending email", err)
 			}
 			lastEmailSentAt = time.Now()
@@ -109,7 +109,7 @@ func sendOneEmail(log logger.Logger, database *sql.DB, config *config.Config) (r
 		return
 	}
 
-	payload, err := json.Marshal(emailapi.EmailTO{
+	payload, err := json.Marshal(email.EmailTO{
 		From:    mail.FromAddress,
 		To:      mail.ToAddress,
 		Subject: mail.Subject,

@@ -2,7 +2,7 @@ package service
 
 import (
 	"net/http"
-	domain_model "user-manager/domain-model"
+	dm "user-manager/domain-model"
 	"user-manager/util/errors"
 
 	"github.com/gin-gonic/gin"
@@ -10,18 +10,18 @@ import (
 
 type SessionCookieService struct {
 	ctx    *gin.Context
-	config *domain_model.Config
+	config *dm.Config
 }
 
-func ProvideSessionCookieService(ctx *gin.Context, config *domain_model.Config) *SessionCookieService {
+func ProvideSessionCookieService(ctx *gin.Context, config *dm.Config) *SessionCookieService {
 	return &SessionCookieService{ctx, config}
 }
 
-func (s *SessionCookieService) RemoveSessionCookie(sessionType domain_model.UserSessionType) {
+func (s *SessionCookieService) RemoveSessionCookie(sessionType dm.UserSessionType) {
 	s.SetSessionCookie("", sessionType)
 }
 
-func (s *SessionCookieService) SetSessionCookie(sessionID string, sessionType domain_model.UserSessionType) {
+func (s *SessionCookieService) SetSessionCookie(sessionID string, sessionType dm.UserSessionType) {
 	ctx := s.ctx
 	config := s.config
 
@@ -29,7 +29,7 @@ func (s *SessionCookieService) SetSessionCookie(sessionID string, sessionType do
 	value := ""
 	if sessionID != "" {
 		value = sessionID
-		maxAge = int(domain_model.LOGIN_SESSION_DURATION.Seconds())
+		maxAge = int(dm.LoginSessionDuration.Seconds())
 	}
 	secure := true
 	if config.IsLocalEnv() {
@@ -39,7 +39,7 @@ func (s *SessionCookieService) SetSessionCookie(sessionID string, sessionType do
 	ctx.SetSameSite(http.SameSiteStrictMode)
 }
 
-func (s *SessionCookieService) GetSessionCookie(sessionType domain_model.UserSessionType) (domain_model.UserSessionID, error) {
+func (s *SessionCookieService) GetSessionCookie(sessionType dm.UserSessionType) (dm.UserSessionID, error) {
 	ctx := s.ctx
 
 	cookie, err := ctx.Request.Cookie(s.getCookieName(sessionType))
@@ -49,9 +49,9 @@ func (s *SessionCookieService) GetSessionCookie(sessionType domain_model.UserSes
 		}
 		return "", errors.Wrap("issue reading cookie", err)
 	}
-	return domain_model.UserSessionID(cookie.Value), nil
+	return dm.UserSessionID(cookie.Value), nil
 }
 
-func (s *SessionCookieService) getCookieName(sessionType domain_model.UserSessionType) string {
+func (s *SessionCookieService) getCookieName(sessionType dm.UserSessionType) string {
 	return sessionType.String() + "_TOKEN"
 }

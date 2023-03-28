@@ -3,7 +3,7 @@ package middleware
 import (
 	ginext "user-manager/cmd/app/gin-extensions"
 	"user-manager/db"
-	domain_model "user-manager/domain-model"
+	dm "user-manager/domain-model"
 	"user-manager/util/errors"
 
 	"database/sql"
@@ -15,10 +15,10 @@ import (
 type DatabaseMiddleware struct {
 	c        *gin.Context
 	database *sql.DB
-	log      domain_model.Log
+	log      dm.Log
 }
 
-func ProvideDatabaseMiddleware(c *gin.Context, database *sql.DB, log domain_model.Log) *DatabaseMiddleware {
+func ProvideDatabaseMiddleware(c *gin.Context, database *sql.DB, log dm.Log) *DatabaseMiddleware {
 	return &DatabaseMiddleware{c, database, log}
 }
 
@@ -36,7 +36,7 @@ func (m *DatabaseMiddleware) Handle() {
 	log.Info("BEGIN Transaction")
 	tx, err := database.BeginTx(ctx, nil)
 	if err != nil {
-		c.AbortWithError(http.StatusInternalServerError, errors.Wrap("begin transaction failed", err))
+		_ = c.AbortWithError(http.StatusInternalServerError, errors.Wrap("begin transaction failed", err))
 		return
 	}
 
@@ -44,14 +44,14 @@ func (m *DatabaseMiddleware) Handle() {
 		if !c.IsAborted() {
 			log.Info("COMMIT")
 			if err := tx.Commit(); err != nil {
-				c.AbortWithError(http.StatusInternalServerError, errors.Wrap("commit failed", err))
+				_ = c.AbortWithError(http.StatusInternalServerError, errors.Wrap("commit failed", err))
 				return
 			}
 		} else {
 			log.Info("ROLLBACK")
 			if err = tx.Rollback(); err != nil {
 				// If rollback doesn't work, log and forget
-				c.AbortWithError(http.StatusInternalServerError, errors.Wrap("rollback failed", err))
+				_ = c.AbortWithError(http.StatusInternalServerError, errors.Wrap("rollback failed", err))
 				return
 			}
 		}

@@ -3,7 +3,7 @@ package resource
 import (
 	"time"
 	ginext "user-manager/cmd/app/gin-extensions"
-	domain_model "user-manager/domain-model"
+	dm "user-manager/domain-model"
 	"user-manager/repository"
 	"user-manager/service"
 	"user-manager/util/errors"
@@ -16,7 +16,7 @@ import (
 )
 
 type LoginResource struct {
-	securityLog                      domain_model.SecurityLog
+	securityLog                      dm.SecurityLog
 	sessionCookieService             *service.SessionCookieService
 	sessionRepository                *repository.SessionRepository
 	userRepository                   *repository.UserRepository
@@ -24,7 +24,7 @@ type LoginResource struct {
 }
 
 func ProvideLoginResource(
-	securityLog domain_model.SecurityLog,
+	securityLog dm.SecurityLog,
 	sessionCookieService *service.SessionCookieService,
 	sessionRepository *repository.SessionRepository,
 	userRepository *repository.UserRepository,
@@ -46,9 +46,9 @@ type LoginTO struct {
 type LoginResponseStatus string
 
 const (
-	LOGIN_RESPONSE_LOGGED_IN           LoginResponseStatus = "logged-in"
-	LOGIN_RESPONSE_2FA_REQUIRED        LoginResponseStatus = "second-factor-required"
-	LOGIN_RESPONSE_INVALID_CREDENTIALS LoginResponseStatus = "invalid-credentials"
+	LoginResponseLoggedIn           LoginResponseStatus = "logged-in"
+	LoginResponse2faRequired        LoginResponseStatus = "second-factor-required"
+	LoginResponseInvalidCredentials LoginResponseStatus = "invalid-credentials"
 )
 
 type LoginResponseTO struct {
@@ -66,34 +66,34 @@ func (r *LoginResource) Login(requestTO LoginTO) (LoginResponseTO, error) {
 		return LoginResponseTO{}, errors.Wrap("error fetching user", err)
 	}
 	if user.AppUserID == 0 {
-		securityLog.Info("Login attempt for non-existant user")
-		return LoginResponseTO{LOGIN_RESPONSE_INVALID_CREDENTIALS}, nil
+		securityLog.Info("Login attempt for non-existent user")
+		return LoginResponseTO{LoginResponseInvalidCredentials}, nil
 	}
 
 	for _, role := range user.UserRoles {
-		if role != domain_model.USER_ROLE_USER {
+		if role != dm.UserRoleUser {
 			securityLog.Info("Login attempt without second factor for non-user %d", user.AppUserID)
-			return LoginResponseTO{LOGIN_RESPONSE_INVALID_CREDENTIALS}, nil
+			return LoginResponseTO{LoginResponseInvalidCredentials}, nil
 		}
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), requestTO.Password); err != nil {
 		securityLog.Info("Password mismatch for user %s", user.AppUserID)
-		return LoginResponseTO{LOGIN_RESPONSE_INVALID_CREDENTIALS}, nil
+		return LoginResponseTO{LoginResponseInvalidCredentials}, nil
 	}
 
 	if user.SecondFactorToken != "" {
-		return LoginResponseTO{LOGIN_RESPONSE_2FA_REQUIRED}, nil
+		return LoginResponseTO{LoginResponse2faRequired}, nil
 	}
 
 	securityLog.Info("Login")
 	sessionID := random.MakeRandomURLSafeB64(21)
-	if err = sessionRepository.InsertSession(sessionID, domain_model.USER_SESSION_TYPE_LOGIN, user.AppUserID, domain_model.LOGIN_SESSION_DURATION); err != nil {
+	if err = sessionRepository.InsertSession(sessionID, dm.UserSessionTypeLogin, user.AppUserID, dm.LoginSessionDuration); err != nil {
 		return LoginResponseTO{}, errors.Wrap("error inserting session", err)
 	}
 
-	sessionCookieService.SetSessionCookie(sessionID, domain_model.USER_SESSION_TYPE_LOGIN)
-	return LoginResponseTO{LOGIN_RESPONSE_LOGGED_IN}, nil
+	sessionCookieService.SetSessionCookie(sessionID, dm.UserSessionTypeLogin)
+	return LoginResponseTO{LoginResponseLoggedIn}, nil
 }
 
 type LoginWithSecondFactorTO struct {
@@ -119,12 +119,12 @@ func (r *LoginResource) LoginWithSecondFactor(requestTO LoginWithSecondFactorTO)
 		return LoginWithSecondFactorResponseTO{}, errors.Wrap("error finding user", err)
 	}
 	if user.AppUserID == 0 {
-		securityLog.Info("Login attempt for non-existant user")
+		securityLog.Info("Login attempt for non-existent user")
 		return LoginWithSecondFactorResponseTO{}, nil
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), requestTO.Password); err != nil {
-		securityLog.Info("password missmatch")
+		securityLog.Info("password mismatch")
 		return LoginWithSecondFactorResponseTO{}, nil
 	}
 
@@ -168,17 +168,17 @@ func (r *LoginResource) LoginWithSecondFactor(requestTO LoginWithSecondFactorTO)
 		if requestTO.RememberDevice {
 			securityLog.Info("2FA login with 'remember device' enabled, issuing device token")
 			deviceSessionID := random.MakeRandomURLSafeB64(21)
-			err = sessionRepository.InsertSession(deviceSessionID, domain_model.USER_SESSION_TYPE_LOGIN, user.AppUserID, domain_model.DEVICE_SESSION_DURATION)
+			err = sessionRepository.InsertSession(deviceSessionID, dm.UserSessionTypeLogin, user.AppUserID, dm.DeviceSessionDuration)
 			if err != nil {
 				return LoginWithSecondFactorResponseTO{}, errors.Wrap("error inserting device session", err)
 			}
 
-			sessionCookieService.SetSessionCookie(deviceSessionID, domain_model.USER_SESSION_TYPE_REMEMBER_DEVICE)
+			sessionCookieService.SetSessionCookie(deviceSessionID, dm.UserSessionTypeRememberDevice)
 		}
 
 		securityLog.Info("Login passed with 2FA token")
 	} else {
-		maybeDeviceSessionID, err := sessionCookieService.GetSessionCookie(domain_model.USER_SESSION_TYPE_LOGIN)
+		maybeDeviceSessionID, err := sessionCookieService.GetSessionCookie(dm.UserSessionTypeLogin)
 		if err != nil {
 			return LoginWithSecondFactorResponseTO{}, errors.Wrap("issue reading device session cookie", err)
 		}
@@ -186,7 +186,7 @@ func (r *LoginResource) LoginWithSecondFactor(requestTO LoginWithSecondFactorTO)
 			return LoginWithSecondFactorResponseTO{}, nil
 		}
 
-		deviceSession, err := sessionRepository.GetSessionAndUser(maybeDeviceSessionID, domain_model.USER_SESSION_TYPE_REMEMBER_DEVICE)
+		deviceSession, err := sessionRepository.GetSessionAndUser(maybeDeviceSessionID, dm.UserSessionTypeRememberDevice)
 
 		if err != nil {
 			return LoginWithSecondFactorResponseTO{}, errors.Wrap("fetching device session failed", err)
@@ -198,10 +198,10 @@ func (r *LoginResource) LoginWithSecondFactor(requestTO LoginWithSecondFactorTO)
 	}
 
 	sessionID := random.MakeRandomURLSafeB64(21)
-	if err = sessionRepository.InsertSession(sessionID, domain_model.USER_SESSION_TYPE_LOGIN, user.AppUserID, domain_model.LOGIN_SESSION_DURATION); err != nil {
+	if err = sessionRepository.InsertSession(sessionID, dm.UserSessionTypeLogin, user.AppUserID, dm.LoginSessionDuration); err != nil {
 		return LoginWithSecondFactorResponseTO{}, errors.Wrap("error inserting login session", err)
 	}
 
-	sessionCookieService.SetSessionCookie(sessionID, domain_model.USER_SESSION_TYPE_LOGIN)
+	sessionCookieService.SetSessionCookie(sessionID, dm.UserSessionTypeLogin)
 	return LoginWithSecondFactorResponseTO{LoggedIn: true}, nil
 }

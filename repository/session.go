@@ -6,7 +6,7 @@ import (
 	"user-manager/db"
 	"user-manager/db/generated/models/postgres/public/model"
 	. "user-manager/db/generated/models/postgres/public/table"
-	domain_model "user-manager/domain-model"
+	dm "user-manager/domain-model"
 	"user-manager/util/errors"
 
 	. "github.com/go-jet/jet/v2/postgres"
@@ -20,7 +20,7 @@ func ProvideSessionRepository(tx *sql.Tx) *SessionRepository {
 	return &SessionRepository{tx}
 }
 
-func (r *SessionRepository) InsertSession(sessionID string, sessionType domain_model.UserSessionType, appUserID domain_model.AppUserID, duration time.Duration) error {
+func (r *SessionRepository) InsertSession(sessionID string, sessionType dm.UserSessionType, appUserID dm.AppUserID, duration time.Duration) error {
 	return db.ExecSingleMutation(
 		UserSession.INSERT(UserSession.UserSessionID, UserSession.AppUserID, UserSession.TimeoutAt, UserSession.UserSessionType).
 			VALUES(sessionID, appUserID.ToIntegerExpression(), time.Now().Add(duration), model.UserSessionType(sessionType)).
@@ -28,7 +28,7 @@ func (r *SessionRepository) InsertSession(sessionID string, sessionType domain_m
 		r.tx)
 }
 
-func (r *SessionRepository) UpdateSessionTimeout(sessionID domain_model.UserSessionID, timeout time.Time) error {
+func (r *SessionRepository) UpdateSessionTimeout(sessionID dm.UserSessionID, timeout time.Time) error {
 	return db.ExecSingleMutation(
 		UserSession.UPDATE(UserSession.TimeoutAt, UserSession.UpdatedAt).
 			SET(timeout, time.Now()).
@@ -37,7 +37,7 @@ func (r *SessionRepository) UpdateSessionTimeout(sessionID domain_model.UserSess
 		r.tx)
 }
 
-func (r *SessionRepository) Delete(sessionID domain_model.UserSessionID) error {
+func (r *SessionRepository) Delete(sessionID dm.UserSessionID) error {
 	return db.ExecSingleMutation(
 		UserSession.DELETE().
 			WHERE(UserSession.UserSessionID.EQ(sessionID.ToStringExpression())).
@@ -45,7 +45,7 @@ func (r *SessionRepository) Delete(sessionID domain_model.UserSessionID) error {
 		r.tx)
 }
 
-func (r *SessionRepository) GetSessionAndUser(sessionID domain_model.UserSessionID, sessionType domain_model.UserSessionType) (domain_model.UserSession, error) {
+func (r *SessionRepository) GetSessionAndUser(sessionID dm.UserSessionID, sessionType dm.UserSessionType) (dm.UserSession, error) {
 	m, err := db.FetchMaybe[struct {
 		model.UserSession
 		model.AppUser
@@ -80,18 +80,18 @@ func (r *SessionRepository) GetSessionAndUser(sessionID domain_model.UserSession
 			QueryContext,
 		r.tx)
 	if err != nil {
-		return domain_model.UserSession{}, errors.Wrap("error loading user session", err)
+		return dm.UserSession{}, errors.Wrap("error loading user session", err)
 	}
 
 	if m == nil {
-		return domain_model.UserSession{}, nil
+		return dm.UserSession{}, nil
 	}
 
-	userSession := domain_model.UserSession{
-		UserSessionID: domain_model.UserSessionID(m.UserSessionID),
-		User: &domain_model.AppUser{
-			AppUserID:                  domain_model.AppUserID(m.AppUser.AppUserID),
-			Language:                   domain_model.UserLanguage(m.Language),
+	userSession := dm.UserSession{
+		UserSessionID: dm.UserSessionID(m.UserSessionID),
+		User: &dm.AppUser{
+			AppUserID:                  dm.AppUserID(m.AppUser.AppUserID),
+			Language:                   dm.UserLanguage(m.Language),
 			UserName:                   m.UserName,
 			PasswordHash:               m.PasswordHash,
 			Email:                      m.Email,
@@ -101,15 +101,15 @@ func (r *SessionRepository) GetSessionAndUser(sessionID domain_model.UserSession
 			PasswordResetToken:         m.PasswordResetToken,
 			SecondFactorToken:          m.SecondFactorToken,
 			TemporarySecondFactorToken: m.TemporarySecondFactorToken,
-			UserRoles:                  make([]domain_model.UserRole, len(m.Roles)),
+			UserRoles:                  make([]dm.UserRole, len(m.Roles)),
 		},
-		UserSessionType: domain_model.UserSessionType(m.UserSessionType),
+		UserSessionType: dm.UserSessionType(m.UserSessionType),
 	}
 	if m.PasswordResetTokenValidUntil != nil {
 		userSession.User.PasswordResetTokenValidUntil = *m.PasswordResetTokenValidUntil
 	}
 	for i, role := range m.Roles {
-		userSession.User.UserRoles[i] = domain_model.UserRole(role.Role)
+		userSession.User.UserRoles[i] = dm.UserRole(role.Role)
 	}
 	return userSession, nil
 }

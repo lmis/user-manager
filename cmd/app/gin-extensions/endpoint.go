@@ -18,12 +18,12 @@ func WrapEndpoint[T interface{}, requestTO interface{}, responseTO interface{}](
 	return func(c *gin.Context) {
 		var request requestTO
 		if err := c.BindJSON(&request); err != nil {
-			c.AbortWithError(http.StatusBadRequest, errors.Wrap("cannot bind to request TO", err))
+			_ = c.AbortWithError(http.StatusBadRequest, errors.Wrap("cannot bind to request TO", err))
 			return
 		}
 		response, err := endpoint(initialzeResource(c), request)
 		if err != nil {
-			c.AbortWithError(http.StatusInternalServerError, err)
+			_ = c.AbortWithError(http.StatusInternalServerError, err)
 			return
 		}
 
@@ -35,11 +35,11 @@ func WrapEndpointWithoutResponseBody[T interface{}, requestTO interface{}](initi
 	return func(c *gin.Context) {
 		var request requestTO
 		if err := c.BindJSON(&request); err != nil {
-			c.AbortWithError(http.StatusBadRequest, errors.Wrap("cannot bind to request TO", err))
+			_ = c.AbortWithError(http.StatusBadRequest, errors.Wrap("cannot bind to request TO", err))
 			return
 		}
 		if err := endpoint(initializeResource(c), request); err != nil {
-			c.AbortWithError(http.StatusInternalServerError, err)
+			_ = c.AbortWithError(http.StatusInternalServerError, err)
 			return
 		}
 
@@ -51,7 +51,7 @@ func WrapEndpointWithoutRequestBody[T interface{}, responseTO interface{}](initi
 	return func(c *gin.Context) {
 		response, err := endpoint(initializeResource(c))
 		if err != nil {
-			c.AbortWithError(http.StatusInternalServerError, err)
+			_ = c.AbortWithError(http.StatusInternalServerError, err)
 			return
 		}
 
@@ -62,7 +62,7 @@ func WrapEndpointWithoutRequestBody[T interface{}, responseTO interface{}](initi
 func WrapEndpointWithoutRequestOrResponseBody[T interface{}](initializeResource ResourceInitializer[T], endpoint EndpointWithoutRequestOrResponseBody[T]) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if err := endpoint(initializeResource(c)); err != nil {
-			c.AbortWithError(http.StatusInternalServerError, err)
+			_ = c.AbortWithError(http.StatusInternalServerError, err)
 			return
 		}
 

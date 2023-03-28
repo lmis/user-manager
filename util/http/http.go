@@ -2,7 +2,7 @@ package http
 
 import (
 	"context"
-	errors "errors"
+	"errors"
 	"net/http"
 	"os"
 	"os/signal"

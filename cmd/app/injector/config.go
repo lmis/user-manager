@@ -1,18 +1,18 @@
 package injector
 
 import (
-	domain_model "user-manager/domain-model"
+	dm "user-manager/domain-model"
 )
 
-var config *domain_model.Config
+var config *dm.Config
 
-func SetupConfigProvider(c *domain_model.Config) {
+func SetupConfigProvider(c *dm.Config) {
 	if c == nil {
 		panic("Invalid singleton setup: config is nil")
 	}
 	config = c
 }
 
-func ProvideConfig() *domain_model.Config {
+func ProvideConfig() *dm.Config {
 	return config
 }

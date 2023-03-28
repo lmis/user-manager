@@ -8,7 +8,7 @@ import (
 )
 
 type Config struct {
-	DbInfo      db.DbInfo
+	DbInfo      db.Info
 	AppPort     string `env:"PORT"`
 	AppUrl      string `env:"APP_URL"`
 	ServiceName string `env:"SERVICE_NAME"`
@@ -17,10 +17,10 @@ type Config struct {
 }
 
 const (
-	LOGIN_SESSION_DURATION        = 60 * time.Minute
-	SUDO_SESSION_DURATION         = 10 * time.Minute
-	DEVICE_SESSION_DURATION       = 30 * 24 * time.Hour
-	PASSWORD_RESET_TOKEN_DURATION = 1 * time.Hour
+	LoginSessionDuration       = 60 * time.Minute
+	SudoSessionDuration        = 10 * time.Minute
+	DeviceSessionDuration      = 30 * 24 * time.Hour
+	PasswordResetTokenDuration = 1 * time.Hour
 )
 
 func (conf *Config) IsLocalEnv() bool {

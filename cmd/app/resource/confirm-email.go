@@ -2,7 +2,7 @@ package resource
 
 import (
 	ginext "user-manager/cmd/app/gin-extensions"
-	domain_model "user-manager/domain-model"
+	dm "user-manager/domain-model"
 	"user-manager/repository"
 	"user-manager/service"
 	"user-manager/util/errors"
@@ -12,16 +12,16 @@ import (
 )
 
 type EmailConfirmationResource struct {
-	securityLog      domain_model.SecurityLog
+	securityLog      dm.SecurityLog
 	mailQueueService *service.MailQueueService
-	userSession      domain_model.UserSession
+	userSession      dm.UserSession
 	userRepository   *repository.UserRepository
 }
 
 func ProvideEmailConfirmationResource(
-	securityLog domain_model.SecurityLog,
+	securityLog dm.SecurityLog,
 	mailQueueService *service.MailQueueService,
-	userSession domain_model.UserSession,
+	userSession dm.UserSession,
 	userRepository *repository.UserRepository,
 ) *EmailConfirmationResource {
 	return &EmailConfirmationResource{securityLog, mailQueueService, userSession, userRepository}
@@ -39,9 +39,9 @@ type EmailConfirmationTO struct {
 type EmailConfirmationStatus string
 
 const (
-	EMAIL_CONFIRMATION_RESPONSE_ALREADY_CONFIRMED EmailConfirmationStatus = "already-confirmed"
-	EMAIL_CONFIRMATION_RESPONSE_NEWLY_CONFIRMED   EmailConfirmationStatus = "newly-confirmed"
-	EMAIL_CONFIRMATION_RESPONSE_INVALID_TOKEN     EmailConfirmationStatus = "invalid-token"
+	EmailConfirmationResponseAlreadyConfirmed EmailConfirmationStatus = "already-confirmed"
+	EmailConfirmationResponseNewlyConfirmed   EmailConfirmationStatus = "newly-confirmed"
+	EmailConfirmationResponseInvalidToken     EmailConfirmationStatus = "invalid-token"
 )
 
 type EmailConfirmationResponseTO struct {
@@ -55,7 +55,7 @@ func (r *EmailConfirmationResource) ConfirmEmail(request EmailConfirmationTO) (E
 
 	if user.EmailVerified {
 		securityLog.Info("Email already verified")
-		return EmailConfirmationResponseTO{EMAIL_CONFIRMATION_RESPONSE_ALREADY_CONFIRMED}, nil
+		return EmailConfirmationResponseTO{EmailConfirmationResponseAlreadyConfirmed}, nil
 	}
 
 	if user.EmailVerificationToken == "" {
@@ -64,14 +64,14 @@ func (r *EmailConfirmationResource) ConfirmEmail(request EmailConfirmationTO) (E
 
 	if request.Token != user.EmailVerificationToken {
 		securityLog.Info("Invalid email verification token")
-		return EmailConfirmationResponseTO{EMAIL_CONFIRMATION_RESPONSE_INVALID_TOKEN}, nil
+		return EmailConfirmationResponseTO{EmailConfirmationResponseInvalidToken}, nil
 	}
 
 	if err := userRepository.SetEmailToVerified(user.AppUserID); err != nil {
 		return EmailConfirmationResponseTO{}, errors.Wrap("issue setting email to verified", err)
 	}
 
-	return EmailConfirmationResponseTO{EMAIL_CONFIRMATION_RESPONSE_NEWLY_CONFIRMED}, nil
+	return EmailConfirmationResponseTO{EmailConfirmationResponseNewlyConfirmed}, nil
 }
 
 type RetriggerConfirmationEmailResponseTO struct {

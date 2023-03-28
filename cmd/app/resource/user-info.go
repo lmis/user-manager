@@ -1,17 +1,16 @@
 package resource
 
 import (
-	ginext "user-manager/cmd/app/gin-extensions"
-	domain_model "user-manager/domain-model"
-
 	"github.com/gin-gonic/gin"
+	ginext "user-manager/cmd/app/gin-extensions"
+	dm "user-manager/domain-model"
 )
 
 type UserInfoResource struct {
-	userSession domain_model.UserSession
+	userSession dm.UserSession
 }
 
-func ProvideUserInfoResource(userSession domain_model.UserSession) *UserInfoResource {
+func ProvideUserInfoResource(userSession dm.UserSession) *UserInfoResource {
 	return &UserInfoResource{userSession}
 }
 
@@ -20,9 +19,9 @@ func RegisterUserInfoResource(group *gin.RouterGroup) {
 }
 
 type UserInfoTO struct {
-	Roles         []domain_model.UserRole   `json:"roles"`
-	EmailVerified bool                      `json:"emailVerified"`
-	Language      domain_model.UserLanguage `json:"language"`
+	Roles         []dm.UserRole   `json:"roles"`
+	EmailVerified bool            `json:"emailVerified"`
+	Language      dm.UserLanguage `json:"language"`
 }
 
 func (r *UserInfoResource) Get() (UserInfoTO, error) {

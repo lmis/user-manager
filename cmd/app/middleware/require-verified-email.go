@@ -1,7 +1,7 @@
 package middleware
 
 import (
-	domain_model "user-manager/domain-model"
+	dm "user-manager/domain-model"
 	"user-manager/util/errors"
 
 	"net/http"
@@ -11,11 +11,11 @@ import (
 
 type VerifiedEmailAuthorizationMiddleware struct {
 	c           *gin.Context
-	userSession domain_model.UserSession
-	securityLog domain_model.SecurityLog
+	userSession dm.UserSession
+	securityLog dm.SecurityLog
 }
 
-func ProvideVerifiedEmailAuthorizationMiddleware(c *gin.Context, userSession domain_model.UserSession, securityLog domain_model.SecurityLog) *VerifiedEmailAuthorizationMiddleware {
+func ProvideVerifiedEmailAuthorizationMiddleware(c *gin.Context, userSession dm.UserSession, securityLog dm.SecurityLog) *VerifiedEmailAuthorizationMiddleware {
 	return &VerifiedEmailAuthorizationMiddleware{c, userSession, securityLog}
 }
 
@@ -29,7 +29,7 @@ func (m *VerifiedEmailAuthorizationMiddleware) Handle() {
 	securityLog := m.securityLog
 	if userSession.UserSessionID == "" || !userSession.User.EmailVerified {
 		securityLog.Info("Email not verified")
-		c.AbortWithError(http.StatusForbidden, errors.Error("email not verified"))
+		_ = c.AbortWithError(http.StatusForbidden, errors.Error("email not verified"))
 		return
 	}
 }

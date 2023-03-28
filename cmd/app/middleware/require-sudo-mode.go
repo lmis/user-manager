@@ -3,7 +3,7 @@ package middleware
 import (
 	"net/http"
 	"time"
-	domain_model "user-manager/domain-model"
+	dm "user-manager/domain-model"
 	"user-manager/repository"
 	"user-manager/service"
 	"user-manager/util/errors"
@@ -30,30 +30,30 @@ func (m *RequireSudoModeMiddleware) Handle() {
 	sessionCookieService := m.sessionCookieService
 	sessionRepository := m.sessionRepository
 
-	sudoSessionID, err := sessionCookieService.GetSessionCookie(domain_model.USER_SESSION_TYPE_SUDO)
+	sudoSessionID, err := sessionCookieService.GetSessionCookie(dm.UserSessionTypeSudo)
 	if err != nil {
-		c.AbortWithError(http.StatusInternalServerError, errors.Wrap("getting session cookie failed", err))
+		_ = c.AbortWithError(http.StatusInternalServerError, errors.Wrap("getting session cookie failed", err))
 		return
 	}
 
 	if sudoSessionID == "" {
-		c.AbortWithError(http.StatusForbidden, errors.Error("sudo session cookie missing"))
+		_ = c.AbortWithError(http.StatusForbidden, errors.Error("sudo session cookie missing"))
 		return
 	}
 
-	session, err := sessionRepository.GetSessionAndUser(sudoSessionID, domain_model.USER_SESSION_TYPE_SUDO)
+	session, err := sessionRepository.GetSessionAndUser(sudoSessionID, dm.UserSessionTypeSudo)
 	if err != nil {
-		c.AbortWithError(http.StatusInternalServerError, errors.Wrap("getting sudo session failed", err))
+		_ = c.AbortWithError(http.StatusInternalServerError, errors.Wrap("getting sudo session failed", err))
 		return
 	}
 
 	if session.UserSessionID == "" {
-		c.AbortWithError(http.StatusForbidden, errors.Error("sudo session not found on db"))
+		_ = c.AbortWithError(http.StatusForbidden, errors.Error("sudo session not found on db"))
 		return
 	}
 
-	if err := sessionRepository.UpdateSessionTimeout(session.UserSessionID, time.Now().Add(domain_model.SUDO_SESSION_DURATION)); err != nil {
-		c.AbortWithError(http.StatusInternalServerError, errors.Wrap("issue updating session timeout in db", err))
+	if err := sessionRepository.UpdateSessionTimeout(session.UserSessionID, time.Now().Add(dm.SudoSessionDuration)); err != nil {
+		_ = c.AbortWithError(http.StatusInternalServerError, errors.Wrap("issue updating session timeout in db", err))
 		return
 	}
 }

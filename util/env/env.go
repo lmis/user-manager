@@ -1,7 +1,7 @@
 package env
 
 import (
-	env "github.com/caarlos0/env/v6"
+	"github.com/caarlos0/env/v6"
 )
 
 func ParseEnv(target interface{}) error {

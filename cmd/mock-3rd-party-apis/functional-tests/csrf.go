@@ -4,11 +4,11 @@ import (
 	"user-manager/cmd/app/resource"
 	"user-manager/cmd/mock-3rd-party-apis/config"
 	"user-manager/cmd/mock-3rd-party-apis/util"
-	domain_model "user-manager/domain-model"
+	dm "user-manager/domain-model"
 	"user-manager/util/errors"
 )
 
-func TestCallWithMismatchingCsrfTokens(config *config.Config, emails util.Emails, testUser *util.TestUser) error {
+func TestCallWithMismatchingCsrfTokens(config *config.Config, _ util.Emails, testUser *util.TestUser) error {
 	email := testUser.Email
 	password := testUser.Password
 	client := util.NewRequestClient(config)
@@ -27,7 +27,7 @@ func TestCallWithMismatchingCsrfTokens(config *config.Config, emails util.Emails
 		Email:    email,
 		Password: password,
 	})
-	if err := client.AssertLastResponseEq(200, resource.LoginResponseTO{Status: resource.LOGIN_RESPONSE_LOGGED_IN}); err != nil {
+	if err := client.AssertLastResponseEq(200, resource.LoginResponseTO{Status: resource.LoginResponseLoggedIn}); err != nil {
 		return errors.Wrap("login response mismatch", err)
 	}
 
@@ -36,8 +36,8 @@ func TestCallWithMismatchingCsrfTokens(config *config.Config, emails util.Emails
 	}
 
 	// Change language settings (logged in, with wrong tokens)
-	var otherLanguage domain_model.UserLanguage
-	for _, lang := range domain_model.AllUserLanguages() {
+	var otherLanguage dm.UserLanguage
+	for _, lang := range dm.AllUserLanguages() {
 		if lang != testUser.Language {
 			otherLanguage = lang
 		}

@@ -3,7 +3,7 @@ package resource
 import (
 	"time"
 	ginext "user-manager/cmd/app/gin-extensions"
-	domain_model "user-manager/domain-model"
+	dm "user-manager/domain-model"
 	"user-manager/repository"
 	"user-manager/service"
 	"user-manager/util/errors"
@@ -13,14 +13,14 @@ import (
 )
 
 type ResetPasswordResource struct {
-	securityLog      domain_model.SecurityLog
+	securityLog      dm.SecurityLog
 	authService      *service.AuthService
 	mailQueueService *service.MailQueueService
 	userRepository   *repository.UserRepository
 }
 
 func ProvideResetPasswordResource(
-	securityLog domain_model.SecurityLog,
+	securityLog dm.SecurityLog,
 	authService *service.AuthService,
 	mailQueueService *service.MailQueueService,
 	userRepository *repository.UserRepository,
@@ -59,7 +59,7 @@ func (r *ResetPasswordResource) RequestPasswordReset(requestTO *PasswordResetReq
 	}
 
 	token := random.MakeRandomURLSafeB64(21)
-	if err := userRepository.SetPasswordResetToken(user.AppUserID, token, time.Now().Add(domain_model.PASSWORD_RESET_TOKEN_DURATION)); err != nil {
+	if err := userRepository.SetPasswordResetToken(user.AppUserID, token, time.Now().Add(dm.PasswordResetTokenDuration)); err != nil {
 		return errors.Wrap("issue persisting password reset token", err)
 	}
 
@@ -78,8 +78,8 @@ type ResetPasswordTO struct {
 type ResetPasswordStatus string
 
 const (
-	RESET_PASSWORD_RESPONSE_SUCCESS ResetPasswordStatus = "success"
-	RESET_PASSWORD_RESPONSE_INVALID ResetPasswordStatus = "invalid-token"
+	ResetPasswordResponseSuccess ResetPasswordStatus = "success"
+	ResetPasswordResponseInvalid ResetPasswordStatus = "invalid-token"
 )
 
 type ResetPasswordResponseTO struct {
@@ -99,15 +99,15 @@ func (r *ResetPasswordResource) ResetPassword(requestTO ResetPasswordTO) (ResetP
 
 	if user.AppUserID == 0 {
 		securityLog.Info("Password reset attempt for non-existing email")
-		return ResetPasswordResponseTO{RESET_PASSWORD_RESPONSE_INVALID}, nil
+		return ResetPasswordResponseTO{ResetPasswordResponseInvalid}, nil
 	}
 	if user.PasswordResetToken == "" || user.PasswordResetToken != requestTO.Token {
 		securityLog.Info("Password reset attempt with wrong token")
-		return ResetPasswordResponseTO{RESET_PASSWORD_RESPONSE_INVALID}, nil
+		return ResetPasswordResponseTO{ResetPasswordResponseInvalid}, nil
 	}
 	if user.PasswordResetTokenValidUntil.Before(time.Now()) {
 		securityLog.Info("Password reset attempt with expired token")
-		return ResetPasswordResponseTO{RESET_PASSWORD_RESPONSE_INVALID}, nil
+		return ResetPasswordResponseTO{ResetPasswordResponseInvalid}, nil
 	}
 
 	hash, err := authService.Hash(requestTO.NewPassword)
@@ -119,5 +119,5 @@ func (r *ResetPasswordResource) ResetPassword(requestTO ResetPasswordTO) (ResetP
 		return ResetPasswordResponseTO{}, errors.Wrap("issue setting password hash", err)
 	}
 
-	return ResetPasswordResponseTO{RESET_PASSWORD_RESPONSE_SUCCESS}, nil
+	return ResetPasswordResponseTO{ResetPasswordResponseSuccess}, nil
 }

@@ -1,12 +1,11 @@
 package router
 
 import (
+	"github.com/gin-gonic/gin"
 	"time"
 	"user-manager/cmd/app/middleware"
 	"user-manager/cmd/app/resource"
-	domain_model "user-manager/domain-model"
-
-	"github.com/gin-gonic/gin"
+	dm "user-manager/domain-model"
 )
 
 func New() *gin.Engine {
@@ -44,20 +43,20 @@ func registerAuthGroup(auth *gin.RouterGroup) {
 }
 
 func registerAdminGroup(admin *gin.RouterGroup) {
-	middleware.RegisterRequireRoleMiddlware(admin, domain_model.USER_ROLE_ADMIN)
+	middleware.RegisterRequireRoleMiddlware(admin, dm.UserRoleAdmin)
 
 	registerSuperAdminGroup(admin.Group("super-admin"))
 }
 
 func registerSuperAdminGroup(superAdmin *gin.RouterGroup) {
-	middleware.RegisterRequireRoleMiddlware(superAdmin, domain_model.USER_ROLE_SUPER_ADMIN)
+	middleware.RegisterRequireRoleMiddlware(superAdmin, dm.UserRoleSuperAdmin)
 
 	// POST("add-admin-user", todo).
 	// POST("change-password", todo)
 }
 
 func registerUserGroup(user *gin.RouterGroup) {
-	middleware.RegisterRequireRoleMiddlware(user, domain_model.USER_ROLE_USER)
+	middleware.RegisterRequireRoleMiddlware(user, dm.UserRoleUser)
 
 	resource.RegisterEmailConfirmationResource(user)
 

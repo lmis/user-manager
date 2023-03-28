@@ -4,14 +4,14 @@ import (
 	"embed"
 	"fmt"
 	"text/template"
-	domain_model "user-manager/domain-model"
+	dm "user-manager/domain-model"
 	"user-manager/util/errors"
 
 	"gopkg.in/yaml.v2"
 )
 
 var baseTemplate *template.Template
-var translations map[domain_model.UserLanguage]domain_model.Translations = make(map[domain_model.UserLanguage]domain_model.Translations)
+var translations map[dm.UserLanguage]dm.Translations = make(map[dm.UserLanguage]dm.Translations)
 
 func SetupEmailTemplatesProviders(translationsFS embed.FS) error {
 	t, err := template.New("base").Parse(`
@@ -28,12 +28,12 @@ func SetupEmailTemplatesProviders(translationsFS embed.FS) error {
 	}
 	baseTemplate = t
 
-	for _, lang := range domain_model.AllUserLanguages() {
+	for _, lang := range dm.AllUserLanguages() {
 		file, err := translationsFS.ReadFile(fmt.Sprintf("translations/%s.yaml", lang))
 		if err != nil {
 			return errors.Wrap(fmt.Sprintf("%s translations cannot be read", lang), err)
 		}
-		translation := domain_model.Translations{}
+		translation := dm.Translations{}
 		if err = yaml.Unmarshal(file, &translation); err != nil {
 			return errors.Wrap(fmt.Sprintf("%s translations cannot be parsed", lang), err)
 		}
@@ -46,6 +46,6 @@ func ProvideBaseTemplate() *template.Template {
 	return baseTemplate
 }
 
-func ProvideTranslations() map[domain_model.UserLanguage]domain_model.Translations {
+func ProvideTranslations() map[dm.UserLanguage]dm.Translations {
 	return translations
 }

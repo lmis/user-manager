@@ -19,10 +19,10 @@ func RecoveryMiddleware(c *gin.Context) {
 		if p := recover(); p != nil {
 			// Client interrupted connection
 			if err, ok := p.(error); ok && (errors.Is(err, syscall.EPIPE) || errors.Is(err, syscall.ECONNRESET)) {
-				c.AbortWithError(http.StatusBadRequest, errs.Wrap("client connection lost", err))
+				_ = c.AbortWithError(http.StatusBadRequest, errs.Wrap("client connection lost", err))
 				return
 			}
-			c.AbortWithError(http.StatusInternalServerError, errs.WrapRecoveredPanic(p, debug.Stack()))
+			_ = c.AbortWithError(http.StatusInternalServerError, errs.WrapRecoveredPanic(p, debug.Stack()))
 			return
 		}
 	}()

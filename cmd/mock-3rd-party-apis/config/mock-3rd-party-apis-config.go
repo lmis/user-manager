@@ -3,7 +3,6 @@ package config
 import (
 	"user-manager/util/env"
 	"user-manager/util/errors"
-	"user-manager/util/logger"
 )
 
 type Config struct {
@@ -11,7 +10,7 @@ type Config struct {
 	AppUrl string `env:"APP_URL"`
 }
 
-func GetConfig(log logger.Logger) (*Config, error) {
+func GetConfig() (*Config, error) {
 	config := &Config{}
 
 	if err := env.ParseEnv(config); err != nil {

@@ -7,7 +7,7 @@ import (
 type UserRole model.UserRole
 
 const (
-	USER_ROLE_USER        UserRole = UserRole(model.UserRole_User)
-	USER_ROLE_ADMIN       UserRole = UserRole(model.UserRole_Admin)
-	USER_ROLE_SUPER_ADMIN UserRole = UserRole(model.UserRole_SuperAdmin)
+	UserRoleUser       = UserRole(model.UserRole_User)
+	UserRoleAdmin      = UserRole(model.UserRole_Admin)
+	UserRoleSuperAdmin = UserRole(model.UserRole_SuperAdmin)
 )

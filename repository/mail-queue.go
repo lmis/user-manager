@@ -5,7 +5,7 @@ import (
 	"user-manager/db"
 	. "user-manager/db/generated/models/postgres/public/enum"
 	. "user-manager/db/generated/models/postgres/public/table"
-	domain_model "user-manager/domain-model"
+	dm "user-manager/domain-model"
 	"user-manager/util/errors"
 )
 
@@ -22,7 +22,7 @@ func (r *MailQueueRepository) InsertPending(
 	to string,
 	content string,
 	subject string,
-	priority domain_model.MailQueuePriority,
+	priority dm.MailQueuePriority,
 ) error {
 	err := db.ExecSingleMutation(
 		MailQueue.INSERT(

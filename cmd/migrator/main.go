@@ -4,7 +4,6 @@ import (
 	"embed"
 	"fmt"
 	"os"
-	"path/filepath"
 	"user-manager/cmd/migrator/config"
 	"user-manager/db"
 	"user-manager/util/command"
@@ -15,7 +14,7 @@ import (
 
 	"github.com/go-jet/jet/v2/generator/postgres"
 	_ "github.com/lib/pq"
-	sql_migrate "github.com/rubenv/sql-migrate"
+	migrate "github.com/rubenv/sql-migrate"
 )
 
 //go:embed migrations/*
@@ -26,22 +25,17 @@ func main() {
 }
 
 func runMigrator(log logger.Logger) error {
-	dir, err := filepath.Abs(filepath.Dir(os.Args[0]))
-	if err != nil {
-		log.Err(errors.Wrap("cannot get executable path", err))
-	}
-
 	if len(os.Args) > 1 && os.Args[1] == "generate" {
-		return generateSqlBoiler(log, dir)
+		return generateSqlBoiler(log)
 	}
-	config, err := config.GetConfig(log)
+	conf, err := config.GetConfig()
 	if err != nil {
 		return errors.Wrap("cannot read config", err)
 	}
-	return applyMigrations(&config.DbInfo, log, dir)
+	return applyMigrations(&conf.DbInfo, log)
 }
 
-func applyMigrations(dbInfo *db.DbInfo, log logger.Logger, dir string) error {
+func applyMigrations(dbInfo *db.Info, log logger.Logger) error {
 	connection, err := dbInfo.OpenDbConnection(log)
 	if err != nil {
 		return errors.Wrap("could not open db connection", err)
@@ -49,10 +43,10 @@ func applyMigrations(dbInfo *db.DbInfo, log logger.Logger, dir string) error {
 	defer db.CloseOrPanic(connection)
 
 	log.Info("Running migrations")
-	sql_migrate.SetTable("migrations")
+	migrate.SetTable("migrations")
 
-	migrations := &sql_migrate.EmbedFileSystemMigrationSource{FileSystem: migrationsFS, Root: "migrations"}
-	numApplied, err := sql_migrate.Exec(connection, "postgres", migrations, sql_migrate.Up)
+	migrations := &migrate.EmbedFileSystemMigrationSource{FileSystem: migrationsFS, Root: "migrations"}
+	numApplied, err := migrate.Exec(connection, "postgres", migrations, migrate.Up)
 	if err != nil {
 		return errors.Wrap("issue executing migration", err)
 	}
@@ -64,7 +58,7 @@ func applyMigrations(dbInfo *db.DbInfo, log logger.Logger, dir string) error {
 	return nil
 }
 
-func generateSqlBoiler(log logger.Logger, dir string) error {
+func generateSqlBoiler(log logger.Logger) error {
 	outputDir := ""
 	if len(os.Args) > 2 {
 		outputDir = os.Args[2]
@@ -75,7 +69,7 @@ func generateSqlBoiler(log logger.Logger, dir string) error {
 
 	log.Info("Starting local postgres docker container")
 
-	dbInfo := &db.DbInfo{
+	dbInfo := &db.Info{
 		DbName:   "postgres",
 		Host:     "localhost",
 		Port:     5432,
@@ -101,7 +95,7 @@ func generateSqlBoiler(log logger.Logger, dir string) error {
 	defer db.CloseOrPanic(dbConnection)
 
 	log.Info("Running migrations")
-	if err = applyMigrations(dbInfo, log, dir); err != nil {
+	if err = applyMigrations(dbInfo, log); err != nil {
 		return errors.Wrap("issue executing migration", err)
 	}
 

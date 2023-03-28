@@ -4,10 +4,9 @@ import (
 	"database/sql"
 	"time"
 	"user-manager/db"
-	. "user-manager/db/generated/models/postgres/public/enum"
 	"user-manager/db/generated/models/postgres/public/model"
 	. "user-manager/db/generated/models/postgres/public/table"
-	domain_model "user-manager/domain-model"
+	dm "user-manager/domain-model"
 	"user-manager/util/errors"
 
 	. "github.com/go-jet/jet/v2/postgres"
@@ -21,7 +20,7 @@ func ProvideUserRepository(tx *sql.Tx) *UserRepository {
 	return &UserRepository{tx}
 }
 
-func (r *UserRepository) GetUserForEmail(email string) (domain_model.AppUser, error) {
+func (r *UserRepository) GetUserForEmail(email string) (dm.AppUser, error) {
 	m, err := db.FetchMaybe[struct {
 		model.AppUser
 		Roles []model.AppUserRole
@@ -48,15 +47,15 @@ func (r *UserRepository) GetUserForEmail(email string) (domain_model.AppUser, er
 			QueryContext,
 		r.tx)
 	if err != nil {
-		return domain_model.AppUser{}, errors.Wrap("error loading user", err)
+		return dm.AppUser{}, errors.Wrap("error loading user", err)
 	}
 
 	if m == nil {
-		return domain_model.AppUser{}, nil
+		return dm.AppUser{}, nil
 	}
-	user := domain_model.AppUser{
-		AppUserID:                  domain_model.AppUserID(m.AppUserID),
-		Language:                   domain_model.UserLanguage(m.Language),
+	user := dm.AppUser{
+		AppUserID:                  dm.AppUserID(m.AppUserID),
+		Language:                   dm.UserLanguage(m.Language),
 		UserName:                   m.UserName,
 		PasswordHash:               m.PasswordHash,
 		Email:                      m.Email,
@@ -66,19 +65,19 @@ func (r *UserRepository) GetUserForEmail(email string) (domain_model.AppUser, er
 		PasswordResetToken:         m.PasswordResetToken,
 		SecondFactorToken:          m.SecondFactorToken,
 		TemporarySecondFactorToken: m.TemporarySecondFactorToken,
-		UserRoles:                  make([]domain_model.UserRole, len(m.Roles)),
+		UserRoles:                  make([]dm.UserRole, len(m.Roles)),
 	}
 	if m.PasswordResetTokenValidUntil != nil {
 		user.PasswordResetTokenValidUntil = *m.PasswordResetTokenValidUntil
 	}
 
 	for i, role := range m.Roles {
-		user.UserRoles[i] = domain_model.UserRole(role.Role)
+		user.UserRoles[i] = dm.UserRole(role.Role)
 	}
 	return user, nil
 }
 
-func (r *UserRepository) UpdateUserEmailVerificationToken(appUserID domain_model.AppUserID, token string) error {
+func (r *UserRepository) UpdateUserEmailVerificationToken(appUserID dm.AppUserID, token string) error {
 	return db.ExecSingleMutation(
 		AppUser.UPDATE(AppUser.EmailVerificationToken, AppUser.UpdatedAt).
 			SET(token, time.Now()).
@@ -87,7 +86,7 @@ func (r *UserRepository) UpdateUserEmailVerificationToken(appUserID domain_model
 		r.tx)
 }
 
-func (r *UserRepository) SetEmailToVerified(appUserID domain_model.AppUserID) error {
+func (r *UserRepository) SetEmailToVerified(appUserID dm.AppUserID) error {
 	return db.ExecSingleMutation(
 		AppUser.UPDATE(AppUser.EmailVerificationToken, AppUser.EmailVerified, AppUser.UpdatedAt).
 			SET("", true, time.Now()).
@@ -96,7 +95,7 @@ func (r *UserRepository) SetEmailToVerified(appUserID domain_model.AppUserID) er
 		r.tx)
 }
 
-func (r *UserRepository) SetNextEmail(appUserID domain_model.AppUserID, nextEmail string, verificationToken string) error {
+func (r *UserRepository) SetNextEmail(appUserID dm.AppUserID, nextEmail string, verificationToken string) error {
 	return db.ExecSingleMutation(
 		AppUser.UPDATE(AppUser.EmailVerificationToken, AppUser.NextEmail, AppUser.UpdatedAt).
 			SET(verificationToken, nextEmail, time.Now()).
@@ -105,7 +104,7 @@ func (r *UserRepository) SetNextEmail(appUserID domain_model.AppUserID, nextEmai
 		r.tx)
 }
 
-func (r *UserRepository) SetEmailAndClearNextEmail(appUserID domain_model.AppUserID, email string) error {
+func (r *UserRepository) SetEmailAndClearNextEmail(appUserID dm.AppUserID, email string) error {
 	return db.ExecSingleMutation(
 		AppUser.UPDATE(AppUser.EmailVerificationToken, AppUser.NextEmail, AppUser.Email, AppUser.UpdatedAt).
 			SET("", "", email, time.Now()).
@@ -114,7 +113,7 @@ func (r *UserRepository) SetEmailAndClearNextEmail(appUserID domain_model.AppUse
 		r.tx)
 }
 
-func (r *UserRepository) SetPasswordResetToken(appUserID domain_model.AppUserID, token string, validUntil time.Time) error {
+func (r *UserRepository) SetPasswordResetToken(appUserID dm.AppUserID, token string, validUntil time.Time) error {
 	return db.ExecSingleMutation(
 		AppUser.UPDATE(AppUser.PasswordResetToken, AppUser.PasswordResetTokenValidUntil, AppUser.UpdatedAt).
 			SET(token, validUntil, time.Now()).
@@ -123,7 +122,7 @@ func (r *UserRepository) SetPasswordResetToken(appUserID domain_model.AppUserID,
 		r.tx)
 }
 
-func (r *UserRepository) SetPasswordHash(appUserID domain_model.AppUserID, hash string) error {
+func (r *UserRepository) SetPasswordHash(appUserID dm.AppUserID, hash string) error {
 	return db.ExecSingleMutation(
 		AppUser.UPDATE(AppUser.PasswordHash, AppUser.PasswordResetToken, AppUser.PasswordResetTokenValidUntil, AppUser.UpdatedAt).
 			SET(hash, "", nil, time.Now()).
@@ -132,7 +131,7 @@ func (r *UserRepository) SetPasswordHash(appUserID domain_model.AppUserID, hash 
 		r.tx)
 }
 
-func (r *UserRepository) SetLanguage(appUserID domain_model.AppUserID, language domain_model.UserLanguage) error {
+func (r *UserRepository) SetLanguage(appUserID dm.AppUserID, language dm.UserLanguage) error {
 	return db.ExecSingleMutation(
 		AppUser.UPDATE(AppUser.Language, AppUser.UpdatedAt).
 			SET(model.UserLanguage(language), time.Now()).
@@ -141,7 +140,7 @@ func (r *UserRepository) SetLanguage(appUserID domain_model.AppUserID, language 
 		r.tx)
 }
 
-func (r *UserRepository) Insert(userRole domain_model.UserRole, userName string, email string, emailVerified bool, emailVerificationToken string, passwordHash string, language domain_model.UserLanguage) error {
+func (r *UserRepository) Insert(userRole dm.UserRole, userName string, email string, emailVerified bool, emailVerificationToken string, passwordHash string, language dm.UserLanguage) error {
 	stmt := AppUser.INSERT(
 		AppUser.UserName,
 		AppUser.Email,
@@ -163,7 +162,7 @@ func (r *UserRepository) Insert(userRole domain_model.UserRole, userName string,
 
 	return db.ExecSingleMutation(
 		AppUserRole.INSERT(AppUserRole.Role, AppUserRole.AppUserID).
-			VALUES(UserRole.User, res.AppUserID).
+			VALUES(userRole, res.AppUserID).
 			ExecContext,
 		r.tx)
 }

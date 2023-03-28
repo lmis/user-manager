@@ -2,7 +2,7 @@ package resource
 
 import (
 	ginext "user-manager/cmd/app/gin-extensions"
-	domain_model "user-manager/domain-model"
+	dm "user-manager/domain-model"
 	"user-manager/repository"
 	"user-manager/service"
 	"user-manager/util/errors"
@@ -13,16 +13,16 @@ import (
 )
 
 type SensitiveSettingsResource struct {
-	securityLog      domain_model.SecurityLog
+	securityLog      dm.SecurityLog
 	mailQueueService *service.MailQueueService
-	userSession      domain_model.UserSession
+	userSession      dm.UserSession
 	userRepository   *repository.UserRepository
 }
 
 func ProvideSensitiveSettingsResource(
-	securityLog domain_model.SecurityLog,
+	securityLog dm.SecurityLog,
 	mailQueueService *service.MailQueueService,
-	userSession domain_model.UserSession,
+	userSession dm.UserSession,
 	userRepository *repository.UserRepository,
 ) *SensitiveSettingsResource {
 	return &SensitiveSettingsResource{securityLog, mailQueueService, userSession, userRepository}

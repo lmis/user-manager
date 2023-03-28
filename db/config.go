@@ -9,7 +9,7 @@ import (
 	"user-manager/util/logger"
 )
 
-type DbInfo struct {
+type Info struct {
 	DbName   string `env:"DB_NAME"`
 	Host     string `env:"DB_HOST"`
 	Port     int    `env:"DB_PORT"`
@@ -17,7 +17,7 @@ type DbInfo struct {
 	Password string `env:"DB_PASSWORD"`
 }
 
-func (dbInfo *DbInfo) OpenDbConnection(log logger.Logger) (dbConnection *sql.DB, err error) {
+func (dbInfo *Info) OpenDbConnection(log logger.Logger) (dbConnection *sql.DB, err error) {
 	defer func() {
 		if p := recover(); p != nil {
 			CloseOrPanic(dbConnection)

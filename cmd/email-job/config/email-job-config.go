@@ -4,11 +4,10 @@ import (
 	"user-manager/db"
 	"user-manager/util/env"
 	"user-manager/util/errors"
-	"user-manager/util/logger"
 )
 
 type Config struct {
-	DbInfo      db.DbInfo
+	DbInfo      db.Info
 	EmailApiUrl string `env:"EMAIL_API_URL"`
 	Environment string `env:"ENVIRONMENT"`
 }
@@ -25,7 +24,7 @@ func (conf *Config) IsStagingEnv() bool {
 	return conf.Environment == "staging"
 }
 
-func GetConfig(log logger.Logger) (*Config, error) {
+func GetConfig() (*Config, error) {
 	config := &Config{}
 
 	if err := env.ParseEnv(config); err != nil {

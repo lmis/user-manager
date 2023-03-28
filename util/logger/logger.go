@@ -17,9 +17,9 @@ var out *log.Logger = log.New(os.Stdout, "", 0)
 type LogLevel string
 
 const (
-	LOG_LEVEL_INFO  LogLevel = "INFO"
-	LOG_LEVEL_WARN  LogLevel = "WARN"
-	LOG_LEVEL_ERROR LogLevel = "ERROR"
+	LogLevelInfo  LogLevel = "INFO"
+	LogLevelWarn  LogLevel = "WARN"
+	LogLevelError LogLevel = "ERROR"
 )
 
 type Logger interface {
@@ -53,15 +53,15 @@ type SimpleLogger struct {
 }
 
 func (logger *SimpleLogger) Info(format string, args ...interface{}) {
-	WriteLog(logger, LOG_LEVEL_INFO, format, args...)
+	WriteLog(logger, LogLevelInfo, format, args...)
 }
 
 func (logger *SimpleLogger) Warn(format string, args ...interface{}) {
-	WriteLog(logger, LOG_LEVEL_WARN, fmt.Sprintf(format, args...))
+	WriteLog(logger, LogLevelWarn, fmt.Sprintf(format, args...))
 }
 
 func (logger *SimpleLogger) Err(e error) {
-	WriteLog(logger, LOG_LEVEL_ERROR, "%s", e.Error())
+	WriteLog(logger, LogLevelError, "%s", e.Error())
 
 }
 
@@ -103,10 +103,10 @@ func WriteLog(metadata interface{}, level LogLevel, format string, args ...inter
 	colorStart := ""
 	colorEnd := ""
 	switch level {
-	case LOG_LEVEL_INFO:
-	case LOG_LEVEL_WARN:
+	case LogLevelInfo:
+	case LogLevelWarn:
 		colorStart = termCodeYellow
-	case LOG_LEVEL_ERROR:
+	case LogLevelError:
 		colorStart = termCodeRed
 	}
 	if colorStart != "" {

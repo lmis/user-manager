@@ -2,7 +2,7 @@ package middleware
 
 import (
 	"net/http"
-	domain_model "user-manager/domain-model"
+	dm "user-manager/domain-model"
 	"user-manager/util/errors"
 
 	"github.com/gin-gonic/gin"
@@ -10,10 +10,10 @@ import (
 
 type CsrfMiddleware struct {
 	c      *gin.Context
-	config *domain_model.Config
+	config *dm.Config
 }
 
-func ProvideCsrfMiddleware(c *gin.Context, config *domain_model.Config) *CsrfMiddleware {
+func ProvideCsrfMiddleware(c *gin.Context, config *dm.Config) *CsrfMiddleware {
 	return &CsrfMiddleware{c, config}
 }
 
@@ -31,17 +31,17 @@ func (m *CsrfMiddleware) Handle() {
 	}
 	cookie, err := c.Cookie(cookieName)
 	if err != nil && err != http.ErrNoCookie {
-		c.AbortWithError(http.StatusInternalServerError, errors.Wrap("getting CSRF cookie failed", err))
+		_ = c.AbortWithError(http.StatusInternalServerError, errors.Wrap("getting CSRF cookie failed", err))
 		return
 	}
 	header := c.GetHeader("X-CSRF-Token")
 	if header == "" || cookie == "" {
-		c.AbortWithError(http.StatusBadRequest, errors.Error("missing tokens"))
+		_ = c.AbortWithError(http.StatusBadRequest, errors.Error("missing tokens"))
 		return
 	}
 
 	if header != cookie {
-		c.AbortWithError(http.StatusBadRequest, errors.Error("mismatching csrf tokens"))
+		_ = c.AbortWithError(http.StatusBadRequest, errors.Error("mismatching csrf tokens"))
 		return
 	}
 }

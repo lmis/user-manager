@@ -10,9 +10,9 @@ type UserSessionID string
 type UserSessionType model.UserSessionType
 
 const (
-	USER_SESSION_TYPE_LOGIN           = UserSessionType(model.UserSessionType_Login)
-	USER_SESSION_TYPE_SUDO            = UserSessionType(model.UserSessionType_Sudo)
-	USER_SESSION_TYPE_REMEMBER_DEVICE = UserSessionType(model.UserSessionType_RememberDevice)
+	UserSessionTypeLogin          = UserSessionType(model.UserSessionType_Login)
+	UserSessionTypeSudo           = UserSessionType(model.UserSessionType_Sudo)
+	UserSessionTypeRememberDevice = UserSessionType(model.UserSessionType_RememberDevice)
 )
 
 type UserSession struct {

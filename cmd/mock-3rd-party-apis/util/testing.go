@@ -5,10 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"user-manager/cmd/mock-3rd-party-apis/config"
-	domain_model "user-manager/domain-model"
+	dm "user-manager/domain-model"
 	"user-manager/util/errors"
 )
 
@@ -16,7 +15,7 @@ type TestUser struct {
 	Email         string
 	EmailVerified bool
 	Password      []byte
-	Language      domain_model.UserLanguage
+	Language      dm.UserLanguage
 }
 
 type FunctionalTest struct {
@@ -50,8 +49,8 @@ func (r *RequestClient) SetCsrfTokens(header string, cookie string) {
 }
 
 func (r *RequestClient) MakeApiRequest(method string, subpath string, payload interface{}) {
-	config := r.config
-	req, err := http.NewRequest(method, fmt.Sprintf("%s/api/%s", config.AppUrl, subpath), nil)
+	conf := r.config
+	req, err := http.NewRequest(method, fmt.Sprintf("%s/api/%s", conf.AppUrl, subpath), nil)
 	if err != nil {
 		panic(errors.Wrap("error building request", err))
 	}
@@ -121,7 +120,7 @@ func AssertEq(received interface{}, expected interface{}) error {
 }
 
 func readAllClose(reader io.ReadCloser) []byte {
-	body, err := ioutil.ReadAll(reader)
+	body, err := io.ReadAll(reader)
 	if err != nil {
 		panic(errors.Wrap("issue reading", err))
 	}

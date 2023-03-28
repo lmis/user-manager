@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"time"
 	ginext "user-manager/cmd/app/gin-extensions"
-	domain_model "user-manager/domain-model"
+	dm "user-manager/domain-model"
 	"user-manager/repository"
 	"user-manager/service"
 	"user-manager/util/errors"
@@ -31,9 +31,9 @@ func (m *ExtractLoginSessionMiddleware) Handle() {
 	sessionCookieService := m.sessionCookieService
 	sessionRepository := m.sessionRepository
 
-	sessionID, err := sessionCookieService.GetSessionCookie(domain_model.USER_SESSION_TYPE_LOGIN)
+	sessionID, err := sessionCookieService.GetSessionCookie(dm.UserSessionTypeLogin)
 	if err != nil {
-		c.AbortWithError(http.StatusInternalServerError, errors.Wrap("getting session cookie failed", err))
+		_ = c.AbortWithError(http.StatusInternalServerError, errors.Wrap("getting session cookie failed", err))
 		return
 	}
 
@@ -41,9 +41,9 @@ func (m *ExtractLoginSessionMiddleware) Handle() {
 		return
 	}
 
-	session, err := sessionRepository.GetSessionAndUser(sessionID, domain_model.USER_SESSION_TYPE_LOGIN)
+	session, err := sessionRepository.GetSessionAndUser(sessionID, dm.UserSessionTypeLogin)
 	if err != nil {
-		c.AbortWithError(http.StatusInternalServerError, errors.Wrap("fetching session failed", err))
+		_ = c.AbortWithError(http.StatusInternalServerError, errors.Wrap("fetching session failed", err))
 		return
 	}
 
@@ -51,8 +51,8 @@ func (m *ExtractLoginSessionMiddleware) Handle() {
 
 		ginext.GetRequestContext(c).UserSession = session
 
-		if err := sessionRepository.UpdateSessionTimeout(session.UserSessionID, time.Now().Add(domain_model.LOGIN_SESSION_DURATION)); err != nil {
-			c.AbortWithError(http.StatusInternalServerError, errors.Wrap("issue updating session timeout in db", err))
+		if err := sessionRepository.UpdateSessionTimeout(session.UserSessionID, time.Now().Add(dm.LoginSessionDuration)); err != nil {
+			_ = c.AbortWithError(http.StatusInternalServerError, errors.Wrap("issue updating session timeout in db", err))
 			return
 		}
 	}

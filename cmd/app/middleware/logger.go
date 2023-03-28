@@ -3,7 +3,7 @@ package middleware
 import (
 	"net/http"
 	ginext "user-manager/cmd/app/gin-extensions"
-	domain_model "user-manager/domain-model"
+	dm "user-manager/domain-model"
 	"user-manager/util/logger"
 
 	"time"
@@ -12,19 +12,19 @@ import (
 )
 
 func RegisterLoggerMiddleware(app *gin.Engine) {
-	app.Use(LoggerMiddlware)
+	app.Use(LoggerMiddleware)
 }
 
-func LoggerMiddlware(c *gin.Context) {
-	// Add logger to context
-	logger := &RequestLogger{topic: "REQUEST", context: c}
+func LoggerMiddleware(c *gin.Context) {
+	// Add requestLogger to context
+	requestLogger := &RequestLogger{topic: "REQUEST", context: c}
 	securityLogger := &RequestLogger{topic: "SECURITY", context: c}
 
 	requestContext := ginext.GetRequestContext(c)
-	requestContext.Log = domain_model.Log(logger)
-	requestContext.SecurityLog = domain_model.SecurityLog(securityLogger)
+	requestContext.Log = dm.Log(requestLogger)
+	requestContext.SecurityLog = dm.SecurityLog(securityLogger)
 
-	logger.Info("Starting request")
+	requestLogger.Info("Starting request")
 
 	// Start timer
 	start := time.Now()
@@ -33,14 +33,14 @@ func LoggerMiddlware(c *gin.Context) {
 	c.Next()
 
 	// Stop timer
-	logger.latency = time.Since(start)
+	requestLogger.latency = time.Since(start)
 
 	status := c.Writer.Status()
-	logger.status = status
+	requestLogger.status = status
 	if status >= 400 {
 		securityLogger.Info("Request failed. Status: %d", status)
 	} else {
-		logger.Info("Finished request. Status: %d", status)
+		requestLogger.Info("Finished request. Status: %d", status)
 	}
 
 	// Trigger alerts
@@ -52,17 +52,17 @@ func LoggerMiddlware(c *gin.Context) {
 }
 
 type LogMetadata struct {
-	Topic         string                  `json:"topic"`
-	CorrelationID string                  `json:"correlationID"`
-	Latency       time.Duration           `json:"latency,omitempty"`
-	Path          string                  `json:"path,omitempty"`
-	UserID        int                     `json:"userID,omitempty"`
-	Roles         []domain_model.UserRole `json:"role,omitempty"`
-	ClientIP      string                  `json:"clientIP,omitempty"`
-	Method        string                  `json:"method,omitempty"`
-	ErrorMessage  string                  `json:"errorMessage,omitempty"`
-	BodySize      int                     `json:"bodySize,omitempty"`
-	Status        int                     `json:"status,omitempty"`
+	Topic         string        `json:"topic"`
+	CorrelationID string        `json:"correlationID"`
+	Latency       time.Duration `json:"latency,omitempty"`
+	Path          string        `json:"path,omitempty"`
+	UserID        int           `json:"userID,omitempty"`
+	Roles         []dm.UserRole `json:"role,omitempty"`
+	ClientIP      string        `json:"clientIP,omitempty"`
+	Method        string        `json:"method,omitempty"`
+	ErrorMessage  string        `json:"errorMessage,omitempty"`
+	BodySize      int           `json:"bodySize,omitempty"`
+	Status        int           `json:"status,omitempty"`
 }
 
 type RequestLogger struct {
@@ -98,13 +98,13 @@ func getMetadata(logger *RequestLogger) *LogMetadata {
 }
 
 func (r *RequestLogger) Info(format string, args ...interface{}) {
-	logger.WriteLog(getMetadata(r), logger.LOG_LEVEL_INFO, format, args...)
+	logger.WriteLog(getMetadata(r), logger.LogLevelInfo, format, args...)
 }
 
 func (r *RequestLogger) Warn(format string, args ...interface{}) {
-	logger.WriteLog(getMetadata(r), logger.LOG_LEVEL_WARN, format, args...)
+	logger.WriteLog(getMetadata(r), logger.LogLevelWarn, format, args...)
 }
 
 func (r *RequestLogger) Err(e error) {
-	logger.WriteLog(getMetadata(r), logger.LOG_LEVEL_ERROR, "%s", e.Error())
+	logger.WriteLog(getMetadata(r), logger.LogLevelError, "%s", e.Error())
 }
