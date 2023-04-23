@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"context"
 	"database/sql"
 	"time"
 	"user-manager/db"
@@ -13,15 +14,17 @@ import (
 )
 
 type SessionRepository struct {
-	tx *sql.Tx
+	ctx context.Context
+	tx  *sql.Tx
 }
 
-func ProvideSessionRepository(tx *sql.Tx) *SessionRepository {
-	return &SessionRepository{tx}
+func ProvideSessionRepository(ctx context.Context, tx *sql.Tx) *SessionRepository {
+	return &SessionRepository{ctx, tx}
 }
 
 func (r *SessionRepository) InsertSession(sessionID string, sessionType dm.UserSessionType, appUserID dm.AppUserID, duration time.Duration) error {
 	return db.ExecSingleMutation(
+		r.ctx,
 		UserSession.INSERT(UserSession.UserSessionID, UserSession.AppUserID, UserSession.TimeoutAt, UserSession.UserSessionType).
 			VALUES(sessionID, appUserID.ToIntegerExpression(), time.Now().Add(duration), model.UserSessionType(sessionType)).
 			ExecContext,
@@ -30,6 +33,7 @@ func (r *SessionRepository) InsertSession(sessionID string, sessionType dm.UserS
 
 func (r *SessionRepository) UpdateSessionTimeout(sessionID dm.UserSessionID, timeout time.Time) error {
 	return db.ExecSingleMutation(
+		r.ctx,
 		UserSession.UPDATE(UserSession.TimeoutAt, UserSession.UpdatedAt).
 			SET(timeout, time.Now()).
 			WHERE(UserSession.UserSessionID.EQ(sessionID.ToStringExpression())).
@@ -39,6 +43,7 @@ func (r *SessionRepository) UpdateSessionTimeout(sessionID dm.UserSessionID, tim
 
 func (r *SessionRepository) Delete(sessionID dm.UserSessionID) error {
 	return db.ExecSingleMutation(
+		r.ctx,
 		UserSession.DELETE().
 			WHERE(UserSession.UserSessionID.EQ(sessionID.ToStringExpression())).
 			ExecContext,
@@ -51,6 +56,7 @@ func (r *SessionRepository) GetSessionAndUser(sessionID dm.UserSessionID, sessio
 		model.AppUser
 		Roles []model.AppUserRole
 	}](
+		r.ctx,
 		SELECT(
 			UserSession.UserSessionID,
 			UserSession.UserSessionType,

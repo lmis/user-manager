@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"context"
 	ginext "user-manager/cmd/app/gin-extensions"
 	"user-manager/db"
 	dm "user-manager/domain-model"
@@ -14,12 +15,13 @@ import (
 
 type DatabaseMiddleware struct {
 	c        *gin.Context
+	ctx      context.Context
 	database *sql.DB
 	log      dm.Log
 }
 
-func ProvideDatabaseMiddleware(c *gin.Context, database *sql.DB, log dm.Log) *DatabaseMiddleware {
-	return &DatabaseMiddleware{c, database, log}
+func ProvideDatabaseMiddleware(c *gin.Context, ctx context.Context, database *sql.DB, log dm.Log) *DatabaseMiddleware {
+	return &DatabaseMiddleware{c, ctx, database, log}
 }
 
 func RegisterDatabaseMiddleware(group *gin.RouterGroup) {
@@ -30,7 +32,7 @@ func (m *DatabaseMiddleware) Handle() {
 	log := m.log
 	database := m.database
 
-	ctx, cancelTimeout := db.DefaultQueryContext()
+	ctx, cancelTimeout := db.DefaultQueryContext(m.ctx)
 	defer cancelTimeout()
 
 	log.Info("BEGIN Transaction")

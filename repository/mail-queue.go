@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"context"
 	"database/sql"
 	"user-manager/db"
 	. "user-manager/db/generated/models/postgres/public/enum"
@@ -10,11 +11,12 @@ import (
 )
 
 type MailQueueRepository struct {
-	tx *sql.Tx
+	ctx context.Context
+	tx  *sql.Tx
 }
 
-func ProvideMailQueueRepository(tx *sql.Tx) *MailQueueRepository {
-	return &MailQueueRepository{tx}
+func ProvideMailQueueRepository(ctx context.Context, tx *sql.Tx) *MailQueueRepository {
+	return &MailQueueRepository{ctx, tx}
 }
 
 func (r *MailQueueRepository) InsertPending(
@@ -25,6 +27,7 @@ func (r *MailQueueRepository) InsertPending(
 	priority dm.MailQueuePriority,
 ) error {
 	err := db.ExecSingleMutation(
+		r.ctx,
 		MailQueue.INSERT(
 			MailQueue.FromAddress,
 			MailQueue.ToAddress,

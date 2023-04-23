@@ -1,12 +1,17 @@
 package injector
 
 import (
+	"context"
 	"database/sql"
 	ginext "user-manager/cmd/app/gin-extensions"
 	dm "user-manager/domain-model"
 
 	"github.com/gin-gonic/gin"
 )
+
+func ProvideCtx(c *gin.Context) context.Context {
+	return ginext.GetRequestContext(c).Ctx
+}
 
 func ProvideTx(c *gin.Context) *sql.Tx {
 	return ginext.GetRequestContext(c).Tx

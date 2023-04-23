@@ -8,7 +8,7 @@ import (
 )
 
 var EmailTemplates = wire.NewSet(ProvideBaseTemplate, ProvideTranslations)
-var RequestContext = wire.NewSet(ProvideTx, ProvideLog, ProvideSecurityLog, ProvideUserSession)
+var RequestContext = wire.NewSet(ProvideCtx, ProvideTx, ProvideLog, ProvideSecurityLog, ProvideUserSession)
 var Repositories = wire.NewSet(repository.ProvideMailQueueRepository, repository.ProvideSessionRepository, repository.ProvideUserRepository, repository.ProvideSecondFactorThrottlingRepository)
 var Services = wire.NewSet(service.ProvideMailQueueService, service.ProvideSessionCookieService, service.ProvideAuthService)
 

@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"context"
 	"database/sql"
 	"time"
 	"user-manager/db"
@@ -13,15 +14,17 @@ import (
 )
 
 type SecondFactorThrottlingRepository struct {
-	tx *sql.Tx
+	ctx context.Context
+	tx  *sql.Tx
 }
 
-func ProvideSecondFactorThrottlingRepository(tx *sql.Tx) *SecondFactorThrottlingRepository {
-	return &SecondFactorThrottlingRepository{tx}
+func ProvideSecondFactorThrottlingRepository(ctx context.Context, tx *sql.Tx) *SecondFactorThrottlingRepository {
+	return &SecondFactorThrottlingRepository{ctx, tx}
 }
 
 func (r *SecondFactorThrottlingRepository) GetForUser(userID dm.AppUserID) (dm.SecondFactorThrottling, error) {
 	m, err := db.FetchMaybe[model.SecondFactorThrottling](
+		r.ctx,
 		SELECT(
 			SecondFactorThrottling.SecondFactorThrottlingID,
 			SecondFactorThrottling.AppUserID,
@@ -52,6 +55,7 @@ func (r *SecondFactorThrottlingRepository) GetForUser(userID dm.AppUserID) (dm.S
 
 func (r *SecondFactorThrottlingRepository) Update(throttlingID dm.SecondFactorThrottlingID, failedAttemptsSinceLastSuccess int32, maybeTimeoutUntil *time.Time) error {
 	return db.ExecSingleMutation(
+		r.ctx,
 		SecondFactorThrottling.UPDATE(SecondFactorThrottling.FailedAttemptsSinceLastSuccess, SecondFactorThrottling.TimeoutUntil, SecondFactorThrottling.UpdatedAt).
 			SET(failedAttemptsSinceLastSuccess, maybeTimeoutUntil, time.Now()).
 			WHERE(SecondFactorThrottling.SecondFactorThrottlingID.EQ(throttlingID.ToIntegerExpression())).
@@ -61,6 +65,7 @@ func (r *SecondFactorThrottlingRepository) Update(throttlingID dm.SecondFactorTh
 
 func (r *SecondFactorThrottlingRepository) Insert(userID dm.AppUserID, failedAttemptsSinceLastSuccess int) error {
 	return db.ExecSingleMutation(
+		r.ctx,
 		SecondFactorThrottling.INSERT(SecondFactorThrottling.AppUserID, SecondFactorThrottling.FailedAttemptsSinceLastSuccess).
 			VALUES(userID.ToIntegerExpression(), failedAttemptsSinceLastSuccess).
 			ExecContext,

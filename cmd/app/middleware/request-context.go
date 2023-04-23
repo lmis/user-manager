@@ -11,5 +11,5 @@ func RegisterRequestContextMiddleware(app *gin.Engine) {
 }
 
 func RequestContextMiddleware(c *gin.Context) {
-	c.Set(ginext.RequestContextKey, &ginext.RequestContext{})
+	c.Set(ginext.RequestContextKey, &ginext.RequestContext{Ctx: c.Request.Context()})
 }

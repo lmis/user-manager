@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"database/sql"
 	"encoding/json"
 	"net/http"
@@ -68,7 +69,7 @@ func startJob(log logger.Logger) error {
 func sendOneEmail(log logger.Logger, database *sql.DB, config *config.Config) (ret error) {
 	shouldCommit := false
 	maxNumFailedAttempts := int16(3)
-	ctx, cancelTimeout := db.DefaultQueryContext()
+	ctx, cancelTimeout := db.DefaultQueryContext(context.Background())
 	defer cancelTimeout()
 
 	log.Info("BEGIN Transaction")
@@ -91,6 +92,7 @@ func sendOneEmail(log logger.Logger, database *sql.DB, config *config.Config) (r
 	}()
 
 	mail, err := db.FetchMaybe[model.MailQueue](
+		context.Background(),
 		SELECT(MailQueue.AllColumns).
 			FROM(MailQueue).
 			WHERE(
@@ -132,6 +134,7 @@ func sendOneEmail(log logger.Logger, database *sql.DB, config *config.Config) (r
 	}
 
 	err = db.ExecSingleMutation(
+		context.Background(),
 		MailQueue.UPDATE(MailQueue.Status, MailQueue.NumberOfFailedAttempts, MailQueue.UpdatedAt).
 			SET(status, numberOfFailedAttempts, time.Now()).
 			WHERE(MailQueue.MailQueueID.EQ(Int64(mail.MailQueueID))).

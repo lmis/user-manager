@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"context"
 	"database/sql"
 	"time"
 	"user-manager/db"
@@ -13,11 +14,12 @@ import (
 )
 
 type UserRepository struct {
-	tx *sql.Tx
+	ctx context.Context
+	tx  *sql.Tx
 }
 
-func ProvideUserRepository(tx *sql.Tx) *UserRepository {
-	return &UserRepository{tx}
+func ProvideUserRepository(ctx context.Context, tx *sql.Tx) *UserRepository {
+	return &UserRepository{ctx, tx}
 }
 
 func (r *UserRepository) GetUserForEmail(email string) (dm.AppUser, error) {
@@ -25,6 +27,7 @@ func (r *UserRepository) GetUserForEmail(email string) (dm.AppUser, error) {
 		model.AppUser
 		Roles []model.AppUserRole
 	}](
+		r.ctx,
 		SELECT(
 			AppUser.AppUserID,
 			AppUser.Language,
@@ -79,6 +82,7 @@ func (r *UserRepository) GetUserForEmail(email string) (dm.AppUser, error) {
 
 func (r *UserRepository) UpdateUserEmailVerificationToken(appUserID dm.AppUserID, token string) error {
 	return db.ExecSingleMutation(
+		r.ctx,
 		AppUser.UPDATE(AppUser.EmailVerificationToken, AppUser.UpdatedAt).
 			SET(token, time.Now()).
 			WHERE(AppUser.AppUserID.EQ(appUserID.ToIntegerExpression())).
@@ -88,6 +92,7 @@ func (r *UserRepository) UpdateUserEmailVerificationToken(appUserID dm.AppUserID
 
 func (r *UserRepository) SetEmailToVerified(appUserID dm.AppUserID) error {
 	return db.ExecSingleMutation(
+		r.ctx,
 		AppUser.UPDATE(AppUser.EmailVerificationToken, AppUser.EmailVerified, AppUser.UpdatedAt).
 			SET("", true, time.Now()).
 			WHERE(AppUser.AppUserID.EQ(appUserID.ToIntegerExpression())).
@@ -97,6 +102,7 @@ func (r *UserRepository) SetEmailToVerified(appUserID dm.AppUserID) error {
 
 func (r *UserRepository) SetNextEmail(appUserID dm.AppUserID, nextEmail string, verificationToken string) error {
 	return db.ExecSingleMutation(
+		r.ctx,
 		AppUser.UPDATE(AppUser.EmailVerificationToken, AppUser.NextEmail, AppUser.UpdatedAt).
 			SET(verificationToken, nextEmail, time.Now()).
 			WHERE(AppUser.AppUserID.EQ(appUserID.ToIntegerExpression())).
@@ -106,6 +112,7 @@ func (r *UserRepository) SetNextEmail(appUserID dm.AppUserID, nextEmail string, 
 
 func (r *UserRepository) SetEmailAndClearNextEmail(appUserID dm.AppUserID, email string) error {
 	return db.ExecSingleMutation(
+		r.ctx,
 		AppUser.UPDATE(AppUser.EmailVerificationToken, AppUser.NextEmail, AppUser.Email, AppUser.UpdatedAt).
 			SET("", "", email, time.Now()).
 			WHERE(AppUser.AppUserID.EQ(appUserID.ToIntegerExpression())).
@@ -115,6 +122,7 @@ func (r *UserRepository) SetEmailAndClearNextEmail(appUserID dm.AppUserID, email
 
 func (r *UserRepository) SetPasswordResetToken(appUserID dm.AppUserID, token string, validUntil time.Time) error {
 	return db.ExecSingleMutation(
+		r.ctx,
 		AppUser.UPDATE(AppUser.PasswordResetToken, AppUser.PasswordResetTokenValidUntil, AppUser.UpdatedAt).
 			SET(token, validUntil, time.Now()).
 			WHERE(AppUser.AppUserID.EQ(appUserID.ToIntegerExpression())).
@@ -124,6 +132,7 @@ func (r *UserRepository) SetPasswordResetToken(appUserID dm.AppUserID, token str
 
 func (r *UserRepository) SetPasswordHash(appUserID dm.AppUserID, hash string) error {
 	return db.ExecSingleMutation(
+		r.ctx,
 		AppUser.UPDATE(AppUser.PasswordHash, AppUser.PasswordResetToken, AppUser.PasswordResetTokenValidUntil, AppUser.UpdatedAt).
 			SET(hash, "", nil, time.Now()).
 			WHERE(AppUser.AppUserID.EQ(appUserID.ToIntegerExpression())).
@@ -133,6 +142,7 @@ func (r *UserRepository) SetPasswordHash(appUserID dm.AppUserID, hash string) er
 
 func (r *UserRepository) SetLanguage(appUserID dm.AppUserID, language dm.UserLanguage) error {
 	return db.ExecSingleMutation(
+		r.ctx,
 		AppUser.UPDATE(AppUser.Language, AppUser.UpdatedAt).
 			SET(model.UserLanguage(language), time.Now()).
 			WHERE(AppUser.AppUserID.EQ(appUserID.ToIntegerExpression())).
@@ -152,7 +162,7 @@ func (r *UserRepository) Insert(userRole dm.UserRole, userName string, email str
 		VALUES(userName, email, emailVerified, emailVerificationToken, passwordHash, model.UserLanguage(language)).
 		RETURNING(AppUser.AppUserID)
 
-	ctx, cancelTimeout := db.DefaultQueryContext()
+	ctx, cancelTimeout := db.DefaultQueryContext(r.ctx)
 	defer cancelTimeout()
 	res := &model.AppUser{}
 	err := stmt.QueryContext(ctx, r.tx, res)
@@ -161,6 +171,7 @@ func (r *UserRepository) Insert(userRole dm.UserRole, userName string, email str
 	}
 
 	return db.ExecSingleMutation(
+		r.ctx,
 		AppUserRole.INSERT(AppUserRole.Role, AppUserRole.AppUserID).
 			VALUES(userRole, res.AppUserID).
 			ExecContext,

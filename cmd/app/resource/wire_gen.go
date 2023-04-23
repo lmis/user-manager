@@ -17,14 +17,15 @@ import (
 
 func InitializeEmailConfirmationResource(c *gin.Context) *EmailConfirmationResource {
 	securityLog := injector.ProvideSecurityLog(c)
+	context := injector.ProvideCtx(c)
 	tx := injector.ProvideTx(c)
-	mailQueueRepository := repository.ProvideMailQueueRepository(tx)
+	mailQueueRepository := repository.ProvideMailQueueRepository(context, tx)
 	config := injector.ProvideConfig()
 	v := injector.ProvideTranslations()
 	template := injector.ProvideBaseTemplate()
 	mailQueueService := service.ProvideMailQueueService(mailQueueRepository, config, v, template)
 	userSession := injector.ProvideUserSession(c)
-	userRepository := repository.ProvideUserRepository(tx)
+	userRepository := repository.ProvideUserRepository(context, tx)
 	emailConfirmationResource := ProvideEmailConfirmationResource(securityLog, mailQueueService, userSession, userRepository)
 	return emailConfirmationResource
 }
@@ -33,18 +34,20 @@ func InitializeLoginResource(c *gin.Context) *LoginResource {
 	securityLog := injector.ProvideSecurityLog(c)
 	config := injector.ProvideConfig()
 	sessionCookieService := service.ProvideSessionCookieService(c, config)
+	context := injector.ProvideCtx(c)
 	tx := injector.ProvideTx(c)
-	sessionRepository := repository.ProvideSessionRepository(tx)
-	userRepository := repository.ProvideUserRepository(tx)
-	secondFactorThrottlingRepository := repository.ProvideSecondFactorThrottlingRepository(tx)
+	sessionRepository := repository.ProvideSessionRepository(context, tx)
+	userRepository := repository.ProvideUserRepository(context, tx)
+	secondFactorThrottlingRepository := repository.ProvideSecondFactorThrottlingRepository(context, tx)
 	loginResource := ProvideLoginResource(securityLog, sessionCookieService, sessionRepository, userRepository, secondFactorThrottlingRepository)
 	return loginResource
 }
 
 func InitializeSignUpResource(c *gin.Context) *SignUpResource {
+	context := injector.ProvideCtx(c)
 	tx := injector.ProvideTx(c)
-	userRepository := repository.ProvideUserRepository(tx)
-	mailQueueRepository := repository.ProvideMailQueueRepository(tx)
+	userRepository := repository.ProvideUserRepository(context, tx)
+	mailQueueRepository := repository.ProvideMailQueueRepository(context, tx)
 	config := injector.ProvideConfig()
 	v := injector.ProvideTranslations()
 	template := injector.ProvideBaseTemplate()
@@ -65,8 +68,9 @@ func InitializeLogoutResource(c *gin.Context) *LogoutResource {
 	securityLog := injector.ProvideSecurityLog(c)
 	config := injector.ProvideConfig()
 	sessionCookieService := service.ProvideSessionCookieService(c, config)
+	context := injector.ProvideCtx(c)
 	tx := injector.ProvideTx(c)
-	sessionRepository := repository.ProvideSessionRepository(tx)
+	sessionRepository := repository.ProvideSessionRepository(context, tx)
 	userSession := injector.ProvideUserSession(c)
 	logoutResource := ProvideLogoutResource(securityLog, sessionCookieService, sessionRepository, userSession)
 	return logoutResource
@@ -77,23 +81,25 @@ func InitializeSettingsResource(c *gin.Context) *SettingsResource {
 	config := injector.ProvideConfig()
 	sessionCookieService := service.ProvideSessionCookieService(c, config)
 	userSession := injector.ProvideUserSession(c)
+	context := injector.ProvideCtx(c)
 	tx := injector.ProvideTx(c)
-	userRepository := repository.ProvideUserRepository(tx)
-	sessionRepository := repository.ProvideSessionRepository(tx)
+	userRepository := repository.ProvideUserRepository(context, tx)
+	sessionRepository := repository.ProvideSessionRepository(context, tx)
 	settingsResource := ProvideSettingsResource(securityLog, sessionCookieService, userSession, userRepository, sessionRepository)
 	return settingsResource
 }
 
 func InitializeSensitiveSettingsResource(c *gin.Context) *SensitiveSettingsResource {
 	securityLog := injector.ProvideSecurityLog(c)
+	context := injector.ProvideCtx(c)
 	tx := injector.ProvideTx(c)
-	mailQueueRepository := repository.ProvideMailQueueRepository(tx)
+	mailQueueRepository := repository.ProvideMailQueueRepository(context, tx)
 	config := injector.ProvideConfig()
 	v := injector.ProvideTranslations()
 	template := injector.ProvideBaseTemplate()
 	mailQueueService := service.ProvideMailQueueService(mailQueueRepository, config, v, template)
 	userSession := injector.ProvideUserSession(c)
-	userRepository := repository.ProvideUserRepository(tx)
+	userRepository := repository.ProvideUserRepository(context, tx)
 	sensitiveSettingsResource := ProvideSensitiveSettingsResource(securityLog, mailQueueService, userSession, userRepository)
 	return sensitiveSettingsResource
 }
@@ -101,13 +107,14 @@ func InitializeSensitiveSettingsResource(c *gin.Context) *SensitiveSettingsResou
 func InitializeResetPasswordResource(c *gin.Context) *ResetPasswordResource {
 	securityLog := injector.ProvideSecurityLog(c)
 	authService := service.ProvideAuthService()
+	context := injector.ProvideCtx(c)
 	tx := injector.ProvideTx(c)
-	mailQueueRepository := repository.ProvideMailQueueRepository(tx)
+	mailQueueRepository := repository.ProvideMailQueueRepository(context, tx)
 	config := injector.ProvideConfig()
 	v := injector.ProvideTranslations()
 	template := injector.ProvideBaseTemplate()
 	mailQueueService := service.ProvideMailQueueService(mailQueueRepository, config, v, template)
-	userRepository := repository.ProvideUserRepository(tx)
+	userRepository := repository.ProvideUserRepository(context, tx)
 	resetPasswordResource := ProvideResetPasswordResource(securityLog, authService, mailQueueService, userRepository)
 	return resetPasswordResource
 }

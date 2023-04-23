@@ -9,9 +9,9 @@ import (
 	"github.com/go-jet/jet/v2/qrm"
 )
 
-func FetchMaybe[A interface{}](query func(context.Context, qrm.Queryable, interface{}) error, tx *sql.Tx) (*A, error) {
+func FetchMaybe[A interface{}](ctx context.Context, query func(context.Context, qrm.Queryable, interface{}) error, tx *sql.Tx) (*A, error) {
 	dest := new(A)
-	ctx, cancelTimeout := DefaultQueryContext()
+	ctx, cancelTimeout := DefaultQueryContext(ctx)
 	defer cancelTimeout()
 	err := query(ctx, tx, dest)
 
@@ -25,8 +25,8 @@ func FetchMaybe[A interface{}](query func(context.Context, qrm.Queryable, interf
 	return dest, nil
 }
 
-func ExecSingleMutation(query func(context.Context, qrm.Executable) (sql.Result, error), tx *sql.Tx) error {
-	ctx, cancelTimeout := DefaultQueryContext()
+func ExecSingleMutation(ctx context.Context, query func(context.Context, qrm.Executable) (sql.Result, error), tx *sql.Tx) error {
+	ctx, cancelTimeout := DefaultQueryContext(ctx)
 	defer cancelTimeout()
 	res, err := query(ctx, tx)
 	if err == nil {

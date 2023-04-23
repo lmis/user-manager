@@ -22,15 +22,17 @@ func InitializeCsrfMiddleware(c *gin.Context) *CsrfMiddleware {
 }
 
 func InitializeDatabaseMiddleware(c *gin.Context) *DatabaseMiddleware {
+	context := injector.ProvideCtx(c)
 	db := injector.ProvideDatabase()
 	log := injector.ProvideLog(c)
-	databaseMiddleware := ProvideDatabaseMiddleware(c, db, log)
+	databaseMiddleware := ProvideDatabaseMiddleware(c, context, db, log)
 	return databaseMiddleware
 }
 
 func InitializeExtractLoginSessionMiddleware(c *gin.Context) *ExtractLoginSessionMiddleware {
+	context := injector.ProvideCtx(c)
 	tx := injector.ProvideTx(c)
-	sessionRepository := repository.ProvideSessionRepository(tx)
+	sessionRepository := repository.ProvideSessionRepository(context, tx)
 	config := injector.ProvideConfig()
 	sessionCookieService := service.ProvideSessionCookieService(c, config)
 	extractLoginSessionMiddleware := ProvideExtractLoginSessionMiddleware(c, sessionRepository, sessionCookieService)
@@ -47,8 +49,9 @@ func InitializeRequireRoleMiddleware(c *gin.Context) *RequireRoleMiddleware {
 func InitializeRequireSudoModeMiddleware(c *gin.Context) *RequireSudoModeMiddleware {
 	config := injector.ProvideConfig()
 	sessionCookieService := service.ProvideSessionCookieService(c, config)
+	context := injector.ProvideCtx(c)
 	tx := injector.ProvideTx(c)
-	sessionRepository := repository.ProvideSessionRepository(tx)
+	sessionRepository := repository.ProvideSessionRepository(context, tx)
 	requireSudoModeMiddleware := ProvideRequireSudoModeMiddleware(c, sessionCookieService, sessionRepository)
 	return requireSudoModeMiddleware
 }
