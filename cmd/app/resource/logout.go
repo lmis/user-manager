@@ -10,63 +10,45 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-type LogoutResource struct {
-	securityLog          dm.SecurityLog
-	sessionCookieService *service.SessionCookieService
-	sessionRepository    *repository.SessionRepository
-	userSession          dm.UserSession
-}
-
-func ProvideLogoutResource(
-	securityLog dm.SecurityLog,
-	sessionCookieService *service.SessionCookieService,
-	sessionRepository *repository.SessionRepository,
-	userSession dm.UserSession,
-) *LogoutResource {
-	return &LogoutResource{securityLog, sessionCookieService, sessionRepository, userSession}
-}
-
 func RegisterLogoutResource(group *gin.RouterGroup) {
-	group.POST("logout", ginext.WrapEndpointWithoutResponseBody(InitializeLogoutResource, (*LogoutResource).Logout))
+	group.POST("logout", ginext.WrapEndpointWithoutResponseBody(Logout))
 }
 
 type LogoutTO struct {
 	ForgetDevice bool `json:"forgetDevice"`
 }
 
-func (r *LogoutResource) Logout(request LogoutTO) error {
-	securityLog := r.securityLog
-	userSession := r.userSession
-	sessionCookieService := r.sessionCookieService
-	sessionRepository := r.sessionRepository
+func Logout(ctx *gin.Context, r *ginext.RequestContext, request LogoutTO) error {
+	securityLog := r.SecurityLog
+	userSession := r.UserSession
 
 	securityLog.Info("Logout")
 
-	sessionCookieService.RemoveSessionCookie(dm.UserSessionTypeLogin)
+	service.RemoveSessionCookie(ctx, r.Config, dm.UserSessionTypeLogin)
 	if userSession.UserSessionID != "" {
-		if err := sessionRepository.Delete(userSession.UserSessionID); err != nil {
+		if err := repository.DeleteSession(ctx, r.Tx, userSession.UserSessionID); err != nil {
 			return errors.Wrap("issue while deleting login session", err)
 		}
 	}
 
-	sudoSessionID, err := sessionCookieService.GetSessionCookie(dm.UserSessionTypeSudo)
+	sudoSessionID, err := service.GetSessionCookie(ctx, dm.UserSessionTypeSudo)
 	if err != nil {
 		return errors.Wrap("issue reading sudo session cookie", err)
 	}
 	if sudoSessionID != "" {
-		sessionCookieService.RemoveSessionCookie(dm.UserSessionTypeSudo)
-		if err := sessionRepository.Delete(sudoSessionID); err != nil {
+		service.RemoveSessionCookie(ctx, r.Config, dm.UserSessionTypeSudo)
+		if err := repository.DeleteSession(ctx, r.Tx, sudoSessionID); err != nil {
 			return errors.Wrap("issue while deleting sudo session", err)
 		}
 	}
 	if request.ForgetDevice {
-		deviceSessionID, err := sessionCookieService.GetSessionCookie(dm.UserSessionTypeRememberDevice)
+		deviceSessionID, err := service.GetSessionCookie(ctx, dm.UserSessionTypeRememberDevice)
 		if err != nil {
 			return errors.Wrap("issue reading device session cookie", err)
 		}
 		if deviceSessionID != "" {
-			sessionCookieService.RemoveSessionCookie(dm.UserSessionTypeRememberDevice)
-			if err := sessionRepository.Delete(deviceSessionID); err != nil {
+			service.RemoveSessionCookie(ctx, r.Config, dm.UserSessionTypeRememberDevice)
+			if err := repository.DeleteSession(ctx, r.Tx, deviceSessionID); err != nil {
 				return errors.Wrap("issue while deleting device session", err)
 			}
 		}

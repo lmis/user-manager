@@ -6,14 +6,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-type AuthService struct {
-}
-
-func ProvideAuthService() *AuthService {
-	return &AuthService{}
-}
-
-func (s *AuthService) Hash(password []byte) (string, error) {
+func HashPassword(password []byte) (string, error) {
 	if len(password) < 8 {
 		return "", errors.Error("password too short")
 

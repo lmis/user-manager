@@ -6,16 +6,8 @@ import (
 	dm "user-manager/domain-model"
 )
 
-type UserInfoResource struct {
-	userSession dm.UserSession
-}
-
-func ProvideUserInfoResource(userSession dm.UserSession) *UserInfoResource {
-	return &UserInfoResource{userSession}
-}
-
 func RegisterUserInfoResource(group *gin.RouterGroup) {
-	group.GET("user-info", ginext.WrapEndpointWithoutRequestBody(InitializeUserInfoResource, (*UserInfoResource).Get))
+	group.GET("user-info", ginext.WrapEndpointWithoutRequestBody(Get))
 }
 
 type UserInfoTO struct {
@@ -24,8 +16,8 @@ type UserInfoTO struct {
 	Language      dm.UserLanguage `json:"language"`
 }
 
-func (r *UserInfoResource) Get() (UserInfoTO, error) {
-	userSession := r.userSession
+func Get(_ *gin.Context, r *ginext.RequestContext) (UserInfoTO, error) {
+	userSession := r.UserSession
 
 	userTO := UserInfoTO{}
 	if userSession.UserSessionID != "" {

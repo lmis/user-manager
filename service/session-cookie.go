@@ -8,22 +8,11 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-type SessionCookieService struct {
-	ctx    *gin.Context
-	config *dm.Config
+func RemoveSessionCookie(ctx *gin.Context, config *dm.Config, sessionType dm.UserSessionType) {
+	SetSessionCookie(ctx, config, "", sessionType)
 }
 
-func ProvideSessionCookieService(ctx *gin.Context, config *dm.Config) *SessionCookieService {
-	return &SessionCookieService{ctx, config}
-}
-
-func (s *SessionCookieService) RemoveSessionCookie(sessionType dm.UserSessionType) {
-	s.SetSessionCookie("", sessionType)
-}
-
-func (s *SessionCookieService) SetSessionCookie(sessionID string, sessionType dm.UserSessionType) {
-	ctx := s.ctx
-	config := s.config
+func SetSessionCookie(ctx *gin.Context, config *dm.Config, sessionID string, sessionType dm.UserSessionType) {
 
 	maxAge := -1
 	value := ""
@@ -35,14 +24,12 @@ func (s *SessionCookieService) SetSessionCookie(sessionID string, sessionType dm
 	if config.IsLocalEnv() {
 		secure = false
 	}
-	ctx.SetCookie(s.getCookieName(sessionType), value, maxAge, "", "", secure, true)
+	ctx.SetCookie(getCookieName(sessionType), value, maxAge, "", "", secure, true)
 	ctx.SetSameSite(http.SameSiteStrictMode)
 }
 
-func (s *SessionCookieService) GetSessionCookie(sessionType dm.UserSessionType) (dm.UserSessionID, error) {
-	ctx := s.ctx
-
-	cookie, err := ctx.Request.Cookie(s.getCookieName(sessionType))
+func GetSessionCookie(ctx *gin.Context, sessionType dm.UserSessionType) (dm.UserSessionID, error) {
+	cookie, err := ctx.Request.Cookie(getCookieName(sessionType))
 	if err != nil {
 		if err == http.ErrNoCookie {
 			return "", nil
@@ -52,6 +39,6 @@ func (s *SessionCookieService) GetSessionCookie(sessionType dm.UserSessionType) 
 	return dm.UserSessionID(cookie.Value), nil
 }
 
-func (s *SessionCookieService) getCookieName(sessionType dm.UserSessionType) string {
+func getCookieName(sessionType dm.UserSessionType) string {
 	return sessionType.String() + "_TOKEN"
 }

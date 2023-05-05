@@ -12,48 +12,34 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-type ExtractLoginSessionMiddleware struct {
-	c                    *gin.Context
-	sessionRepository    *repository.SessionRepository
-	sessionCookieService *service.SessionCookieService
-}
-
-func ProvideExtractLoginSessionMiddleware(c *gin.Context, sessionRepository *repository.SessionRepository, sessionCookieService *service.SessionCookieService) *ExtractLoginSessionMiddleware {
-	return &ExtractLoginSessionMiddleware{c, sessionRepository, sessionCookieService}
-}
-
 func RegisterExtractLoginSessionMiddleware(group *gin.RouterGroup) {
-	group.Use(func(ctx *gin.Context) { InitializeExtractLoginSessionMiddleware(ctx).Handle() })
-}
+	group.Use(func(ctx *gin.Context) {
+		r := ginext.GetRequestContext(ctx)
 
-func (m *ExtractLoginSessionMiddleware) Handle() {
-	c := m.c
-	sessionCookieService := m.sessionCookieService
-	sessionRepository := m.sessionRepository
-
-	sessionID, err := sessionCookieService.GetSessionCookie(dm.UserSessionTypeLogin)
-	if err != nil {
-		_ = c.AbortWithError(http.StatusInternalServerError, errors.Wrap("getting session cookie failed", err))
-		return
-	}
-
-	if sessionID == "" {
-		return
-	}
-
-	session, err := sessionRepository.GetSessionAndUser(sessionID, dm.UserSessionTypeLogin)
-	if err != nil {
-		_ = c.AbortWithError(http.StatusInternalServerError, errors.Wrap("fetching session failed", err))
-		return
-	}
-
-	if session.UserSessionID != "" {
-
-		ginext.GetRequestContext(c).UserSession = session
-
-		if err := sessionRepository.UpdateSessionTimeout(session.UserSessionID, time.Now().Add(dm.LoginSessionDuration)); err != nil {
-			_ = c.AbortWithError(http.StatusInternalServerError, errors.Wrap("issue updating session timeout in db", err))
+		sessionID, err := service.GetSessionCookie(ctx, dm.UserSessionTypeLogin)
+		if err != nil {
+			_ = ctx.AbortWithError(http.StatusInternalServerError, errors.Wrap("getting session cookie failed", err))
 			return
 		}
-	}
+
+		if sessionID == "" {
+			return
+		}
+
+		session, err := repository.GetSessionAndUser(ctx, r.Tx, sessionID, dm.UserSessionTypeLogin)
+		if err != nil {
+			_ = ctx.AbortWithError(http.StatusInternalServerError, errors.Wrap("fetching session failed", err))
+			return
+		}
+
+		if session.UserSessionID != "" {
+
+			ginext.GetRequestContext(ctx).UserSession = session
+
+			if err := repository.UpdateSessionTimeout(ctx, r.Tx, session.UserSessionID, time.Now().Add(dm.LoginSessionDuration)); err != nil {
+				_ = ctx.AbortWithError(http.StatusInternalServerError, errors.Wrap("issue updating session timeout in db", err))
+				return
+			}
+		}
+	})
 }

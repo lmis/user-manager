@@ -7,15 +7,11 @@ import (
 )
 
 func RegisterTimingObfuscationMiddleware(group *gin.RouterGroup, minTime time.Duration) {
-	group.Use(TimingObfuscationMiddleware(minTime))
-}
-
-// TODO: Rethink and document this
-func TimingObfuscationMiddleware(minTime time.Duration) gin.HandlerFunc {
-	return func(c *gin.Context) {
+	group.Use(func(c *gin.Context) {
+		// TODO: Rethink and document this
 		start := time.Now()
 		c.Next()
 		waitTime := minTime - time.Since(start)
 		time.Sleep(waitTime)
-	}
+	})
 }

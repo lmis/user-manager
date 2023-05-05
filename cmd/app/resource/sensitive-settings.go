@@ -2,7 +2,6 @@ package resource
 
 import (
 	ginext "user-manager/cmd/app/gin-extensions"
-	dm "user-manager/domain-model"
 	"user-manager/repository"
 	"user-manager/service"
 	"user-manager/util/errors"
@@ -12,35 +11,17 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-type SensitiveSettingsResource struct {
-	securityLog      dm.SecurityLog
-	mailQueueService *service.MailQueueService
-	userSession      dm.UserSession
-	userRepository   *repository.UserRepository
-}
-
-func ProvideSensitiveSettingsResource(
-	securityLog dm.SecurityLog,
-	mailQueueService *service.MailQueueService,
-	userSession dm.UserSession,
-	userRepository *repository.UserRepository,
-) *SensitiveSettingsResource {
-	return &SensitiveSettingsResource{securityLog, mailQueueService, userSession, userRepository}
-}
-
 func RegisterSensitiveSettingsResource(group *gin.RouterGroup) {
-	group.POST("initiate-email-change", ginext.WrapEndpointWithoutResponseBody(InitializeSensitiveSettingsResource, (*SensitiveSettingsResource).InitiateEmailChange))
+	group.POST("initiate-email-change", ginext.WrapEndpointWithoutResponseBody(InitiateEmailChange))
 }
 
 type ChangeEmailTO struct {
 	NewEmail string `json:"newEmail"`
 }
 
-func (r *SensitiveSettingsResource) InitiateEmailChange(requestTO ChangeEmailTO) error {
-	securityLog := r.securityLog
-	userSession := r.userSession
-	mailQueueService := r.mailQueueService
-	userRepository := r.userRepository
+func InitiateEmailChange(ctx *gin.Context, r *ginext.RequestContext, requestTO ChangeEmailTO) error {
+	securityLog := r.SecurityLog
+	userSession := r.UserSession
 
 	user := userSession.User
 	nextEmail := requestTO.NewEmail
@@ -52,14 +33,14 @@ func (r *SensitiveSettingsResource) InitiateEmailChange(requestTO ChangeEmailTO)
 	securityLog.Info("Changing user email")
 
 	verificationToken := random.MakeRandomURLSafeB64(21)
-	if err := userRepository.SetNextEmail(user.AppUserID, nextEmail, verificationToken); err != nil {
+	if err := repository.SetNextEmail(ctx, r.Tx, user.AppUserID, nextEmail, verificationToken); err != nil {
 		return errors.Wrap("issue setting next email for user", err)
 	}
 
-	if err := mailQueueService.SendChangeVerificationEmail(user.Language, nextEmail, verificationToken); err != nil {
+	if err := service.SendChangeVerificationEmail(ctx, r, user.Language, nextEmail, verificationToken); err != nil {
 		return errors.Wrap("error sending change verification email", err)
 	}
-	if err := mailQueueService.SendChangeNotificationEmail(user.Language, user.Email, nextEmail); err != nil {
+	if err := service.SendChangeNotificationEmail(ctx, r, user.Language, user.Email, nextEmail); err != nil {
 		return errors.Wrap("error sending change notification email", err)
 	}
 

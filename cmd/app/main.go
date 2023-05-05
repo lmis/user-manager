@@ -5,7 +5,6 @@ package main
 import (
 	"database/sql"
 	"embed"
-	"user-manager/cmd/app/injector"
 	"user-manager/cmd/app/router"
 	"user-manager/db"
 	dm "user-manager/domain-model"
@@ -32,16 +31,10 @@ func main() {
 func runServer(log logger.Logger) error {
 	log.Info("Starting up")
 
-	err := injector.SetupEmailTemplatesProviders(translationsFS)
-	if err != nil {
-		return errors.Wrap("cannot initialize email service", err)
-	}
-
 	config, err := dm.GetConfig()
 	if err != nil {
 		return errors.Wrap("cannot read config", err)
 	}
-	injector.SetupConfigProvider(config)
 
 	if !config.IsLocalEnv() {
 		gin.SetMode(gin.ReleaseMode)
@@ -52,11 +45,14 @@ func runServer(log logger.Logger) error {
 		return errors.Wrap("could not open db connection", err)
 	}
 	defer db.CloseOrPanic(database)
-	injector.SetupDatabaseProvider(database)
 
+	engine, err := router.New(translationsFS, config, database)
+	if err != nil {
+		return errors.Wrap("cannot setup router", err)
+	}
 	if err = util.RunHttpServer(log, &http.Server{
 		Addr:         ":" + config.AppPort,
-		Handler:      router.New(),
+		Handler:      engine,
 		ReadTimeout:  1 * time.Minute,
 		WriteTimeout: 1 * time.Minute,
 	}); err != nil {

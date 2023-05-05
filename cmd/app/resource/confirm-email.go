@@ -2,7 +2,6 @@ package resource
 
 import (
 	ginext "user-manager/cmd/app/gin-extensions"
-	dm "user-manager/domain-model"
 	"user-manager/repository"
 	"user-manager/service"
 	"user-manager/util/errors"
@@ -11,25 +10,9 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-type EmailConfirmationResource struct {
-	securityLog      dm.SecurityLog
-	mailQueueService *service.MailQueueService
-	userSession      dm.UserSession
-	userRepository   *repository.UserRepository
-}
-
-func ProvideEmailConfirmationResource(
-	securityLog dm.SecurityLog,
-	mailQueueService *service.MailQueueService,
-	userSession dm.UserSession,
-	userRepository *repository.UserRepository,
-) *EmailConfirmationResource {
-	return &EmailConfirmationResource{securityLog, mailQueueService, userSession, userRepository}
-}
-
 func RegisterEmailConfirmationResource(group *gin.RouterGroup) {
-	group.POST("confirm-email", ginext.WrapEndpoint(InitializeEmailConfirmationResource, (*EmailConfirmationResource).ConfirmEmail))
-	group.POST("re-trigger-confirmation-email", ginext.WrapEndpointWithoutRequestBody(InitializeEmailConfirmationResource, (*EmailConfirmationResource).RetriggerVerificationEmail))
+	group.POST("confirm-email", ginext.WrapEndpoint(ConfirmEmail))
+	group.POST("re-trigger-confirmation-email", ginext.WrapEndpointWithoutRequestBody(RetriggerVerificationEmail))
 }
 
 type EmailConfirmationTO struct {
@@ -48,10 +31,9 @@ type EmailConfirmationResponseTO struct {
 	Status EmailConfirmationStatus `json:"status"`
 }
 
-func (r *EmailConfirmationResource) ConfirmEmail(request EmailConfirmationTO) (EmailConfirmationResponseTO, error) {
-	securityLog := r.securityLog
-	user := r.userSession.User
-	userRepository := r.userRepository
+func ConfirmEmail(ctx *gin.Context, r *ginext.RequestContext, request EmailConfirmationTO) (EmailConfirmationResponseTO, error) {
+	securityLog := r.SecurityLog
+	user := r.UserSession.User
 
 	if user.EmailVerified {
 		securityLog.Info("Email already verified")
@@ -67,7 +49,7 @@ func (r *EmailConfirmationResource) ConfirmEmail(request EmailConfirmationTO) (E
 		return EmailConfirmationResponseTO{EmailConfirmationResponseInvalidToken}, nil
 	}
 
-	if err := userRepository.SetEmailToVerified(user.AppUserID); err != nil {
+	if err := repository.SetEmailToVerified(ctx, r.Tx, user.AppUserID); err != nil {
 		return EmailConfirmationResponseTO{}, errors.Wrap("issue setting email to verified", err)
 	}
 
@@ -78,25 +60,23 @@ type RetriggerConfirmationEmailResponseTO struct {
 	Sent bool `json:"sent"`
 }
 
-func (r *EmailConfirmationResource) RetriggerVerificationEmail() (RetriggerConfirmationEmailResponseTO, error) {
-	user := r.userSession.User
-	securityLog := r.securityLog
-	userRepository := r.userRepository
-	mailQueueService := r.mailQueueService
+func RetriggerVerificationEmail(ctx *gin.Context, r *ginext.RequestContext) (RetriggerConfirmationEmailResponseTO, error) {
+	user := r.UserSession.User
+	securityLog := r.SecurityLog
 
 	if user.EmailVerified {
 		securityLog.Info("Email already verified")
 		return RetriggerConfirmationEmailResponseTO{Sent: false}, nil
 	}
 
-	if err := userRepository.UpdateUserEmailVerificationToken(user.AppUserID, random.MakeRandomURLSafeB64(21)); err != nil {
+	if err := repository.UpdateUserEmailVerificationToken(ctx, r.Tx, user.AppUserID, random.MakeRandomURLSafeB64(21)); err != nil {
 		return RetriggerConfirmationEmailResponseTO{}, errors.Wrap("issue updating token", err)
 	}
 
 	if user.EmailVerificationToken == "" {
 		return RetriggerConfirmationEmailResponseTO{}, errors.Errorf("missing email verification token")
 	}
-	if err := mailQueueService.SendVerificationEmail(user.Language, user.Email, user.EmailVerificationToken); err != nil {
+	if err := service.SendVerificationEmail(ctx, r, user.Language, user.Email, user.EmailVerificationToken); err != nil {
 		return RetriggerConfirmationEmailResponseTO{}, errors.Wrap("error sending verification email", err)
 	}
 

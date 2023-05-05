@@ -11,24 +11,8 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-type SignUpResource struct {
-	userRepository   *repository.UserRepository
-	mailQueueService *service.MailQueueService
-	authService      *service.AuthService
-	securityLog      dm.SecurityLog
-}
-
-func ProvideSignUpResource(
-	userRepository *repository.UserRepository,
-	mailQueueService *service.MailQueueService,
-	authService *service.AuthService,
-	securityLog dm.SecurityLog,
-) *SignUpResource {
-	return &SignUpResource{userRepository, mailQueueService, authService, securityLog}
-}
-
 func RegisterSignUpResource(group *gin.RouterGroup) {
-	group.POST("sign-up", ginext.WrapEndpointWithoutResponseBody(InitializeSignUpResource, (*SignUpResource).SignUp))
+	group.POST("sign-up", ginext.WrapEndpointWithoutResponseBody(SignUp))
 }
 
 type SignUpTO struct {
@@ -38,25 +22,22 @@ type SignUpTO struct {
 	Password []byte `json:"password"`
 }
 
-func (r *SignUpResource) SignUp(requestTO SignUpTO) error {
-	securityLog := r.securityLog
-	userRepository := r.userRepository
-	mailQueueService := r.mailQueueService
-	authService := r.authService
+func SignUp(ctx *gin.Context, r *ginext.RequestContext, requestTO SignUpTO) error {
+	securityLog := r.SecurityLog
 
-	user, err := userRepository.GetUserForEmail(requestTO.Email)
+	user, err := repository.GetUserForEmail(ctx, r.Tx, requestTO.Email)
 	if err != nil {
 		return errors.Wrap("error fetching user", err)
 	}
 	if user.AppUserID != 0 {
 		securityLog.Info("User already exists")
-		if err = mailQueueService.SendSignUpAttemptEmail(user.Language, user.Email); err != nil {
+		if err = service.SendSignUpAttemptEmail(ctx, r, user.Language, user.Email); err != nil {
 			return errors.Wrap("error sending signup attempted email", err)
 		}
 		return nil
 	}
 
-	hash, err := authService.Hash(requestTO.Password)
+	hash, err := service.HashPassword(requestTO.Password)
 	if err != nil {
 		return errors.Wrap("error hashing password", err)
 	}
@@ -67,11 +48,11 @@ func (r *SignUpResource) SignUp(requestTO SignUpTO) error {
 	}
 
 	verificationToken := random.MakeRandomURLSafeB64(21)
-	if err = userRepository.Insert(dm.UserRoleUser, requestTO.UserName, requestTO.Email, false, verificationToken, hash, language); err != nil {
+	if err = repository.InsertUser(ctx, r.Tx, dm.UserRoleUser, requestTO.UserName, requestTO.Email, false, verificationToken, hash, language); err != nil {
 		return errors.Wrap("error inserting user", err)
 	}
 
-	if err = mailQueueService.SendVerificationEmail(language, requestTO.Email, verificationToken); err != nil {
+	if err = service.SendVerificationEmail(ctx, r, language, requestTO.Email, verificationToken); err != nil {
 		return errors.Wrap("error sending verification email", err)
 	}
 

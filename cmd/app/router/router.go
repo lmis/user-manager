@@ -1,29 +1,41 @@
 package router
 
 import (
+	"database/sql"
+	"embed"
 	"github.com/gin-gonic/gin"
 	"time"
 	"user-manager/cmd/app/middleware"
 	"user-manager/cmd/app/resource"
 	dm "user-manager/domain-model"
+	"user-manager/util/errors"
 )
 
-func New() *gin.Engine {
+func New(translationsFS embed.FS, config *dm.Config, database *sql.DB) (*gin.Engine, error) {
 	r := gin.New()
 	r.HandleMethodNotAllowed = true
 
-	middleware.RegisterRequestContextMiddleware(r)
+	err := middleware.RegisterRequestContextMiddleware(r, translationsFS, config)
+	if err != nil {
+		return nil, errors.Wrap("cannot setup RequestContextMiddleware", err)
+	}
 	middleware.RegisterLoggerMiddleware(r)
 	middleware.RegisterRecoveryMiddleware(r)
 
-	registerApiGroup(r.Group("api"))
+	err = registerApiGroup(r.Group("api"), database)
+	if err != nil {
+		return nil, errors.Wrap("cannot setup ApiGroup", err)
+	}
 
-	return r
+	return r, nil
 }
 
-func registerApiGroup(api *gin.RouterGroup) {
+func registerApiGroup(api *gin.RouterGroup, database *sql.DB) error {
 	middleware.RegisterCsrfMiddleware(api)
-	middleware.RegisterDatabaseMiddleware(api)
+	err := middleware.RegisterDatabaseMiddleware(api, database)
+	if err != nil {
+		return errors.Error("cannot setup DatabaseMiddleware")
+	}
 	middleware.RegisterExtractLoginSessionMiddleware(api)
 
 	resource.RegisterUserInfoResource(api)
@@ -31,6 +43,7 @@ func registerApiGroup(api *gin.RouterGroup) {
 	registerAuthGroup(api.Group("auth"))
 	registerAdminGroup(api.Group("admin"))
 	registerUserGroup(api.Group("user"))
+	return nil
 }
 
 func registerAuthGroup(auth *gin.RouterGroup) {
@@ -43,20 +56,20 @@ func registerAuthGroup(auth *gin.RouterGroup) {
 }
 
 func registerAdminGroup(admin *gin.RouterGroup) {
-	middleware.RegisterRequireRoleMiddlware(admin, dm.UserRoleAdmin)
+	middleware.RegisterRequireRoleMiddleware(admin, dm.UserRoleAdmin)
 
 	registerSuperAdminGroup(admin.Group("super-admin"))
 }
 
 func registerSuperAdminGroup(superAdmin *gin.RouterGroup) {
-	middleware.RegisterRequireRoleMiddlware(superAdmin, dm.UserRoleSuperAdmin)
+	middleware.RegisterRequireRoleMiddleware(superAdmin, dm.UserRoleSuperAdmin)
 
 	// POST("add-admin-user", todo).
 	// POST("change-password", todo)
 }
 
 func registerUserGroup(user *gin.RouterGroup) {
-	middleware.RegisterRequireRoleMiddlware(user, dm.UserRoleUser)
+	middleware.RegisterRequireRoleMiddleware(user, dm.UserRoleUser)
 
 	resource.RegisterEmailConfirmationResource(user)
 

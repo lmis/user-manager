@@ -13,37 +13,18 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-type SettingsResource struct {
-	securityLog          dm.SecurityLog
-	sessionCookieService *service.SessionCookieService
-	userSession          dm.UserSession
-	userRepository       *repository.UserRepository
-	sessionRepository    *repository.SessionRepository
-}
-
-func ProvideSettingsResource(
-	securityLog dm.SecurityLog,
-	sessionCookieService *service.SessionCookieService,
-	userSession dm.UserSession,
-	userRepository *repository.UserRepository,
-	sessionRepository *repository.SessionRepository,
-) *SettingsResource {
-	return &SettingsResource{securityLog, sessionCookieService, userSession, userRepository, sessionRepository}
-}
-
 func RegisterSettingsResource(group *gin.RouterGroup) {
-	group.POST("language", ginext.WrapEndpointWithoutResponseBody(InitializeSettingsResource, (*SettingsResource).SetLanguage))
-	group.POST("confirm-email-change", ginext.WrapEndpoint(InitializeSettingsResource, (*SettingsResource).ConfirmEmailChange))
-	group.POST("enter-sudo-mode", ginext.WrapEndpoint(InitializeSettingsResource, (*SettingsResource).EnterSudoMode))
+	group.POST("language", ginext.WrapEndpointWithoutResponseBody(SetLanguage))
+	group.POST("confirm-email-change", ginext.WrapEndpoint(ConfirmEmailChange))
+	group.POST("enter-sudo-mode", ginext.WrapEndpoint(EnterSudoMode))
 }
 
 type LanguageTO struct {
 	Language dm.UserLanguage `json:"language"`
 }
 
-func (r *SettingsResource) SetLanguage(requestTO *LanguageTO) error {
-	userRepository := r.userRepository
-	userSession := r.userSession
+func SetLanguage(ctx *gin.Context, r *ginext.RequestContext, requestTO *LanguageTO) error {
+	userSession := r.UserSession
 
 	if userSession.UserSessionID == "" {
 		return errors.Error("no user")
@@ -54,7 +35,7 @@ func (r *SettingsResource) SetLanguage(requestTO *LanguageTO) error {
 		return errors.Errorf("invalid language %s", language)
 	}
 
-	if err := userRepository.SetLanguage(userSession.User.AppUserID, language); err != nil {
+	if err := repository.SetLanguage(ctx, r.Tx, userSession.User.AppUserID, language); err != nil {
 		return errors.Wrap("error updating language", err)
 	}
 	return nil
@@ -68,11 +49,9 @@ type SudoResponseTO struct {
 	Success bool `json:"success"`
 }
 
-func (r *SettingsResource) EnterSudoMode(requestTO *SudoTO) (*SudoResponseTO, error) {
-	securityLog := r.securityLog
-	userSession := r.userSession
-	sessionRepository := r.sessionRepository
-	sessionCookieService := r.sessionCookieService
+func EnterSudoMode(ctx *gin.Context, r *ginext.RequestContext, requestTO *SudoTO) (*SudoResponseTO, error) {
+	securityLog := r.SecurityLog
+	userSession := r.UserSession
 
 	if userSession.UserSessionID == "" {
 		return nil, errors.Error("no user")
@@ -86,11 +65,11 @@ func (r *SettingsResource) EnterSudoMode(requestTO *SudoTO) (*SudoResponseTO, er
 
 	securityLog.Info("Entering sudo mode")
 	sessionID := random.MakeRandomURLSafeB64(21)
-	if err := sessionRepository.InsertSession(sessionID, dm.UserSessionTypeSudo, user.AppUserID, dm.SudoSessionDuration); err != nil {
+	if err := repository.InsertSession(ctx, r.Tx, sessionID, dm.UserSessionTypeSudo, user.AppUserID, dm.SudoSessionDuration); err != nil {
 		return nil, errors.Wrap("error inserting session", err)
 	}
 
-	sessionCookieService.SetSessionCookie(sessionID, dm.UserSessionTypeSudo)
+	service.SetSessionCookie(ctx, r.Config, sessionID, dm.UserSessionTypeSudo)
 	return &SudoResponseTO{Success: true}, nil
 }
 
@@ -110,10 +89,9 @@ type EmailChangeConfirmationResponseTO struct {
 	Status EmailChangeStatus `json:"status"`
 }
 
-func (r *SettingsResource) ConfirmEmailChange(request EmailChangeConfirmationTO) (EmailChangeConfirmationResponseTO, error) {
-	securityLog := r.securityLog
-	userSession := r.userSession
-	userRepository := r.userRepository
+func ConfirmEmailChange(ctx *gin.Context, r *ginext.RequestContext, request EmailChangeConfirmationTO) (EmailChangeConfirmationResponseTO, error) {
+	securityLog := r.SecurityLog
+	userSession := r.UserSession
 
 	if userSession.UserSessionID == "" {
 		return EmailChangeConfirmationResponseTO{}, errors.Error("no user")
@@ -133,7 +111,7 @@ func (r *SettingsResource) ConfirmEmailChange(request EmailChangeConfirmationTO)
 		return EmailChangeConfirmationResponseTO{EmailChangeResponseInvalidToken}, nil
 	}
 
-	if err := userRepository.SetEmailAndClearNextEmail(user.AppUserID, user.NextEmail); err != nil {
+	if err := repository.SetEmailAndClearNextEmail(ctx, r.Tx, user.AppUserID, user.NextEmail); err != nil {
 		return EmailChangeConfirmationResponseTO{}, errors.Wrap("issue setting email ", err)
 	}
 

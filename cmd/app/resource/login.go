@@ -15,27 +15,9 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-type LoginResource struct {
-	securityLog                      dm.SecurityLog
-	sessionCookieService             *service.SessionCookieService
-	sessionRepository                *repository.SessionRepository
-	userRepository                   *repository.UserRepository
-	secondFactorThrottlingRepository *repository.SecondFactorThrottlingRepository
-}
-
-func ProvideLoginResource(
-	securityLog dm.SecurityLog,
-	sessionCookieService *service.SessionCookieService,
-	sessionRepository *repository.SessionRepository,
-	userRepository *repository.UserRepository,
-	secondFactorThrottlingRepository *repository.SecondFactorThrottlingRepository,
-) *LoginResource {
-	return &LoginResource{securityLog, sessionCookieService, sessionRepository, userRepository, secondFactorThrottlingRepository}
-}
-
 func RegisterLoginResource(group *gin.RouterGroup) {
-	group.POST("login", ginext.WrapEndpoint(InitializeLoginResource, (*LoginResource).Login))
-	group.POST("login-with-second-factor", ginext.WrapEndpoint(InitializeLoginResource, (*LoginResource).LoginWithSecondFactor))
+	group.POST("login", ginext.WrapEndpoint(Login))
+	group.POST("login-with-second-factor", ginext.WrapEndpoint(LoginWithSecondFactor))
 }
 
 type LoginTO struct {
@@ -55,13 +37,10 @@ type LoginResponseTO struct {
 	Status LoginResponseStatus `json:"status"`
 }
 
-func (r *LoginResource) Login(requestTO LoginTO) (LoginResponseTO, error) {
-	securityLog := r.securityLog
-	sessionCookieService := r.sessionCookieService
-	userRepository := r.userRepository
-	sessionRepository := r.sessionRepository
+func Login(ctx *gin.Context, r *ginext.RequestContext, requestTO LoginTO) (LoginResponseTO, error) {
+	securityLog := r.SecurityLog
 
-	user, err := userRepository.GetUserForEmail(requestTO.Email)
+	user, err := repository.GetUserForEmail(ctx, r.Tx, requestTO.Email)
 	if err != nil {
 		return LoginResponseTO{}, errors.Wrap("error fetching user", err)
 	}
@@ -88,11 +67,11 @@ func (r *LoginResource) Login(requestTO LoginTO) (LoginResponseTO, error) {
 
 	securityLog.Info("Login")
 	sessionID := random.MakeRandomURLSafeB64(21)
-	if err = sessionRepository.InsertSession(sessionID, dm.UserSessionTypeLogin, user.AppUserID, dm.LoginSessionDuration); err != nil {
+	if err = repository.InsertSession(ctx, r.Tx, sessionID, dm.UserSessionTypeLogin, user.AppUserID, dm.LoginSessionDuration); err != nil {
 		return LoginResponseTO{}, errors.Wrap("error inserting session", err)
 	}
 
-	sessionCookieService.SetSessionCookie(sessionID, dm.UserSessionTypeLogin)
+	service.SetSessionCookie(ctx, r.Config, sessionID, dm.UserSessionTypeLogin)
 	return LoginResponseTO{LoginResponseLoggedIn}, nil
 }
 
@@ -107,14 +86,10 @@ type LoginWithSecondFactorResponseTO struct {
 	TimeoutUntil time.Time `json:"timeoutUntil,omitempty"`
 }
 
-func (r *LoginResource) LoginWithSecondFactor(requestTO LoginWithSecondFactorTO) (LoginWithSecondFactorResponseTO, error) {
-	sessionCookieService := r.sessionCookieService
-	sessionRepository := r.sessionRepository
-	userRepository := r.userRepository
-	secondFactorThrottlingRepository := r.secondFactorThrottlingRepository
-	securityLog := r.securityLog
+func LoginWithSecondFactor(ctx *gin.Context, r *ginext.RequestContext, requestTO LoginWithSecondFactorTO) (LoginWithSecondFactorResponseTO, error) {
+	securityLog := r.SecurityLog
 
-	user, err := userRepository.GetUserForEmail(requestTO.Email)
+	user, err := repository.GetUserForEmail(ctx, r.Tx, requestTO.Email)
 	if err != nil {
 		return LoginWithSecondFactorResponseTO{}, errors.Wrap("error finding user", err)
 	}
@@ -129,7 +104,7 @@ func (r *LoginResource) LoginWithSecondFactor(requestTO LoginWithSecondFactorTO)
 	}
 
 	if requestTO.SecondFactor != "" {
-		throttling, err := secondFactorThrottlingRepository.GetForUser(user.AppUserID)
+		throttling, err := repository.GetSecondFactorThrottlingForUser(ctx, r.Tx, user.AppUserID)
 		if err != nil {
 			return LoginWithSecondFactorResponseTO{}, errors.Wrap("error loading throttling", err)
 		}
@@ -151,11 +126,11 @@ func (r *LoginResource) LoginWithSecondFactor(requestTO LoginWithSecondFactorTO)
 					*maybeTimeoutUntil = time.Now().Add(time.Minute * 3 * time.Duration(failedAttemptsSinceLastSuccess))
 				}
 			}
-			if err := secondFactorThrottlingRepository.Update(throttling.SecondFactorThrottlingID, failedAttemptsSinceLastSuccess, maybeTimeoutUntil); err != nil {
+			if err := repository.UpdateSecondFactorThrottling(ctx, r.Tx, throttling.SecondFactorThrottlingID, failedAttemptsSinceLastSuccess, maybeTimeoutUntil); err != nil {
 				return LoginWithSecondFactorResponseTO{}, errors.Wrap("issue updating throttling in db", err)
 			}
 		} else if !tokenMatches {
-			if err := secondFactorThrottlingRepository.Insert(user.AppUserID, 1); err != nil {
+			if err := repository.InsertSecondFactorThrottling(ctx, r.Tx, user.AppUserID, 1); err != nil {
 				return LoginWithSecondFactorResponseTO{}, errors.Wrap("issue inserting throttling in db", err)
 			}
 		}
@@ -168,17 +143,17 @@ func (r *LoginResource) LoginWithSecondFactor(requestTO LoginWithSecondFactorTO)
 		if requestTO.RememberDevice {
 			securityLog.Info("2FA login with 'remember device' enabled, issuing device token")
 			deviceSessionID := random.MakeRandomURLSafeB64(21)
-			err = sessionRepository.InsertSession(deviceSessionID, dm.UserSessionTypeLogin, user.AppUserID, dm.DeviceSessionDuration)
+			err = repository.InsertSession(ctx, r.Tx, deviceSessionID, dm.UserSessionTypeLogin, user.AppUserID, dm.DeviceSessionDuration)
 			if err != nil {
 				return LoginWithSecondFactorResponseTO{}, errors.Wrap("error inserting device session", err)
 			}
 
-			sessionCookieService.SetSessionCookie(deviceSessionID, dm.UserSessionTypeRememberDevice)
+			service.SetSessionCookie(ctx, r.Config, deviceSessionID, dm.UserSessionTypeRememberDevice)
 		}
 
 		securityLog.Info("Login passed with 2FA token")
 	} else {
-		maybeDeviceSessionID, err := sessionCookieService.GetSessionCookie(dm.UserSessionTypeLogin)
+		maybeDeviceSessionID, err := service.GetSessionCookie(ctx, dm.UserSessionTypeLogin)
 		if err != nil {
 			return LoginWithSecondFactorResponseTO{}, errors.Wrap("issue reading device session cookie", err)
 		}
@@ -186,7 +161,7 @@ func (r *LoginResource) LoginWithSecondFactor(requestTO LoginWithSecondFactorTO)
 			return LoginWithSecondFactorResponseTO{}, nil
 		}
 
-		deviceSession, err := sessionRepository.GetSessionAndUser(maybeDeviceSessionID, dm.UserSessionTypeRememberDevice)
+		deviceSession, err := repository.GetSessionAndUser(ctx, r.Tx, maybeDeviceSessionID, dm.UserSessionTypeRememberDevice)
 
 		if err != nil {
 			return LoginWithSecondFactorResponseTO{}, errors.Wrap("fetching device session failed", err)
@@ -198,10 +173,10 @@ func (r *LoginResource) LoginWithSecondFactor(requestTO LoginWithSecondFactorTO)
 	}
 
 	sessionID := random.MakeRandomURLSafeB64(21)
-	if err = sessionRepository.InsertSession(sessionID, dm.UserSessionTypeLogin, user.AppUserID, dm.LoginSessionDuration); err != nil {
+	if err = repository.InsertSession(ctx, r.Tx, sessionID, dm.UserSessionTypeLogin, user.AppUserID, dm.LoginSessionDuration); err != nil {
 		return LoginWithSecondFactorResponseTO{}, errors.Wrap("error inserting login session", err)
 	}
 
-	sessionCookieService.SetSessionCookie(sessionID, dm.UserSessionTypeLogin)
+	service.SetSessionCookie(ctx, r.Config, sessionID, dm.UserSessionTypeLogin)
 	return LoginWithSecondFactorResponseTO{LoggedIn: true}, nil
 }

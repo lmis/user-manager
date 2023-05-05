@@ -10,16 +10,8 @@ import (
 	"user-manager/util/errors"
 )
 
-type MailQueueRepository struct {
-	ctx context.Context
-	tx  *sql.Tx
-}
-
-func ProvideMailQueueRepository(ctx context.Context, tx *sql.Tx) *MailQueueRepository {
-	return &MailQueueRepository{ctx, tx}
-}
-
-func (r *MailQueueRepository) InsertPending(
+func InsertPendingMail(
+	ctx context.Context, tx *sql.Tx,
 	from string,
 	to string,
 	content string,
@@ -27,7 +19,7 @@ func (r *MailQueueRepository) InsertPending(
 	priority dm.MailQueuePriority,
 ) error {
 	err := db.ExecSingleMutation(
-		r.ctx,
+		ctx,
 		MailQueue.INSERT(
 			MailQueue.FromAddress,
 			MailQueue.ToAddress,
@@ -37,7 +29,7 @@ func (r *MailQueueRepository) InsertPending(
 			MailQueue.Priority).
 			VALUES(from, to, content, subject, EmailStatus.Pending, int16(priority)).
 			ExecContext,
-		r.tx)
+		tx)
 	if err != nil {
 		return errors.Wrap("issue inserting email in db", err)
 	}

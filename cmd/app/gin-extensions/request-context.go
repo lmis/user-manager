@@ -1,7 +1,6 @@
 package ginext
 
 import (
-	"context"
 	"database/sql"
 	"reflect"
 	dm "user-manager/domain-model"
@@ -15,11 +14,12 @@ const (
 )
 
 type RequestContext struct {
-	Ctx         context.Context
 	UserSession dm.UserSession
 	Tx          *sql.Tx
 	Log         dm.Log
 	SecurityLog dm.SecurityLog
+	Emailing    dm.Emailing
+	Config      *dm.Config
 }
 
 func GetRequestContext(c *gin.Context) *RequestContext {

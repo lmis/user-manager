@@ -1,56 +1,48 @@
 package service
 
 import (
+	"context"
+	"database/sql"
 	"fmt"
 	"strings"
 	"text/template"
+	ginext "user-manager/cmd/app/gin-extensions"
 	dm "user-manager/domain-model"
 	"user-manager/repository"
 	"user-manager/util/errors"
 )
 
-type MailQueueService struct {
-	mailQueueRepository *repository.MailQueueRepository
-	config              *dm.Config
-	translations        map[dm.UserLanguage]dm.Translations
-	baseTemplate        *template.Template
-}
-
-func ProvideMailQueueService(mailQueueRepository *repository.MailQueueRepository, config *dm.Config, translations map[dm.UserLanguage]dm.Translations, baseTemplate *template.Template) *MailQueueService {
-	return &MailQueueService{mailQueueRepository, config, translations, baseTemplate}
-}
-
-func (s *MailQueueService) SendVerificationEmail(language dm.UserLanguage, email string, verificationToken string) error {
-	translation := s.translations[language]
-	config := s.config
+func SendVerificationEmail(ctx context.Context, r *ginext.RequestContext, language dm.UserLanguage, email string, verificationToken string) error {
+	config := r.Config
+	translation := r.Emailing.Translations[language]
 
 	data := map[string]string{
 		"AppUrl":                 config.AppUrl,
 		"EmailVerificationToken": verificationToken,
 		"ServiceName":            config.ServiceName,
 	}
-	if err := s.enqueueBasicEmail(translation, translation.VerificationEmail, data, config.EmailFrom, email, dm.MailQueuePrioHigh); err != nil {
+	if err := enqueueBasicEmail(ctx, r.Tx, r.Emailing.BaseTemplate, translation, translation.VerificationEmail, data, config.EmailFrom, email, dm.MailQueuePrioHigh); err != nil {
 		return errors.Wrap("error enqueuing basic email", err)
 	}
 	return nil
 }
 
-func (s *MailQueueService) SendSignUpAttemptEmail(language dm.UserLanguage, email string) error {
-	translation := s.translations[language]
-	config := s.config
+func SendSignUpAttemptEmail(ctx context.Context, r *ginext.RequestContext, language dm.UserLanguage, email string) error {
+	config := r.Config
+	translation := r.Emailing.Translations[language]
 
 	data := map[string]string{
 		"ServiceName": config.ServiceName,
 	}
-	if err := s.enqueueBasicEmail(translation, translation.SignUpAttemptedEmail, data, config.EmailFrom, email, dm.MailQueuePrioHigh); err != nil {
+	if err := enqueueBasicEmail(ctx, r.Tx, r.Emailing.BaseTemplate, translation, translation.SignUpAttemptedEmail, data, config.EmailFrom, email, dm.MailQueuePrioHigh); err != nil {
 		return errors.Wrap("error enqueuing basic email", err)
 	}
 	return nil
 }
 
-func (s *MailQueueService) SendChangeVerificationEmail(language dm.UserLanguage, newEmail string, verificationToken string) error {
-	translation := s.translations[language]
-	config := s.config
+func SendChangeVerificationEmail(ctx context.Context, r *ginext.RequestContext, language dm.UserLanguage, newEmail string, verificationToken string) error {
+	config := r.Config
+	translation := r.Emailing.Translations[language]
 
 	data := map[string]string{
 		"AppUrl":                       config.AppUrl,
@@ -58,42 +50,42 @@ func (s *MailQueueService) SendChangeVerificationEmail(language dm.UserLanguage,
 		"ServiceName":                  config.ServiceName,
 		"NewEmail":                     newEmail,
 	}
-	if err := s.enqueueBasicEmail(translation, translation.ChangeVerificationEmail, data, config.EmailFrom, newEmail, dm.MailQueuePrioHigh); err != nil {
+	if err := enqueueBasicEmail(ctx, r.Tx, r.Emailing.BaseTemplate, translation, translation.ChangeVerificationEmail, data, config.EmailFrom, newEmail, dm.MailQueuePrioHigh); err != nil {
 		return errors.Wrap("error enqueuing basic email", err)
 	}
 	return nil
 }
 
-func (s *MailQueueService) SendChangeNotificationEmail(language dm.UserLanguage, email string, newEmail string) error {
-	translation := s.translations[language]
-	config := s.config
+func SendChangeNotificationEmail(ctx context.Context, r *ginext.RequestContext, language dm.UserLanguage, email string, newEmail string) error {
+	config := r.Config
+	translation := r.Emailing.Translations[language]
 
 	data := map[string]string{
 		"ServiceName": config.ServiceName,
 		"NewEmail":    newEmail,
 	}
-	if err := s.enqueueBasicEmail(translation, translation.ChangeNotificationEmail, data, config.EmailFrom, email, dm.MailQueuePrioHigh); err != nil {
+	if err := enqueueBasicEmail(ctx, r.Tx, r.Emailing.BaseTemplate, translation, translation.ChangeNotificationEmail, data, config.EmailFrom, email, dm.MailQueuePrioHigh); err != nil {
 		return errors.Wrap("error enqueuing basic email", err)
 	}
 	return nil
 }
 
-func (s *MailQueueService) SendResetPasswordEmail(language dm.UserLanguage, email string, resetToken string) error {
-	translation := s.translations[language]
-	config := s.config
+func SendResetPasswordEmail(ctx context.Context, r *ginext.RequestContext, language dm.UserLanguage, email string, resetToken string) error {
+	config := r.Config
+	translation := r.Emailing.Translations[language]
 
 	data := map[string]string{
 		"ServiceName":        config.ServiceName,
 		"AppUrl":             config.AppUrl,
 		"PasswordResetToken": resetToken,
 	}
-	if err := s.enqueueBasicEmail(translation, translation.ResetPasswordEmail, data, config.EmailFrom, email, dm.MailQueuePrioHigh); err != nil {
+	if err := enqueueBasicEmail(ctx, r.Tx, r.Emailing.BaseTemplate, translation, translation.ResetPasswordEmail, data, config.EmailFrom, email, dm.MailQueuePrioHigh); err != nil {
 		return errors.Wrap("error enqueuing basic email", err)
 	}
 	return nil
 }
 
-func (s *MailQueueService) executeTemplate(templateText string, data interface{}) (string, error) {
+func executeTemplate(templateText string, data interface{}) (string, error) {
 	t, err := template.New("base").Parse(templateText)
 	if err != nil {
 		return "", errors.Wrap("templateText cannot be parsed", err)
@@ -111,7 +103,9 @@ type baseTemplateData struct {
 	Footer     string
 }
 
-func (s *MailQueueService) enqueueBasicEmail(
+func enqueueBasicEmail(
+	ctx context.Context, tx *sql.Tx,
+	baseTemplate *template.Template,
 	translation dm.Translations,
 	templates []string,
 	data map[string]string,
@@ -119,14 +113,12 @@ func (s *MailQueueService) enqueueBasicEmail(
 	to string,
 	priority dm.MailQueuePriority,
 ) error {
-	baseTemplate := s.baseTemplate
-	mailQueueRepository := s.mailQueueRepository
 
 	var err error
 	salutation := ""
 	_, ok := data["UserName"]
 	if ok {
-		salutation, err = s.executeTemplate(translation.Salutation, data)
+		salutation, err = executeTemplate(translation.Salutation, data)
 		if err != nil {
 			return errors.Wrap("issue translating salutation", err)
 		}
@@ -139,7 +131,7 @@ func (s *MailQueueService) enqueueBasicEmail(
 		return errors.Errorf("invalid template. %s need at least subject and paragraph", templates)
 	}
 	for i, t := range templates {
-		p, err := s.executeTemplate(t, data)
+		p, err := executeTemplate(t, data)
 		if err != nil {
 			return errors.Wrap(fmt.Sprintf("issue translating template %d", i), err)
 		}
@@ -158,7 +150,7 @@ func (s *MailQueueService) enqueueBasicEmail(
 		return errors.Wrap("issue executing base template", err)
 	}
 
-	if err = mailQueueRepository.InsertPending(from, to, writer.String(), subject, priority); err != nil {
+	if err = repository.InsertPendingMail(ctx, tx, from, to, writer.String(), subject, priority); err != nil {
 		return errors.Wrap("issue inserting pending email", err)
 	}
 	return nil

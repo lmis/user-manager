@@ -13,50 +13,41 @@ import (
 	. "github.com/go-jet/jet/v2/postgres"
 )
 
-type SessionRepository struct {
-	ctx context.Context
-	tx  *sql.Tx
-}
-
-func ProvideSessionRepository(ctx context.Context, tx *sql.Tx) *SessionRepository {
-	return &SessionRepository{ctx, tx}
-}
-
-func (r *SessionRepository) InsertSession(sessionID string, sessionType dm.UserSessionType, appUserID dm.AppUserID, duration time.Duration) error {
+func InsertSession(ctx context.Context, tx *sql.Tx, sessionID string, sessionType dm.UserSessionType, appUserID dm.AppUserID, duration time.Duration) error {
 	return db.ExecSingleMutation(
-		r.ctx,
+		ctx,
 		UserSession.INSERT(UserSession.UserSessionID, UserSession.AppUserID, UserSession.TimeoutAt, UserSession.UserSessionType).
 			VALUES(sessionID, appUserID.ToIntegerExpression(), time.Now().Add(duration), model.UserSessionType(sessionType)).
 			ExecContext,
-		r.tx)
+		tx)
 }
 
-func (r *SessionRepository) UpdateSessionTimeout(sessionID dm.UserSessionID, timeout time.Time) error {
+func UpdateSessionTimeout(ctx context.Context, tx *sql.Tx, sessionID dm.UserSessionID, timeout time.Time) error {
 	return db.ExecSingleMutation(
-		r.ctx,
+		ctx,
 		UserSession.UPDATE(UserSession.TimeoutAt, UserSession.UpdatedAt).
 			SET(timeout, time.Now()).
 			WHERE(UserSession.UserSessionID.EQ(sessionID.ToStringExpression())).
 			ExecContext,
-		r.tx)
+		tx)
 }
 
-func (r *SessionRepository) Delete(sessionID dm.UserSessionID) error {
+func DeleteSession(ctx context.Context, tx *sql.Tx, sessionID dm.UserSessionID) error {
 	return db.ExecSingleMutation(
-		r.ctx,
+		ctx,
 		UserSession.DELETE().
 			WHERE(UserSession.UserSessionID.EQ(sessionID.ToStringExpression())).
 			ExecContext,
-		r.tx)
+		tx)
 }
 
-func (r *SessionRepository) GetSessionAndUser(sessionID dm.UserSessionID, sessionType dm.UserSessionType) (dm.UserSession, error) {
+func GetSessionAndUser(ctx context.Context, tx *sql.Tx, sessionID dm.UserSessionID, sessionType dm.UserSessionType) (dm.UserSession, error) {
 	m, err := db.FetchMaybe[struct {
 		model.UserSession
 		model.AppUser
 		Roles []model.AppUserRole
 	}](
-		r.ctx,
+		ctx,
 		SELECT(
 			UserSession.UserSessionID,
 			UserSession.UserSessionType,
@@ -84,7 +75,7 @@ func (r *SessionRepository) GetSessionAndUser(sessionID dm.UserSessionID, sessio
 					AND(UserSession.UserSessionType.EQ(sessionType.ToStringExpression())),
 			).
 			QueryContext,
-		r.tx)
+		tx)
 	if err != nil {
 		return dm.UserSession{}, errors.Wrap("error loading user session", err)
 	}
