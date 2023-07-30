@@ -23,6 +23,7 @@ func RegisterLoginResource(group *gin.RouterGroup) {
 type LoginTO struct {
 	Email    string `json:"email"`
 	Password []byte `json:"password"`
+	Sudo     bool   `json:"sudo"`
 }
 
 type LoginResponseStatus string
@@ -40,18 +41,27 @@ type LoginResponseTO struct {
 func Login(ctx *gin.Context, r *ginext.RequestContext, requestTO LoginTO) (LoginResponseTO, error) {
 	securityLog := r.SecurityLog
 
+	loginDescription := "Login"
+	if requestTO.Sudo {
+		loginDescription = "Sudo-login"
+		if r.UserSession.UserSessionID == "" {
+			securityLog.Info("Sudo login attempted without valid session.")
+			return LoginResponseTO{LoginResponseInvalidCredentials}, nil
+		}
+	}
+
 	user, err := repository.GetUserForEmail(ctx, r.Tx, requestTO.Email)
 	if err != nil {
 		return LoginResponseTO{}, errors.Wrap("error fetching user", err)
 	}
 	if user.AppUserID == 0 {
-		securityLog.Info("Login attempt for non-existent user")
+		securityLog.Info(loginDescription + " attempt for non-existent user")
 		return LoginResponseTO{LoginResponseInvalidCredentials}, nil
 	}
 
 	for _, role := range user.UserRoles {
 		if role != dm.UserRoleUser {
-			securityLog.Info("Login attempt without second factor for non-user %d", user.AppUserID)
+			securityLog.Info(loginDescription+" attempt without second factor for non-user %d", user.AppUserID)
 			return LoginResponseTO{LoginResponseInvalidCredentials}, nil
 		}
 	}
@@ -65,13 +75,19 @@ func Login(ctx *gin.Context, r *ginext.RequestContext, requestTO LoginTO) (Login
 		return LoginResponseTO{LoginResponse2faRequired}, nil
 	}
 
-	securityLog.Info("Login")
+	securityLog.Info(loginDescription)
 	sessionID := random.MakeRandomURLSafeB64(21)
-	if err = repository.InsertSession(ctx, r.Tx, sessionID, dm.UserSessionTypeLogin, user.AppUserID, dm.LoginSessionDuration); err != nil {
+	sessionType := dm.UserSessionTypeLogin
+	duration := dm.LoginSessionDuration
+	if requestTO.Sudo {
+		sessionType = dm.UserSessionTypeSudo
+		duration = dm.SudoSessionDuration
+	}
+	if err = repository.InsertSession(ctx, r.Tx, sessionID, sessionType, user.AppUserID, duration); err != nil {
 		return LoginResponseTO{}, errors.Wrap("error inserting session", err)
 	}
 
-	service.SetSessionCookie(ctx, r.Config, sessionID, dm.UserSessionTypeLogin)
+	service.SetSessionCookie(ctx, r.Config, sessionID, sessionType)
 	return LoginResponseTO{LoginResponseLoggedIn}, nil
 }
 
@@ -89,12 +105,20 @@ type LoginWithSecondFactorResponseTO struct {
 func LoginWithSecondFactor(ctx *gin.Context, r *ginext.RequestContext, requestTO LoginWithSecondFactorTO) (LoginWithSecondFactorResponseTO, error) {
 	securityLog := r.SecurityLog
 
+	loginDescription := "Login (2FA)"
+	if requestTO.Sudo {
+		loginDescription = "Sudo-login (2FA)"
+		if r.UserSession.UserSessionID == "" {
+			securityLog.Info("Sudo 2FA attempted without valid session.")
+			return LoginWithSecondFactorResponseTO{}, nil
+		}
+	}
 	user, err := repository.GetUserForEmail(ctx, r.Tx, requestTO.Email)
 	if err != nil {
 		return LoginWithSecondFactorResponseTO{}, errors.Wrap("error finding user", err)
 	}
 	if user.AppUserID == 0 {
-		securityLog.Info("Login attempt for non-existent user")
+		securityLog.Info(loginDescription + " attempt for non-existent user")
 		return LoginWithSecondFactorResponseTO{}, nil
 	}
 
@@ -143,7 +167,7 @@ func LoginWithSecondFactor(ctx *gin.Context, r *ginext.RequestContext, requestTO
 		if requestTO.RememberDevice {
 			securityLog.Info("2FA login with 'remember device' enabled, issuing device token")
 			deviceSessionID := random.MakeRandomURLSafeB64(21)
-			err = repository.InsertSession(ctx, r.Tx, deviceSessionID, dm.UserSessionTypeLogin, user.AppUserID, dm.DeviceSessionDuration)
+			err = repository.InsertSession(ctx, r.Tx, deviceSessionID, dm.UserSessionTypeRememberDevice, user.AppUserID, dm.DeviceSessionDuration)
 			if err != nil {
 				return LoginWithSecondFactorResponseTO{}, errors.Wrap("error inserting device session", err)
 			}
@@ -173,10 +197,16 @@ func LoginWithSecondFactor(ctx *gin.Context, r *ginext.RequestContext, requestTO
 	}
 
 	sessionID := random.MakeRandomURLSafeB64(21)
-	if err = repository.InsertSession(ctx, r.Tx, sessionID, dm.UserSessionTypeLogin, user.AppUserID, dm.LoginSessionDuration); err != nil {
+	sessionType := dm.UserSessionTypeLogin
+	duration := dm.LoginSessionDuration
+	if requestTO.Sudo {
+		sessionType = dm.UserSessionTypeSudo
+		duration = dm.SudoSessionDuration
+	}
+	if err = repository.InsertSession(ctx, r.Tx, sessionID, sessionType, user.AppUserID, duration); err != nil {
 		return LoginWithSecondFactorResponseTO{}, errors.Wrap("error inserting login session", err)
 	}
 
-	service.SetSessionCookie(ctx, r.Config, sessionID, dm.UserSessionTypeLogin)
+	service.SetSessionCookie(ctx, r.Config, sessionID, sessionType)
 	return LoginWithSecondFactorResponseTO{LoggedIn: true}, nil
 }

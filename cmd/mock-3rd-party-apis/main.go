@@ -83,6 +83,10 @@ func registerFunctionalTests(config *config.Config, app *gin.Engine, emails util
 			Description: "Simple login",
 			Test:        test.TestSimpleLogin,
 		},
+		{
+			Description: "Change password",
+			Test:        test.TestChangePassword,
+		},
 	}
 	app.GET("/tests/:n", func(c *gin.Context) {
 		n := c.Param("n")

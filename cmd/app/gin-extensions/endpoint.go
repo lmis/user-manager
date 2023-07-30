@@ -25,7 +25,9 @@ func WrapEndpoint[requestTO interface{}, responseTO interface{}](endpoint Endpoi
 			return
 		}
 
-		c.JSON(http.StatusOK, response)
+		if !c.IsAborted() {
+			c.JSON(http.StatusOK, response)
+		}
 	}
 }
 
@@ -37,11 +39,14 @@ func WrapEndpointWithoutResponseBody[requestTO interface{}](endpoint EndpointWit
 			return
 		}
 		if err := endpoint(c, GetRequestContext(c), request); err != nil {
-			_ = c.AbortWithError(http.StatusInternalServerError, err)
+			status := http.StatusInternalServerError
+			_ = c.AbortWithError(status, err)
 			return
 		}
 
-		c.Status(http.StatusNoContent)
+		if !c.IsAborted() {
+			c.Status(http.StatusNoContent)
+		}
 	}
 }
 
@@ -53,7 +58,9 @@ func WrapEndpointWithoutRequestBody[responseTO interface{}](endpoint EndpointWit
 			return
 		}
 
-		c.JSON(http.StatusOK, response)
+		if !c.IsAborted() {
+			c.JSON(http.StatusOK, response)
+		}
 	}
 }
 
@@ -64,6 +71,8 @@ func WrapEndpointWithoutRequestOrResponseBody(endpoint EndpointWithoutRequestOrR
 			return
 		}
 
-		c.Status(http.StatusNoContent)
+		if !c.IsAborted() {
+			c.Status(http.StatusNoContent)
+		}
 	}
 }

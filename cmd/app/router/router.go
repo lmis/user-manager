@@ -88,6 +88,6 @@ func registerSensitiveSettingsGroup(sensitiveSettings *gin.RouterGroup) {
 	middleware.RegisterRequireSudoModeMiddleware(sensitiveSettings)
 
 	resource.RegisterSensitiveSettingsResource(sensitiveSettings)
-	// 	POST("change-password", todo).
+	resource.RegisterChangePasswordResource(sensitiveSettings)
 	// 	POST("second-factor", todo)
 }

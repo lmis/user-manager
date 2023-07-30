@@ -45,7 +45,7 @@ func LoggerMiddleware(c *gin.Context) {
 
 	// Trigger alerts
 	if status == http.StatusInternalServerError {
-		if err := c.Errors.Last(); err != nil {
+		for _, err := range c.Errors {
 			securityLogger.Err(err.Err)
 		}
 	}
