@@ -28,7 +28,7 @@ func SetSessionCookie(ctx *gin.Context, config *dm.Config, sessionID string, ses
 	ctx.SetSameSite(http.SameSiteStrictMode)
 }
 
-func GetSessionCookie(ctx *gin.Context, sessionType dm.UserSessionType) (dm.UserSessionID, error) {
+func GetSessionCookie(ctx *gin.Context, sessionType dm.UserSessionType) (dm.UserSessionToken, error) {
 	cookie, err := ctx.Request.Cookie(getCookieName(sessionType))
 	if err != nil {
 		if err == http.ErrNoCookie {
@@ -36,9 +36,9 @@ func GetSessionCookie(ctx *gin.Context, sessionType dm.UserSessionType) (dm.User
 		}
 		return "", errors.Wrap("issue reading cookie", err)
 	}
-	return dm.UserSessionID(cookie.Value), nil
+	return dm.UserSessionToken(cookie.Value), nil
 }
 
 func getCookieName(sessionType dm.UserSessionType) string {
-	return sessionType.String() + "_TOKEN"
+	return string(sessionType) + "_TOKEN"
 }

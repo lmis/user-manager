@@ -2,8 +2,8 @@ package service
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
+	"go.mongodb.org/mongo-driver/mongo"
 	"strings"
 	"text/template"
 	ginext "user-manager/cmd/app/gin-extensions"
@@ -21,7 +21,7 @@ func SendVerificationEmail(ctx context.Context, r *ginext.RequestContext, langua
 		"EmailVerificationToken": verificationToken,
 		"ServiceName":            config.ServiceName,
 	}
-	if err := enqueueBasicEmail(ctx, r.Tx, r.Emailing.BaseTemplate, translation, translation.VerificationEmail, data, config.EmailFrom, email, dm.MailQueuePrioHigh); err != nil {
+	if err := enqueueBasicEmail(ctx, r.Database, r.Emailing.BaseTemplate, translation, translation.VerificationEmail, data, config.EmailFrom, email, dm.MailQueuePrioHigh); err != nil {
 		return errors.Wrap("error enqueuing basic email", err)
 	}
 	return nil
@@ -34,7 +34,7 @@ func SendSignUpAttemptEmail(ctx context.Context, r *ginext.RequestContext, langu
 	data := map[string]string{
 		"ServiceName": config.ServiceName,
 	}
-	if err := enqueueBasicEmail(ctx, r.Tx, r.Emailing.BaseTemplate, translation, translation.SignUpAttemptedEmail, data, config.EmailFrom, email, dm.MailQueuePrioHigh); err != nil {
+	if err := enqueueBasicEmail(ctx, r.Database, r.Emailing.BaseTemplate, translation, translation.SignUpAttemptedEmail, data, config.EmailFrom, email, dm.MailQueuePrioHigh); err != nil {
 		return errors.Wrap("error enqueuing basic email", err)
 	}
 	return nil
@@ -50,7 +50,7 @@ func SendChangeVerificationEmail(ctx context.Context, r *ginext.RequestContext, 
 		"ServiceName":                  config.ServiceName,
 		"NewEmail":                     newEmail,
 	}
-	if err := enqueueBasicEmail(ctx, r.Tx, r.Emailing.BaseTemplate, translation, translation.ChangeVerificationEmail, data, config.EmailFrom, newEmail, dm.MailQueuePrioHigh); err != nil {
+	if err := enqueueBasicEmail(ctx, r.Database, r.Emailing.BaseTemplate, translation, translation.ChangeVerificationEmail, data, config.EmailFrom, newEmail, dm.MailQueuePrioHigh); err != nil {
 		return errors.Wrap("error enqueuing basic email", err)
 	}
 	return nil
@@ -64,7 +64,7 @@ func SendChangeNotificationEmail(ctx context.Context, r *ginext.RequestContext, 
 		"ServiceName": config.ServiceName,
 		"NewEmail":    newEmail,
 	}
-	if err := enqueueBasicEmail(ctx, r.Tx, r.Emailing.BaseTemplate, translation, translation.ChangeNotificationEmail, data, config.EmailFrom, email, dm.MailQueuePrioHigh); err != nil {
+	if err := enqueueBasicEmail(ctx, r.Database, r.Emailing.BaseTemplate, translation, translation.ChangeNotificationEmail, data, config.EmailFrom, email, dm.MailQueuePrioHigh); err != nil {
 		return errors.Wrap("error enqueuing basic email", err)
 	}
 	return nil
@@ -79,7 +79,7 @@ func SendResetPasswordEmail(ctx context.Context, r *ginext.RequestContext, langu
 		"AppUrl":             config.AppUrl,
 		"PasswordResetToken": resetToken,
 	}
-	if err := enqueueBasicEmail(ctx, r.Tx, r.Emailing.BaseTemplate, translation, translation.ResetPasswordEmail, data, config.EmailFrom, email, dm.MailQueuePrioHigh); err != nil {
+	if err := enqueueBasicEmail(ctx, r.Database, r.Emailing.BaseTemplate, translation, translation.ResetPasswordEmail, data, config.EmailFrom, email, dm.MailQueuePrioHigh); err != nil {
 		return errors.Wrap("error enqueuing basic email", err)
 	}
 	return nil
@@ -104,7 +104,8 @@ type baseTemplateData struct {
 }
 
 func enqueueBasicEmail(
-	ctx context.Context, tx *sql.Tx,
+	ctx context.Context,
+	database *mongo.Database,
 	baseTemplate *template.Template,
 	translation dm.Translations,
 	templates []string,
@@ -150,7 +151,13 @@ func enqueueBasicEmail(
 		return errors.Wrap("issue executing base template", err)
 	}
 
-	if err = repository.InsertPendingMail(ctx, tx, from, to, writer.String(), subject, priority); err != nil {
+	if err = repository.InsertPendingMail(ctx, database, dm.MailInsert{
+		ToAddress:   to,
+		FromAddress: from,
+		Subject:     subject,
+		Content:     writer.String(),
+		Priority:    priority,
+	}); err != nil {
 		return errors.Wrap("issue inserting pending email", err)
 	}
 	return nil

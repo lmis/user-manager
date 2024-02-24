@@ -52,21 +52,21 @@ type SimpleLogger struct {
 	Topic string `json:"topic"`
 }
 
-func (logger *SimpleLogger) Info(format string, args ...interface{}) {
-	WriteLog(logger, LogLevelInfo, format, args...)
+func (logger SimpleLogger) Info(format string, args ...interface{}) {
+	WriteLog(logger.Topic, LogLevelInfo, format, args...)
 }
 
-func (logger *SimpleLogger) Warn(format string, args ...interface{}) {
-	WriteLog(logger, LogLevelWarn, fmt.Sprintf(format, args...))
+func (logger SimpleLogger) Warn(format string, args ...interface{}) {
+	WriteLog(logger.Topic, LogLevelWarn, fmt.Sprintf(format, args...))
 }
 
-func (logger *SimpleLogger) Err(e error) {
-	WriteLog(logger, LogLevelError, "%s", e.Error())
+func (logger SimpleLogger) Err(e error) {
+	WriteLog(logger.Topic, LogLevelError, "%s", e.Error())
 
 }
 
 func NewLogger(topic string) Logger {
-	return &SimpleLogger{
+	return SimpleLogger{
 		topic,
 	}
 }

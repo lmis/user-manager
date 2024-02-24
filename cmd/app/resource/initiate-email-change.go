@@ -21,19 +21,18 @@ type ChangeEmailTO struct {
 
 func InitiateEmailChange(ctx *gin.Context, r *ginext.RequestContext, requestTO ChangeEmailTO) error {
 	securityLog := r.SecurityLog
-	userSession := r.UserSession
+	user := r.User
 
-	user := userSession.User
 	nextEmail := requestTO.NewEmail
 
-	if user.AppUserID == 0 {
+	if !user.IsPresent() {
 		return errors.Error("missing user")
 
 	}
 	securityLog.Info("Changing user email")
 
 	verificationToken := random.MakeRandomURLSafeB64(21)
-	if err := repository.SetNextEmail(ctx, r.Tx, user.AppUserID, nextEmail, verificationToken); err != nil {
+	if err := repository.SetNextEmail(ctx, r.Database, user.ID, nextEmail, verificationToken); err != nil {
 		return errors.Wrap("issue setting next email for user", err)
 	}
 

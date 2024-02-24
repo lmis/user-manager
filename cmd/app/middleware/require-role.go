@@ -13,14 +13,14 @@ func RegisterRequireRoleMiddleware(group *gin.RouterGroup, requiredRole dm.UserR
 	group.Use(func(ctx *gin.Context) {
 		r := ginext.GetRequestContext(ctx)
 		securityLog := r.SecurityLog
-		userSession := r.UserSession
-		if userSession.UserSessionID == "" {
+		user := r.User
+		if !user.IsPresent() {
 			securityLog.Info("Not a %s: unauthenticated", requiredRole)
 			_ = ctx.AbortWithError(http.StatusUnauthorized, errors.Error("not authenticated"))
 			return
 		}
 
-		receivedRoles := userSession.User.UserRoles
+		receivedRoles := user.UserRoles
 		if !slices.Contains(receivedRoles, requiredRole) {
 			securityLog.Info("Not a %s: wrong role (%v)", requiredRole, receivedRoles)
 			_ = ctx.AbortWithError(http.StatusUnauthorized, errors.Errorf("wrong role. required %s, received %v", requiredRole, receivedRoles))

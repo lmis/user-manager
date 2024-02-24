@@ -1,7 +1,6 @@
 package resource
 
 import (
-	"golang.org/x/crypto/bcrypt"
 	"net/http"
 	ginext "user-manager/cmd/app/gin-extensions"
 	"user-manager/repository"
@@ -22,27 +21,25 @@ type ChangePasswordTO struct {
 
 func ChangePassword(ctx *gin.Context, r *ginext.RequestContext, requestTO ChangePasswordTO) error {
 	securityLog := r.SecurityLog
-	userSession := r.UserSession
+	user := r.User
 
-	user := userSession.User
-
-	if user.AppUserID == 0 {
+	if !user.IsPresent() {
 		return errors.Error("missing user")
 	}
 	securityLog.Info("Changing user password")
 
-	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), requestTO.OldPassword); err != nil {
-		securityLog.Info("Password mismatch for user %s trying to change password", user.AppUserID)
-		_ = ctx.AbortWithError(http.StatusBadRequest, err)
+	if service.VerifyCredentials(requestTO.OldPassword, user.Credentials) {
+		securityLog.Info("Password mismatch for user %s trying to change password", user.ID)
+		ctx.AbortWithStatus(http.StatusBadRequest)
 		return nil
 	}
 
-	newHash, err := service.HashPassword(requestTO.NewPassword)
+	newCredentials, err := service.MakeCredentials(requestTO.NewPassword)
 	if err != nil {
-		return errors.Wrap("error hashing new password", err)
+		return errors.Wrap("error making credentials from new password", err)
 	}
 
-	if err := repository.SetPasswordHash(ctx, r.Tx, user.AppUserID, newHash); err != nil {
+	if err := repository.SetCredentials(ctx, r.Database, user.ID, newCredentials); err != nil {
 		return errors.Wrap("issue setting new password hash for user", err)
 	}
 

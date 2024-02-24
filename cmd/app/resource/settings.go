@@ -1,6 +1,7 @@
 package resource
 
 import (
+	"time"
 	ginext "user-manager/cmd/app/gin-extensions"
 	dm "user-manager/domain-model"
 	"user-manager/repository"
@@ -10,7 +11,6 @@ import (
 	"user-manager/util/random"
 
 	"github.com/gin-gonic/gin"
-	"golang.org/x/crypto/bcrypt"
 )
 
 func RegisterSettingsResource(group *gin.RouterGroup) {
@@ -24,9 +24,9 @@ type LanguageTO struct {
 }
 
 func SetLanguage(ctx *gin.Context, r *ginext.RequestContext, requestTO *LanguageTO) error {
-	userSession := r.UserSession
+	user := r.User
 
-	if userSession.UserSessionID == "" {
+	if !user.IsPresent() {
 		return errors.Error("no user")
 	}
 
@@ -35,7 +35,7 @@ func SetLanguage(ctx *gin.Context, r *ginext.RequestContext, requestTO *Language
 		return errors.Errorf("invalid language %s", language)
 	}
 
-	if err := repository.SetLanguage(ctx, r.Tx, userSession.User.AppUserID, language); err != nil {
+	if err := repository.SetLanguage(ctx, r.Database, user.ID, language); err != nil {
 		return errors.Wrap("error updating language", err)
 	}
 	return nil
@@ -51,25 +51,28 @@ type SudoResponseTO struct {
 
 func EnterSudoMode(ctx *gin.Context, r *ginext.RequestContext, requestTO *SudoTO) (*SudoResponseTO, error) {
 	securityLog := r.SecurityLog
-	userSession := r.UserSession
+	user := r.User
 
-	if userSession.UserSessionID == "" {
+	if !user.IsPresent() {
 		return nil, errors.Error("no user")
 	}
 
-	user := userSession.User
-	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), requestTO.Password); err != nil {
-		securityLog.Info("Password mismatch in sudo attempt for user %s", user.AppUserID)
+	if !service.VerifyCredentials(requestTO.Password, user.Credentials) {
+		securityLog.Info("Password mismatch in sudo attempt for user %s", user.ID)
 		return &SudoResponseTO{}, nil
 	}
 
 	securityLog.Info("Entering sudo mode")
-	sessionID := random.MakeRandomURLSafeB64(21)
-	if err := repository.InsertSession(ctx, r.Tx, sessionID, dm.UserSessionTypeSudo, user.AppUserID, dm.SudoSessionDuration); err != nil {
+	session := dm.UserSession{
+		Token:     dm.UserSessionToken(random.MakeRandomURLSafeB64(21)),
+		Type:      dm.UserSessionTypeSudo,
+		TimeoutAt: time.Now().Add(dm.SudoSessionDuration),
+	}
+	if err := repository.InsertSession(ctx, r.Database, user.ID, session); err != nil {
 		return nil, errors.Wrap("error inserting session", err)
 	}
 
-	service.SetSessionCookie(ctx, r.Config, sessionID, dm.UserSessionTypeSudo)
+	service.SetSessionCookie(ctx, r.Config, string(session.Token), session.Type)
 	return &SudoResponseTO{Success: true}, nil
 }
 
@@ -91,12 +94,11 @@ type EmailChangeConfirmationResponseTO struct {
 
 func ConfirmEmailChange(ctx *gin.Context, r *ginext.RequestContext, request EmailChangeConfirmationTO) (EmailChangeConfirmationResponseTO, error) {
 	securityLog := r.SecurityLog
-	userSession := r.UserSession
+	user := r.User
 
-	if userSession.UserSessionID == "" {
+	if user.IsPresent() {
 		return EmailChangeConfirmationResponseTO{}, errors.Error("no user")
 	}
-	user := userSession.User
 
 	if user.NextEmail == "" {
 		return EmailChangeConfirmationResponseTO{EmailChangeResponseNoChangeInProgress}, nil
@@ -111,7 +113,7 @@ func ConfirmEmailChange(ctx *gin.Context, r *ginext.RequestContext, request Emai
 		return EmailChangeConfirmationResponseTO{EmailChangeResponseInvalidToken}, nil
 	}
 
-	if err := repository.SetEmailAndClearNextEmail(ctx, r.Tx, user.AppUserID, user.NextEmail); err != nil {
+	if err := repository.SetEmailAndClearNextEmail(ctx, r.Database, user.ID, user.NextEmail); err != nil {
 		return EmailChangeConfirmationResponseTO{}, errors.Wrap("issue setting email ", err)
 	}
 

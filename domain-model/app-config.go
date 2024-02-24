@@ -8,7 +8,7 @@ import (
 )
 
 type Config struct {
-	DbInfo      db.Info
+	DbInfo      db.DbInfo
 	AppPort     string `env:"PORT"`
 	AppUrl      string `env:"APP_URL"`
 	ServiceName string `env:"SERVICE_NAME"`
@@ -35,7 +35,6 @@ func (conf *Config) IsStagingEnv() bool {
 	return conf.Environment == "staging"
 }
 
-// TODO: Make this more strict with regards to missing env variables for non-local environments
 func GetConfig() (*Config, error) {
 	config := &Config{}
 

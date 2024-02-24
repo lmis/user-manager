@@ -16,6 +16,7 @@ func RegisterRequestContextMiddleware(app *gin.Engine, translationsFS embed.FS, 
 		return errors.Error("Invalid config: nil")
 	}
 	emailing := dm.Emailing{Translations: make(map[dm.UserLanguage]dm.Translations)}
+	// TODO: Embed as template
 	t, err := template.New("base").Parse(`
 	{{.Salutation}}
 

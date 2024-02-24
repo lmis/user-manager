@@ -12,7 +12,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/pquerna/otp/totp"
-	"golang.org/x/crypto/bcrypt"
 )
 
 func RegisterLoginResource(group *gin.RouterGroup) {
@@ -44,30 +43,30 @@ func Login(ctx *gin.Context, r *ginext.RequestContext, requestTO LoginTO) (Login
 	loginDescription := "Login"
 	if requestTO.Sudo {
 		loginDescription = "Sudo-login"
-		if r.UserSession.UserSessionID == "" {
-			securityLog.Info("Sudo login attempted without valid session.")
+		if !r.User.IsPresent() {
+			securityLog.Info("Sudo login attempted without valid user.")
 			return LoginResponseTO{LoginResponseInvalidCredentials}, nil
 		}
 	}
 
-	user, err := repository.GetUserForEmail(ctx, r.Tx, requestTO.Email)
+	user, err := repository.GetUserForEmail(ctx, r.Database, requestTO.Email)
 	if err != nil {
 		return LoginResponseTO{}, errors.Wrap("error fetching user", err)
 	}
-	if user.AppUserID == 0 {
+	if !user.IsPresent() {
 		securityLog.Info(loginDescription + " attempt for non-existent user")
 		return LoginResponseTO{LoginResponseInvalidCredentials}, nil
 	}
 
 	for _, role := range user.UserRoles {
 		if role != dm.UserRoleUser {
-			securityLog.Info(loginDescription+" attempt without second factor for non-user %d", user.AppUserID)
+			securityLog.Info(loginDescription+" attempt without second factor for non-user %d", user.ID)
 			return LoginResponseTO{LoginResponseInvalidCredentials}, nil
 		}
 	}
 
-	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), requestTO.Password); err != nil {
-		securityLog.Info("Password mismatch for user %s", user.AppUserID)
+	if !service.VerifyCredentials(requestTO.Password, user.Credentials) {
+		securityLog.Info("Password mismatch for user %s", user.ID)
 		return LoginResponseTO{LoginResponseInvalidCredentials}, nil
 	}
 
@@ -76,18 +75,21 @@ func Login(ctx *gin.Context, r *ginext.RequestContext, requestTO LoginTO) (Login
 	}
 
 	securityLog.Info(loginDescription)
-	sessionID := random.MakeRandomURLSafeB64(21)
-	sessionType := dm.UserSessionTypeLogin
-	duration := dm.LoginSessionDuration
-	if requestTO.Sudo {
-		sessionType = dm.UserSessionTypeSudo
-		duration = dm.SudoSessionDuration
+	session := dm.UserSession{
+		Token:     dm.UserSessionToken(random.MakeRandomURLSafeB64(21)),
+		Type:      dm.UserSessionTypeLogin,
+		TimeoutAt: time.Now().Add(dm.LoginSessionDuration),
 	}
-	if err = repository.InsertSession(ctx, r.Tx, sessionID, sessionType, user.AppUserID, duration); err != nil {
+
+	if requestTO.Sudo {
+		session.Type = dm.UserSessionTypeSudo
+		session.TimeoutAt = time.Now().Add(dm.SudoSessionDuration)
+	}
+	if err = repository.InsertSession(ctx, r.Database, user.ID, session); err != nil {
 		return LoginResponseTO{}, errors.Wrap("error inserting session", err)
 	}
 
-	service.SetSessionCookie(ctx, r.Config, sessionID, sessionType)
+	service.SetSessionCookie(ctx, r.Config, string(session.Token), session.Type)
 	return LoginResponseTO{LoginResponseLoggedIn}, nil
 }
 
@@ -108,71 +110,66 @@ func LoginWithSecondFactor(ctx *gin.Context, r *ginext.RequestContext, requestTO
 	loginDescription := "Login (2FA)"
 	if requestTO.Sudo {
 		loginDescription = "Sudo-login (2FA)"
-		if r.UserSession.UserSessionID == "" {
+		if !r.User.IsPresent() {
 			securityLog.Info("Sudo 2FA attempted without valid session.")
 			return LoginWithSecondFactorResponseTO{}, nil
 		}
 	}
-	user, err := repository.GetUserForEmail(ctx, r.Tx, requestTO.Email)
+	user, err := repository.GetUserForEmail(ctx, r.Database, requestTO.Email)
 	if err != nil {
 		return LoginWithSecondFactorResponseTO{}, errors.Wrap("error finding user", err)
 	}
-	if user.AppUserID == 0 {
+	if !user.IsPresent() {
 		securityLog.Info(loginDescription + " attempt for non-existent user")
 		return LoginWithSecondFactorResponseTO{}, nil
 	}
 
-	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), requestTO.Password); err != nil {
+	if !service.VerifyCredentials(requestTO.Password, user.Credentials) {
 		securityLog.Info("password mismatch")
 		return LoginWithSecondFactorResponseTO{}, nil
 	}
 
 	if requestTO.SecondFactor != "" {
-		throttling, err := repository.GetSecondFactorThrottlingForUser(ctx, r.Tx, user.AppUserID)
-		if err != nil {
-			return LoginWithSecondFactorResponseTO{}, errors.Wrap("error loading throttling", err)
-		}
+		throttling := user.SecondFactorThrottling
 
-		if throttling.AppUserID != 0 && throttling.TimeoutUntil.After(time.Now()) {
+		if throttling.FailedAttemptsSinceLastSuccess != 0 && throttling.TimeoutUntil.After(time.Now()) {
 			securityLog.Info("Throttled 2FA attempted")
 			return LoginWithSecondFactorResponseTO{TimeoutUntil: throttling.TimeoutUntil}, nil
 		}
 
 		tokenMatches := user.SecondFactorToken != "" && totp.Validate(requestTO.SecondFactor, user.SecondFactorToken)
 
-		if throttling.AppUserID != 0 {
-			failedAttemptsSinceLastSuccess := int32(0)
-			var maybeTimeoutUntil *time.Time
-			if !tokenMatches {
-				failedAttemptsSinceLastSuccess = throttling.FailedAttemptsSinceLastSuccess + 1
-				// TODO: Check this exponential timeout logic
-				if failedAttemptsSinceLastSuccess%5 == 0 {
-					*maybeTimeoutUntil = time.Now().Add(time.Minute * 3 * time.Duration(failedAttemptsSinceLastSuccess))
-				}
+		if tokenMatches {
+			if err := repository.UpdateSecondFactorThrottling(ctx, r.Database, user.ID, 0, nil); err != nil {
+				return LoginWithSecondFactorResponseTO{}, errors.Wrap("issue resetting throttling in db", err)
 			}
-			if err := repository.UpdateSecondFactorThrottling(ctx, r.Tx, throttling.SecondFactorThrottlingID, failedAttemptsSinceLastSuccess, maybeTimeoutUntil); err != nil {
+		} else {
+			var maybeTimeoutUntil *time.Time
+			failedAttemptsSinceLastSuccess := user.SecondFactorThrottling.FailedAttemptsSinceLastSuccess + 1
+			// TODO: Check this exponential timeout logic
+			if failedAttemptsSinceLastSuccess%5 == 0 {
+				*maybeTimeoutUntil = time.Now().Add(time.Minute * 3 * time.Duration(failedAttemptsSinceLastSuccess))
+			}
+			if err := repository.UpdateSecondFactorThrottling(ctx, r.Database, user.ID, failedAttemptsSinceLastSuccess, maybeTimeoutUntil); err != nil {
 				return LoginWithSecondFactorResponseTO{}, errors.Wrap("issue updating throttling in db", err)
 			}
-		} else if !tokenMatches {
-			if err := repository.InsertSecondFactorThrottling(ctx, r.Tx, user.AppUserID, 1); err != nil {
-				return LoginWithSecondFactorResponseTO{}, errors.Wrap("issue inserting throttling in db", err)
-			}
-		}
-
-		if !tokenMatches {
 			securityLog.Info("2FA mismatch")
 			return LoginWithSecondFactorResponseTO{}, nil
 		}
 
 		if requestTO.RememberDevice {
 			securityLog.Info("2FA login with 'remember device' enabled, issuing device token")
-			deviceSessionID := random.MakeRandomURLSafeB64(21)
-			err = repository.InsertSession(ctx, r.Tx, deviceSessionID, dm.UserSessionTypeRememberDevice, user.AppUserID, dm.DeviceSessionDuration)
+			deviceSession := dm.UserSession{
+				Token:     dm.UserSessionToken(random.MakeRandomURLSafeB64(21)),
+				Type:      dm.UserSessionTypeRememberDevice,
+				TimeoutAt: time.Now().Add(dm.DeviceSessionDuration),
+			}
+			err = repository.InsertSession(ctx, r.Database, user.ID, deviceSession)
 			if err != nil {
 				return LoginWithSecondFactorResponseTO{}, errors.Wrap("error inserting device session", err)
 			}
 
-			service.SetSessionCookie(ctx, r.Config, deviceSessionID, dm.UserSessionTypeRememberDevice)
+			service.SetSessionCookie(ctx, r.Config, string(deviceSession.Token), deviceSession.Type)
 		}
 
 		securityLog.Info("Login passed with 2FA token")
@@ -185,28 +182,30 @@ func LoginWithSecondFactor(ctx *gin.Context, r *ginext.RequestContext, requestTO
 			return LoginWithSecondFactorResponseTO{}, nil
 		}
 
-		deviceSession, err := repository.GetSessionAndUser(ctx, r.Tx, maybeDeviceSessionID, dm.UserSessionTypeRememberDevice)
+		deviceSession, err := repository.GetUserForSession(ctx, r.Database, maybeDeviceSessionID, dm.UserSessionTypeRememberDevice)
 
 		if err != nil {
 			return LoginWithSecondFactorResponseTO{}, errors.Wrap("fetching device session failed", err)
 		}
-		if deviceSession.UserSessionID == "" {
+		if !deviceSession.IsPresent() {
 			return LoginWithSecondFactorResponseTO{}, nil
 		}
 		securityLog.Info("Login passed with device token cookie")
 	}
 
-	sessionID := random.MakeRandomURLSafeB64(21)
-	sessionType := dm.UserSessionTypeLogin
-	duration := dm.LoginSessionDuration
-	if requestTO.Sudo {
-		sessionType = dm.UserSessionTypeSudo
-		duration = dm.SudoSessionDuration
+	session := dm.UserSession{
+		Token:     dm.UserSessionToken(random.MakeRandomURLSafeB64(21)),
+		Type:      dm.UserSessionTypeLogin,
+		TimeoutAt: time.Now().Add(dm.LoginSessionDuration),
 	}
-	if err = repository.InsertSession(ctx, r.Tx, sessionID, sessionType, user.AppUserID, duration); err != nil {
+	if requestTO.Sudo {
+		session.Type = dm.UserSessionTypeSudo
+		session.TimeoutAt = time.Now().Add(dm.SudoSessionDuration)
+	}
+	if err = repository.InsertSession(ctx, r.Database, user.ID, session); err != nil {
 		return LoginWithSecondFactorResponseTO{}, errors.Wrap("error inserting login session", err)
 	}
 
-	service.SetSessionCookie(ctx, r.Config, sessionID, sessionType)
+	service.SetSessionCookie(ctx, r.Config, string(session.Token), session.Type)
 	return LoginWithSecondFactorResponseTO{LoggedIn: true}, nil
 }

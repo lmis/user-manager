@@ -2,111 +2,78 @@ package repository
 
 import (
 	"context"
-	"database/sql"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
 	"time"
 	"user-manager/db"
-	"user-manager/db/generated/models/postgres/public/model"
-	. "user-manager/db/generated/models/postgres/public/table"
 	dm "user-manager/domain-model"
 	"user-manager/util/errors"
-
-	. "github.com/go-jet/jet/v2/postgres"
 )
 
-func InsertSession(ctx context.Context, tx *sql.Tx, sessionID string, sessionType dm.UserSessionType, appUserID dm.AppUserID, duration time.Duration) error {
-	return db.ExecSingleMutation(
-		ctx,
-		UserSession.INSERT(UserSession.UserSessionID, UserSession.AppUserID, UserSession.TimeoutAt, UserSession.UserSessionType).
-			VALUES(sessionID, appUserID.ToIntegerExpression(), time.Now().Add(duration), model.UserSessionType(sessionType)).
-			ExecContext,
-		tx)
-}
+func InsertSession(ctx context.Context, database *mongo.Database, userId dm.UserID, session dm.UserSession) error {
+	queryCtx, cancel := db.DefaultQueryContext(ctx)
+	defer cancel()
 
-func UpdateSessionTimeout(ctx context.Context, tx *sql.Tx, sessionID dm.UserSessionID, timeout time.Time) error {
-	return db.ExecSingleMutation(
-		ctx,
-		UserSession.UPDATE(UserSession.TimeoutAt, UserSession.UpdatedAt).
-			SET(timeout, time.Now()).
-			WHERE(UserSession.UserSessionID.EQ(sessionID.ToStringExpression())).
-			ExecContext,
-		tx)
-}
+	_, err := database.Collection(dm.UserCollectionName).UpdateByID(queryCtx, userId, bson.M{"$push": bson.M{"sessions": session}})
 
-func DeleteSession(ctx context.Context, tx *sql.Tx, sessionID dm.UserSessionID) error {
-	return db.ExecSingleMutation(
-		ctx,
-		UserSession.DELETE().
-			WHERE(UserSession.UserSessionID.EQ(sessionID.ToStringExpression())).
-			ExecContext,
-		tx)
-}
-
-func GetSessionAndUser(ctx context.Context, tx *sql.Tx, sessionID dm.UserSessionID, sessionType dm.UserSessionType) (dm.UserSession, error) {
-	m, err := db.FetchMaybe[struct {
-		model.UserSession
-		model.AppUser
-		Roles []model.AppUserRole
-	}](
-		ctx,
-		SELECT(
-			UserSession.UserSessionID,
-			UserSession.UserSessionType,
-			AppUser.AppUserID,
-			AppUser.Language,
-			AppUser.UserName,
-			AppUser.PasswordHash,
-			AppUser.Email,
-			AppUser.EmailVerified,
-			AppUser.EmailVerificationToken,
-			AppUser.NextEmail,
-			AppUser.PasswordResetToken,
-			AppUser.PasswordResetTokenValidUntil,
-			AppUser.SecondFactorToken,
-			AppUser.TemporarySecondFactorToken,
-			AppUserRole.Role,
-		).
-			FROM(UserSession.
-				INNER_JOIN(AppUser, AppUser.AppUserID.EQ(UserSession.AppUserID)).
-				INNER_JOIN(AppUserRole, AppUserRole.AppUserID.EQ(AppUser.AppUserID)),
-			).
-			WHERE(
-				UserSession.UserSessionID.EQ(sessionID.ToStringExpression()).
-					AND(UserSession.TimeoutAt.GT(TimestampzT(time.Now()))).
-					AND(UserSession.UserSessionType.EQ(sessionType.ToStringExpression())),
-			).
-			QueryContext,
-		tx)
 	if err != nil {
-		return dm.UserSession{}, errors.Wrap("error loading user session", err)
+		return errors.Wrap("error inserting session", err)
 	}
 
-	if m == nil {
-		return dm.UserSession{}, nil
+	// Prune old sessions
+	queryCtx, cancel = db.DefaultQueryContext(ctx)
+	defer cancel()
+	_, err = database.Collection(dm.UserCollectionName).UpdateByID(queryCtx, userId, bson.M{"$pull": bson.M{"sessions": bson.M{"timeoutAt": bson.M{"$lt": time.Now()}}}})
+
+	if err != nil {
+		return errors.Wrap("error pruning old sessions", err)
 	}
 
-	userSession := dm.UserSession{
-		UserSessionID: dm.UserSessionID(m.UserSessionID),
-		User: &dm.AppUser{
-			AppUserID:                  dm.AppUserID(m.AppUser.AppUserID),
-			Language:                   dm.UserLanguage(m.Language),
-			UserName:                   m.UserName,
-			PasswordHash:               m.PasswordHash,
-			Email:                      m.Email,
-			EmailVerified:              m.EmailVerified,
-			EmailVerificationToken:     m.EmailVerificationToken,
-			NextEmail:                  m.NextEmail,
-			PasswordResetToken:         m.PasswordResetToken,
-			SecondFactorToken:          m.SecondFactorToken,
-			TemporarySecondFactorToken: m.TemporarySecondFactorToken,
-			UserRoles:                  make([]dm.UserRole, len(m.Roles)),
-		},
-		UserSessionType: dm.UserSessionType(m.UserSessionType),
+	return nil
+}
+
+func UpdateSessionTimeout(ctx context.Context, database *mongo.Database, sessionToken dm.UserSessionToken, timeout time.Time) error {
+	queryCtx, cancel := db.DefaultQueryContext(ctx)
+	defer cancel()
+
+	_, err := database.Collection(dm.UserCollectionName).UpdateOne(queryCtx,
+		bson.M{"sessions": bson.M{"$elemMatch": bson.M{"token": sessionToken}}},
+		bson.M{"$set": bson.M{"sessions.$.timeoutAt": timeout}})
+
+	if err != nil {
+		return errors.Wrap("error updating session timeout", err)
 	}
-	if m.PasswordResetTokenValidUntil != nil {
-		userSession.User.PasswordResetTokenValidUntil = *m.PasswordResetTokenValidUntil
+	return nil
+}
+
+func DeleteSession(ctx context.Context, database *mongo.Database, sessionToken dm.UserSessionToken) error {
+	queryCtx, cancel := db.DefaultQueryContext(ctx)
+	defer cancel()
+
+	_, err := database.Collection(dm.UserCollectionName).UpdateOne(
+		queryCtx,
+		bson.M{"sessions": bson.M{"$elemMatch": bson.M{"token": sessionToken}}},
+		bson.M{"$pull": bson.M{"sessions": bson.M{"token": sessionToken}}})
+
+	if err != nil {
+		return errors.Wrap("error deleting session", err)
 	}
-	for i, role := range m.Roles {
-		userSession.User.UserRoles[i] = dm.UserRole(role.Role)
+	return nil
+}
+
+func GetUserForSession(ctx context.Context, database *mongo.Database, sessionToken dm.UserSessionToken, sessionType dm.UserSessionType) (dm.User, error) {
+	queryCtx, cancel := db.DefaultQueryContext(ctx)
+	defer cancel()
+
+	var user dm.User
+	sessionMatches := bson.M{"token": sessionToken, "type": sessionType}
+	notExpired := bson.M{"timeoutAt": bson.M{"$gt": time.Now()}}
+
+	err := database.Collection(dm.UserCollectionName).FindOne(queryCtx, bson.M{"sessions": bson.M{"$elemMatch": bson.M{"$and": bson.A{sessionMatches, notExpired}}}}).
+		Decode(&user)
+
+	if err != nil {
+		return dm.User{}, errors.Wrap("error loading user for session", err)
 	}
-	return userSession, nil
+	return user, nil
 }

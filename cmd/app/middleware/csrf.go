@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	errs "errors"
 	"net/http"
 	ginext "user-manager/cmd/app/gin-extensions"
 	"user-manager/util/errors"
@@ -17,7 +18,7 @@ func RegisterCsrfMiddleware(group *gin.RouterGroup) {
 			cookieName = "CSRF-Token"
 		}
 		cookie, err := ctx.Cookie(cookieName)
-		if err != nil && err != http.ErrNoCookie {
+		if err != nil && !errs.Is(err, http.ErrNoCookie) {
 			_ = ctx.AbortWithError(http.StatusInternalServerError, errors.Wrap("getting CSRF cookie failed", err))
 			return
 		}

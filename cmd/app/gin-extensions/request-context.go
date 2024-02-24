@@ -1,7 +1,7 @@
 package ginext
 
 import (
-	"database/sql"
+	"go.mongodb.org/mongo-driver/mongo"
 	"reflect"
 	dm "user-manager/domain-model"
 	"user-manager/util/errors"
@@ -14,8 +14,8 @@ const (
 )
 
 type RequestContext struct {
-	UserSession dm.UserSession
-	Tx          *sql.Tx
+	User        dm.User
+	Database    *mongo.Database
 	Log         dm.Log
 	SecurityLog dm.SecurityLog
 	Emailing    dm.Emailing

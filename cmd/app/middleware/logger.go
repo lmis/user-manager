@@ -56,7 +56,7 @@ type LogMetadata struct {
 	CorrelationID string        `json:"correlationID"`
 	Latency       time.Duration `json:"latency,omitempty"`
 	Path          string        `json:"path,omitempty"`
-	UserID        int           `json:"userID,omitempty"`
+	UserID        string        `json:"userID,omitempty"`
 	Roles         []dm.UserRole `json:"role,omitempty"`
 	ClientIP      string        `json:"clientIP,omitempty"`
 	Method        string        `json:"method,omitempty"`
@@ -76,7 +76,7 @@ func getMetadata(logger *RequestLogger) *LogMetadata {
 	topic := logger.topic
 	c := logger.context
 	requestContext := ginext.GetRequestContext(c)
-	userSession := requestContext.UserSession
+	user := requestContext.User
 	path := c.FullPath()
 
 	metadata := LogMetadata{
@@ -90,9 +90,9 @@ func getMetadata(logger *RequestLogger) *LogMetadata {
 		BodySize:      c.Writer.Size(),
 		Latency:       logger.latency,
 	}
-	if userSession.UserSessionID != "" {
-		metadata.UserID = int(userSession.User.AppUserID)
-		metadata.Roles = userSession.User.UserRoles
+	if user.IsPresent() {
+		metadata.UserID = user.ID.ToString()
+		metadata.Roles = user.UserRoles
 	}
 	return &metadata
 }

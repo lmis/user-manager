@@ -1,8 +1,11 @@
 package main
 
 import (
-	"database/sql"
 	"embed"
+	"github.com/gin-gonic/gin"
+	"github.com/unrolled/render"
+	"net/http"
+	"time"
 	"user-manager/cmd/app/router"
 	"user-manager/db"
 	dm "user-manager/domain-model"
@@ -11,22 +14,29 @@ import (
 	util "user-manager/util/http"
 	"user-manager/util/logger"
 
-	"net/http"
-	"time"
-
-	"github.com/gin-gonic/gin"
 	_ "github.com/lib/pq"
 )
 
 //go:embed translations/*
 var translationsFS embed.FS
-var database *sql.DB
+
+//go:embed templates/*.tmpl
+var templatesFS embed.FS
 
 func main() {
 	command.Run("LIFECYCLE", runServer)
 }
 
 func runServer(log logger.Logger) error {
+	r := render.New(render.Options{
+		Directory: "templates",
+		FileSystem: &render.EmbedFileSystem{
+			FS: templatesFS,
+		},
+		Extensions: []string{".html", ".tmpl"},
+		Layout:     "layout",
+	})
+
 	log.Info("Starting up")
 
 	config, err := dm.GetConfig()
@@ -38,13 +48,16 @@ func runServer(log logger.Logger) error {
 		gin.SetMode(gin.ReleaseMode)
 	}
 
-	database, err = config.DbInfo.OpenDbConnection(log)
+	database, err := db.OpenDbConnection(log, config.DbInfo)
 	if err != nil {
 		return errors.Wrap("could not open db connection", err)
 	}
-	defer db.CloseOrPanic(database)
+	defer db.CloseOrPanic(database.Client())
 
 	engine, err := router.New(translationsFS, config, database)
+	engine.GET("/hello", func(c *gin.Context) {
+		_ = r.HTML(c.Writer, http.StatusOK, "home", "world")
+	})
 	if err != nil {
 		return errors.Wrap("cannot setup router", err)
 	}

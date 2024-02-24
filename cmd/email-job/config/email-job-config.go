@@ -7,7 +7,7 @@ import (
 )
 
 type Config struct {
-	DbInfo      db.Info
+	DbInfo      db.DbInfo
 	EmailApiUrl string `env:"EMAIL_API_URL"`
 	Environment string `env:"ENVIRONMENT"`
 }

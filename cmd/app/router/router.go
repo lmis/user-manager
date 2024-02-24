@@ -1,9 +1,9 @@
 package router
 
 import (
-	"database/sql"
 	"embed"
 	"github.com/gin-gonic/gin"
+	"go.mongodb.org/mongo-driver/mongo"
 	"time"
 	"user-manager/cmd/app/middleware"
 	"user-manager/cmd/app/resource"
@@ -11,7 +11,7 @@ import (
 	"user-manager/util/errors"
 )
 
-func New(translationsFS embed.FS, config *dm.Config, database *sql.DB) (*gin.Engine, error) {
+func New(translationsFS embed.FS, config *dm.Config, database *mongo.Database) (*gin.Engine, error) {
 	r := gin.New()
 	r.HandleMethodNotAllowed = true
 
@@ -30,7 +30,7 @@ func New(translationsFS embed.FS, config *dm.Config, database *sql.DB) (*gin.Eng
 	return r, nil
 }
 
-func registerApiGroup(api *gin.RouterGroup, database *sql.DB) error {
+func registerApiGroup(api *gin.RouterGroup, database *mongo.Database) error {
 	middleware.RegisterCsrfMiddleware(api)
 	err := middleware.RegisterDatabaseMiddleware(api, database)
 	if err != nil {
