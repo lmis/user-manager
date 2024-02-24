@@ -1,11 +1,12 @@
 package middleware
 
 import (
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"net/http"
 	ginext "user-manager/cmd/app/gin-extensions"
 	dm "user-manager/domain-model"
-	"user-manager/util/errors"
+	"user-manager/util/errs"
 	"user-manager/util/slices"
 )
 
@@ -13,17 +14,17 @@ func RegisterRequireRoleMiddleware(group *gin.RouterGroup, requiredRole dm.UserR
 	group.Use(func(ctx *gin.Context) {
 		r := ginext.GetRequestContext(ctx)
 		securityLog := r.SecurityLog
-		userSession := r.UserSession
-		if userSession.UserSessionID == "" {
-			securityLog.Info("Not a %s: unauthenticated", requiredRole)
-			_ = ctx.AbortWithError(http.StatusUnauthorized, errors.Error("not authenticated"))
+		user := r.User
+		if !user.IsPresent() {
+			securityLog.Info(fmt.Sprintf("Not a %s: unauthenticated", requiredRole))
+			_ = ctx.AbortWithError(http.StatusUnauthorized, errs.Error("not authenticated"))
 			return
 		}
 
-		receivedRoles := userSession.User.UserRoles
+		receivedRoles := user.UserRoles
 		if !slices.Contains(receivedRoles, requiredRole) {
-			securityLog.Info("Not a %s: wrong role (%v)", requiredRole, receivedRoles)
-			_ = ctx.AbortWithError(http.StatusUnauthorized, errors.Errorf("wrong role. required %s, received %v", requiredRole, receivedRoles))
+			securityLog.Info(fmt.Sprintf("Not a %s: wrong role (%v)", requiredRole, receivedRoles))
+			_ = ctx.AbortWithError(http.StatusUnauthorized, errs.Errorf("wrong role. required %s, received %v", requiredRole, receivedRoles))
 			return
 		}
 	})

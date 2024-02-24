@@ -1,9 +1,10 @@
 package service
 
 import (
+	"errors"
 	"net/http"
 	dm "user-manager/domain-model"
-	"user-manager/util/errors"
+	"user-manager/util/errs"
 
 	"github.com/gin-gonic/gin"
 )
@@ -28,17 +29,17 @@ func SetSessionCookie(ctx *gin.Context, config *dm.Config, sessionID string, ses
 	ctx.SetSameSite(http.SameSiteStrictMode)
 }
 
-func GetSessionCookie(ctx *gin.Context, sessionType dm.UserSessionType) (dm.UserSessionID, error) {
+func GetSessionCookie(ctx *gin.Context, sessionType dm.UserSessionType) (dm.UserSessionToken, error) {
 	cookie, err := ctx.Request.Cookie(getCookieName(sessionType))
 	if err != nil {
-		if err == http.ErrNoCookie {
+		if errors.Is(err, http.ErrNoCookie) {
 			return "", nil
 		}
-		return "", errors.Wrap("issue reading cookie", err)
+		return "", errs.Wrap("issue reading cookie", err)
 	}
-	return dm.UserSessionID(cookie.Value), nil
+	return dm.UserSessionToken(cookie.Value), nil
 }
 
 func getCookieName(sessionType dm.UserSessionType) string {
-	return sessionType.String() + "_TOKEN"
+	return string(sessionType) + "_TOKEN"
 }

@@ -2,14 +2,14 @@ package service
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
+	"go.mongodb.org/mongo-driver/mongo"
 	"strings"
 	"text/template"
 	ginext "user-manager/cmd/app/gin-extensions"
 	dm "user-manager/domain-model"
 	"user-manager/repository"
-	"user-manager/util/errors"
+	"user-manager/util/errs"
 )
 
 func SendVerificationEmail(ctx context.Context, r *ginext.RequestContext, language dm.UserLanguage, email string, verificationToken string) error {
@@ -21,8 +21,8 @@ func SendVerificationEmail(ctx context.Context, r *ginext.RequestContext, langua
 		"EmailVerificationToken": verificationToken,
 		"ServiceName":            config.ServiceName,
 	}
-	if err := enqueueBasicEmail(ctx, r.Tx, r.Emailing.BaseTemplate, translation, translation.VerificationEmail, data, config.EmailFrom, email, dm.MailQueuePrioHigh); err != nil {
-		return errors.Wrap("error enqueuing basic email", err)
+	if err := enqueueBasicEmail(ctx, r.Database, r.Emailing.BaseTemplate, translation, translation.VerificationEmail, data, config.EmailFrom, email, dm.MailQueuePrioHigh); err != nil {
+		return errs.Wrap("error enqueuing basic email", err)
 	}
 	return nil
 }
@@ -34,8 +34,8 @@ func SendSignUpAttemptEmail(ctx context.Context, r *ginext.RequestContext, langu
 	data := map[string]string{
 		"ServiceName": config.ServiceName,
 	}
-	if err := enqueueBasicEmail(ctx, r.Tx, r.Emailing.BaseTemplate, translation, translation.SignUpAttemptedEmail, data, config.EmailFrom, email, dm.MailQueuePrioHigh); err != nil {
-		return errors.Wrap("error enqueuing basic email", err)
+	if err := enqueueBasicEmail(ctx, r.Database, r.Emailing.BaseTemplate, translation, translation.SignUpAttemptedEmail, data, config.EmailFrom, email, dm.MailQueuePrioHigh); err != nil {
+		return errs.Wrap("error enqueuing basic email", err)
 	}
 	return nil
 }
@@ -50,8 +50,8 @@ func SendChangeVerificationEmail(ctx context.Context, r *ginext.RequestContext, 
 		"ServiceName":                  config.ServiceName,
 		"NewEmail":                     newEmail,
 	}
-	if err := enqueueBasicEmail(ctx, r.Tx, r.Emailing.BaseTemplate, translation, translation.ChangeVerificationEmail, data, config.EmailFrom, newEmail, dm.MailQueuePrioHigh); err != nil {
-		return errors.Wrap("error enqueuing basic email", err)
+	if err := enqueueBasicEmail(ctx, r.Database, r.Emailing.BaseTemplate, translation, translation.ChangeVerificationEmail, data, config.EmailFrom, newEmail, dm.MailQueuePrioHigh); err != nil {
+		return errs.Wrap("error enqueuing basic email", err)
 	}
 	return nil
 }
@@ -64,8 +64,8 @@ func SendChangeNotificationEmail(ctx context.Context, r *ginext.RequestContext, 
 		"ServiceName": config.ServiceName,
 		"NewEmail":    newEmail,
 	}
-	if err := enqueueBasicEmail(ctx, r.Tx, r.Emailing.BaseTemplate, translation, translation.ChangeNotificationEmail, data, config.EmailFrom, email, dm.MailQueuePrioHigh); err != nil {
-		return errors.Wrap("error enqueuing basic email", err)
+	if err := enqueueBasicEmail(ctx, r.Database, r.Emailing.BaseTemplate, translation, translation.ChangeNotificationEmail, data, config.EmailFrom, email, dm.MailQueuePrioHigh); err != nil {
+		return errs.Wrap("error enqueuing basic email", err)
 	}
 	return nil
 }
@@ -79,8 +79,8 @@ func SendResetPasswordEmail(ctx context.Context, r *ginext.RequestContext, langu
 		"AppUrl":             config.AppUrl,
 		"PasswordResetToken": resetToken,
 	}
-	if err := enqueueBasicEmail(ctx, r.Tx, r.Emailing.BaseTemplate, translation, translation.ResetPasswordEmail, data, config.EmailFrom, email, dm.MailQueuePrioHigh); err != nil {
-		return errors.Wrap("error enqueuing basic email", err)
+	if err := enqueueBasicEmail(ctx, r.Database, r.Emailing.BaseTemplate, translation, translation.ResetPasswordEmail, data, config.EmailFrom, email, dm.MailQueuePrioHigh); err != nil {
+		return errs.Wrap("error enqueuing basic email", err)
 	}
 	return nil
 }
@@ -88,11 +88,11 @@ func SendResetPasswordEmail(ctx context.Context, r *ginext.RequestContext, langu
 func executeTemplate(templateText string, data interface{}) (string, error) {
 	t, err := template.New("base").Parse(templateText)
 	if err != nil {
-		return "", errors.Wrap("templateText cannot be parsed", err)
+		return "", errs.Wrap("templateText cannot be parsed", err)
 	}
 	writer := &strings.Builder{}
 	if err = t.Execute(writer, data); err != nil {
-		return "", errors.Wrap("template execution error", err)
+		return "", errs.Wrap("template execution error", err)
 	}
 	return writer.String(), nil
 }
@@ -104,7 +104,8 @@ type baseTemplateData struct {
 }
 
 func enqueueBasicEmail(
-	ctx context.Context, tx *sql.Tx,
+	ctx context.Context,
+	database *mongo.Database,
 	baseTemplate *template.Template,
 	translation dm.Translations,
 	templates []string,
@@ -120,7 +121,7 @@ func enqueueBasicEmail(
 	if ok {
 		salutation, err = executeTemplate(translation.Salutation, data)
 		if err != nil {
-			return errors.Wrap("issue translating salutation", err)
+			return errs.Wrap("issue translating salutation", err)
 		}
 	} else {
 		salutation = translation.SalutationAnonymous
@@ -128,12 +129,12 @@ func enqueueBasicEmail(
 	subject := ""
 	var paragraphs []string
 	if len(templates) < 2 {
-		return errors.Errorf("invalid template. %s need at least subject and paragraph", templates)
+		return errs.Errorf("invalid template. %s need at least subject and paragraph", templates)
 	}
 	for i, t := range templates {
 		p, err := executeTemplate(t, data)
 		if err != nil {
-			return errors.Wrap(fmt.Sprintf("issue translating template %d", i), err)
+			return errs.Wrap(fmt.Sprintf("issue translating template %d", i), err)
 		}
 		if i == 0 {
 			subject = p
@@ -147,11 +148,17 @@ func enqueueBasicEmail(
 		Paragraphs: paragraphs,
 		Footer:     translation.Footer,
 	}); err != nil {
-		return errors.Wrap("issue executing base template", err)
+		return errs.Wrap("issue executing base template", err)
 	}
 
-	if err = repository.InsertPendingMail(ctx, tx, from, to, writer.String(), subject, priority); err != nil {
-		return errors.Wrap("issue inserting pending email", err)
+	if err = repository.InsertPendingMail(ctx, database, dm.MailInsert{
+		To:       to,
+		From:     from,
+		Subject:  subject,
+		Content:  writer.String(),
+		Priority: priority,
+	}); err != nil {
+		return errs.Wrap("issue inserting pending email", err)
 	}
 	return nil
 }

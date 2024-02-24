@@ -3,8 +3,10 @@ package main
 import (
 	"bytes"
 	"context"
-	"database/sql"
 	"encoding/json"
+	"errors"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
 	"net/http"
 	"os"
 	"os/signal"
@@ -12,15 +14,12 @@ import (
 	"time"
 	"user-manager/cmd/email-job/config"
 	"user-manager/db"
-	. "user-manager/db/generated/models/postgres/public/enum"
-	"user-manager/db/generated/models/postgres/public/model"
-	. "user-manager/db/generated/models/postgres/public/table"
+	dm "user-manager/domain-model"
 	email "user-manager/third-party-models/email-api"
 	"user-manager/util/command"
-	"user-manager/util/errors"
+	"user-manager/util/errs"
 	"user-manager/util/logger"
 
-	. "github.com/go-jet/jet/v2/postgres"
 	_ "github.com/lib/pq"
 )
 
@@ -33,14 +32,14 @@ func startJob(log logger.Logger) error {
 
 	conf, err := config.GetConfig()
 	if err != nil {
-		return errors.Wrap("issue reading config", err)
+		return errs.Wrap("issue reading config", err)
 	}
 
-	connection, err := conf.DbInfo.OpenDbConnection(log)
+	database, err := db.OpenDbConnection(log, conf.DbInfo)
 	if err != nil {
-		return errors.Wrap("issue opening db connection", err)
+		return errs.Wrap("issue opening db connection", err)
 	}
-	defer db.CloseOrPanic(connection)
+	defer db.CloseOrPanic(database.Client())
 
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, syscall.SIGTERM, syscall.SIGINT)
@@ -58,93 +57,68 @@ func startJob(log logger.Logger) error {
 			if timeSinceLastEmailSent < minTimeBetweenSendingEmails {
 				time.Sleep(minTimeBetweenSendingEmails - timeSinceLastEmailSent)
 			}
-			if err = sendOneEmail(log, connection, conf); err != nil {
-				return errors.Wrap("issue sending email", err)
+			if err = sendOneEmail(log, database, conf); err != nil {
+				return errs.Wrap("issue sending email", err)
 			}
 			lastEmailSentAt = time.Now()
 		}
 	}
 }
 
-func sendOneEmail(log logger.Logger, database *sql.DB, config *config.Config) (ret error) {
-	shouldCommit := false
-	maxNumFailedAttempts := int16(3)
+func sendOneEmail(log logger.Logger, database *mongo.Database, config *config.Config) (ret error) {
+	maxNumFailedAttempts := int8(3)
 	ctx, cancelTimeout := db.DefaultQueryContext(context.Background())
 	defer cancelTimeout()
 
-	log.Info("BEGIN Transaction")
-	tx, err := database.BeginTx(ctx, nil)
+	var mail dm.Mail
+	err := database.Collection(dm.MailQueueCollectionName).FindOne(ctx, bson.M{
+		"$or": []bson.M{
+			{"status": dm.MailStatusPending},
+			{"status": dm.MailStatusFailed, "failedAttempts": bson.M{"$lt": maxNumFailedAttempts}},
+		},
+	}).Decode(&mail)
+
 	if err != nil {
-		return errors.Wrap("issue beginning transaction", err)
-	}
-	defer func() {
-		if shouldCommit {
-			log.Info("COMMIT")
-			if err := tx.Commit(); err != nil {
-				ret = errors.Wrap("issue committing to db", err)
-			}
-		} else {
-			log.Info("ROLLBACK Transaction")
-			if err = tx.Rollback(); err != nil {
-				ret = errors.Wrap("issue rolling back transaction", err)
-			}
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			log.Info("No emails to send")
+			return nil
 		}
-	}()
-
-	mail, err := db.FetchMaybe[model.MailQueue](
-		context.Background(),
-		SELECT(MailQueue.AllColumns).
-			FROM(MailQueue).
-			WHERE(
-				MailQueue.Status.EQ(EmailStatus.Pending).
-					OR(
-						MailQueue.Status.EQ(EmailStatus.Error).
-							AND(MailQueue.NumberOfFailedAttempts.LT(Int16(maxNumFailedAttempts))))).
-			ORDER_BY(MailQueue.Priority.DESC()).
-			QueryContext,
-		tx)
-
-	if err != nil {
-		return errors.Wrap("issue getting email from db", err)
-	}
-	if mail == nil {
-		return
+		return errs.Wrap("issue getting email from db", err)
 	}
 
 	payload, err := json.Marshal(email.EmailTO{
-		From:    mail.FromAddress,
-		To:      mail.ToAddress,
+		From:    mail.From,
+		To:      mail.To,
 		Subject: mail.Subject,
 		Body:    mail.Content,
 	})
 
 	if err != nil {
-		return errors.Wrap("issue marshalling payload for api call", err)
+		return errs.Wrap("issue marshalling payload for api call", err)
 	}
 	// TODO: how does this work in GCP?
 	_, err = http.Post(config.EmailApiUrl, "application/json", bytes.NewReader(payload))
 
 	// If sending the mail failed, log and continue
-	numberOfFailedAttempts := mail.NumberOfFailedAttempts
-	status := EmailStatus.Sent
+	failedAttempts := mail.FailedAttempts
+	status := dm.MailStatusSent
 	if err != nil {
-		status = EmailStatus.Error
-		numberOfFailedAttempts++
-		log.Warn(errors.Wrap("issue sending email", err).Error())
+		status = dm.MailStatusFailed
+		failedAttempts++
+		log.Warn(errs.Wrap("issue sending email", err).Error())
 	}
 
-	err = db.ExecSingleMutation(
-		context.Background(),
-		MailQueue.UPDATE(MailQueue.Status, MailQueue.NumberOfFailedAttempts, MailQueue.UpdatedAt).
-			SET(status, numberOfFailedAttempts, time.Now()).
-			WHERE(MailQueue.MailQueueID.EQ(Int64(mail.MailQueueID))).
-			ExecContext,
-		tx)
+	_, err = database.Collection(dm.MailQueueCollectionName).UpdateByID(ctx, mail.ObjectID, bson.M{
+		"$set": bson.M{
+			"status":         status,
+			"failedAttempts": failedAttempts,
+			"updatedAt":      time.Now(),
+		},
+	})
 
 	if err != nil {
-		return errors.Wrap("issue updating email in db", err)
+		return errs.Wrap("issue updating email in db", err)
 	}
 
-	shouldCommit = true
 	return nil
 }

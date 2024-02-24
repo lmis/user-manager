@@ -2,7 +2,7 @@ package ginext
 
 import (
 	"net/http"
-	"user-manager/util/errors"
+	"user-manager/util/errs"
 
 	"github.com/gin-gonic/gin"
 )
@@ -16,7 +16,7 @@ func WrapEndpoint[requestTO interface{}, responseTO interface{}](endpoint Endpoi
 	return func(c *gin.Context) {
 		var request requestTO
 		if err := c.BindJSON(&request); err != nil {
-			_ = c.AbortWithError(http.StatusBadRequest, errors.Wrap("cannot bind to request TO", err))
+			_ = c.AbortWithError(http.StatusBadRequest, errs.Wrap("cannot bind to request TO", err))
 			return
 		}
 		response, err := endpoint(c, GetRequestContext(c), request)
@@ -35,7 +35,7 @@ func WrapEndpointWithoutResponseBody[requestTO interface{}](endpoint EndpointWit
 	return func(c *gin.Context) {
 		var request requestTO
 		if err := c.BindJSON(&request); err != nil {
-			_ = c.AbortWithError(http.StatusBadRequest, errors.Wrap("cannot bind to request TO", err))
+			_ = c.AbortWithError(http.StatusBadRequest, errs.Wrap("cannot bind to request TO", err))
 			return
 		}
 		if err := endpoint(c, GetRequestContext(c), request); err != nil {

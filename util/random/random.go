@@ -3,7 +3,7 @@ package random
 import (
 	"crypto/rand"
 	"encoding/base64"
-	"user-manager/util/errors"
+	"user-manager/util/errs"
 )
 
 func MakeRandomURLSafeB64(size int) string {
@@ -11,7 +11,7 @@ func MakeRandomURLSafeB64(size int) string {
 
 	_, err := rand.Read(randomBytes)
 	if err != nil {
-		panic(errors.Wrap("issue reading random bytes", err))
+		panic(errs.Wrap("issue reading random bytes", err))
 	}
 	return base64.URLEncoding.EncodeToString(randomBytes)
 }

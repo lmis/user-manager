@@ -5,7 +5,7 @@ import (
 	"user-manager/cmd/mock-3rd-party-apis/config"
 	"user-manager/cmd/mock-3rd-party-apis/util"
 	dm "user-manager/domain-model"
-	"user-manager/util/errors"
+	"user-manager/util/errs"
 )
 
 func TestSimpleLogin(config *config.Config, _ util.Emails, testUser *util.TestUser) error {
@@ -19,10 +19,10 @@ func TestSimpleLogin(config *config.Config, _ util.Emails, testUser *util.TestUs
 		Password: password,
 	})
 	if err := client.AssertLastResponseEq(200, resource.LoginResponseTO{Status: resource.LoginResponseInvalidCredentials}); err != nil {
-		return errors.Wrap("login with wrong email response mismatch", err)
+		return errs.Wrap("login with wrong email response mismatch", err)
 	}
 	if client.HasSessionCookie() {
-		return errors.Error("unexpected session cookie returned despite wrong email")
+		return errs.Error("unexpected session cookie returned despite wrong email")
 	}
 
 	// Login with wrong password
@@ -31,17 +31,17 @@ func TestSimpleLogin(config *config.Config, _ util.Emails, testUser *util.TestUs
 		Password: []byte("not-the-password"),
 	})
 	if err := client.AssertLastResponseEq(200, resource.LoginResponseTO{Status: resource.LoginResponseInvalidCredentials}); err != nil {
-		return errors.Wrap("login with wrong password response mismatch", err)
+		return errs.Wrap("login with wrong password response mismatch", err)
 	}
 
 	if client.HasSessionCookie() {
-		return errors.Error("unexpected session cookie returned despite wrong password")
+		return errs.Error("unexpected session cookie returned despite wrong password")
 	}
 
 	// Get user info
 	client.MakeApiRequest("GET", "user-info", nil)
 	if err := client.AssertLastResponseEq(200, resource.UserInfoTO{Roles: nil, EmailVerified: false}); err != nil {
-		return errors.Wrap("get user info response mismatch", err)
+		return errs.Wrap("get user info response mismatch", err)
 	}
 
 	// Login with correct info
@@ -50,16 +50,16 @@ func TestSimpleLogin(config *config.Config, _ util.Emails, testUser *util.TestUs
 		Password: password,
 	})
 	if err := client.AssertLastResponseEq(200, resource.LoginResponseTO{Status: resource.LoginResponseLoggedIn}); err != nil {
-		return errors.Wrap("login with correct info response mismatch", err)
+		return errs.Wrap("login with correct info response mismatch", err)
 	}
 	if !client.HasSessionCookie() {
-		return errors.Error("expected session cookie returned, got none")
+		return errs.Error("expected session cookie returned, got none")
 	}
 
 	// Get user info
 	client.MakeApiRequest("GET", "user-info", nil)
 	if err := client.AssertLastResponseEq(200, resource.UserInfoTO{Roles: []dm.UserRole{dm.UserRoleUser}, EmailVerified: testUser.EmailVerified, Language: testUser.Language}); err != nil {
-		return errors.Wrap("second get user info response mismatch", err)
+		return errs.Wrap("second get user info response mismatch", err)
 	}
 	return nil
 }

@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"runtime/debug"
 	"syscall"
-	errs "user-manager/util/errors"
+	errs "user-manager/util/errs"
 
 	"github.com/gin-gonic/gin"
 )

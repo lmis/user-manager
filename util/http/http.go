@@ -3,17 +3,18 @@ package http
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
-	errs "user-manager/util/errors"
+	"user-manager/util/errs"
 	"user-manager/util/logger"
 )
 
 func RunHttpServer(log logger.Logger, httpServer *http.Server) error {
-	log.Info("Starting http server on %s", httpServer.Addr)
+	log.Info(fmt.Sprintf("Starting http server on %s", httpServer.Addr))
 	httpServerError := make(chan error, 1)
 	go func() {
 		if err := httpServer.ListenAndServe(); err != nil {

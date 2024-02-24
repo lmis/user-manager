@@ -1,41 +1,37 @@
 package router
 
 import (
-	"database/sql"
 	"embed"
 	"github.com/gin-gonic/gin"
+	"go.mongodb.org/mongo-driver/mongo"
 	"time"
 	"user-manager/cmd/app/middleware"
 	"user-manager/cmd/app/resource"
 	dm "user-manager/domain-model"
-	"user-manager/util/errors"
+	"user-manager/util/errs"
 )
 
-func New(translationsFS embed.FS, config *dm.Config, database *sql.DB) (*gin.Engine, error) {
+func New(translationsFS embed.FS, config *dm.Config, database *mongo.Database) (*gin.Engine, error) {
 	r := gin.New()
 	r.HandleMethodNotAllowed = true
 
-	err := middleware.RegisterRequestContextMiddleware(r, translationsFS, config)
+	err := middleware.RegisterRequestContextMiddleware(r, translationsFS, database, config)
 	if err != nil {
-		return nil, errors.Wrap("cannot setup RequestContextMiddleware", err)
+		return nil, errs.Wrap("cannot setup RequestContextMiddleware", err)
 	}
 	middleware.RegisterLoggerMiddleware(r)
 	middleware.RegisterRecoveryMiddleware(r)
 
 	err = registerApiGroup(r.Group("api"), database)
 	if err != nil {
-		return nil, errors.Wrap("cannot setup ApiGroup", err)
+		return nil, errs.Wrap("cannot setup ApiGroup", err)
 	}
 
 	return r, nil
 }
 
-func registerApiGroup(api *gin.RouterGroup, database *sql.DB) error {
+func registerApiGroup(api *gin.RouterGroup, database *mongo.Database) error {
 	middleware.RegisterCsrfMiddleware(api)
-	err := middleware.RegisterDatabaseMiddleware(api, database)
-	if err != nil {
-		return errors.Error("cannot setup DatabaseMiddleware")
-	}
 	middleware.RegisterExtractLoginSessionMiddleware(api)
 
 	resource.RegisterUserInfoResource(api)

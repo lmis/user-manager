@@ -17,13 +17,15 @@ type UserInfoTO struct {
 }
 
 func Get(_ *gin.Context, r *ginext.RequestContext) (UserInfoTO, error) {
-	userSession := r.UserSession
+	user := r.User
 
-	userTO := UserInfoTO{}
-	if userSession.UserSessionID != "" {
-		userTO.Roles = userSession.User.UserRoles
-		userTO.EmailVerified = userSession.User.EmailVerified
-		userTO.Language = userSession.User.Language
+	if !user.IsPresent() {
+		return UserInfoTO{}, nil
 	}
-	return userTO, nil
+
+	return UserInfoTO{
+		Roles:         user.UserRoles,
+		EmailVerified: user.EmailVerified,
+		Language:      user.Language,
+	}, nil
 }

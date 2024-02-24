@@ -1,6 +1,8 @@
 package middleware
 
 import (
+	"fmt"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"net/http"
 	ginext "user-manager/cmd/app/gin-extensions"
 	dm "user-manager/domain-model"
@@ -17,8 +19,8 @@ func RegisterLoggerMiddleware(app *gin.Engine) {
 
 func LoggerMiddleware(c *gin.Context) {
 	// Add requestLogger to context
-	requestLogger := &RequestLogger{topic: "REQUEST", context: c}
-	securityLogger := &RequestLogger{topic: "SECURITY", context: c}
+	requestLogger := RequestLogger{topic: "REQUEST", context: c}
+	securityLogger := RequestLogger{topic: "SECURITY", context: c}
 
 	requestContext := ginext.GetRequestContext(c)
 	requestContext.Log = dm.Log(requestLogger)
@@ -38,9 +40,9 @@ func LoggerMiddleware(c *gin.Context) {
 	status := c.Writer.Status()
 	requestLogger.status = status
 	if status >= 400 {
-		securityLogger.Info("Request failed. Status: %d", status)
+		securityLogger.Info(fmt.Sprintf("Request failed. Status: %d", status))
 	} else {
-		requestLogger.Info("Finished request. Status: %d", status)
+		requestLogger.Info(fmt.Sprintf("Finished request. Status: %d", status))
 	}
 
 	// Trigger alerts
@@ -56,7 +58,7 @@ type LogMetadata struct {
 	CorrelationID string        `json:"correlationID"`
 	Latency       time.Duration `json:"latency,omitempty"`
 	Path          string        `json:"path,omitempty"`
-	UserID        int           `json:"userID,omitempty"`
+	UserID        string        `json:"userID,omitempty"`
 	Roles         []dm.UserRole `json:"role,omitempty"`
 	ClientIP      string        `json:"clientIP,omitempty"`
 	Method        string        `json:"method,omitempty"`
@@ -72,11 +74,11 @@ type RequestLogger struct {
 	status  int
 }
 
-func getMetadata(logger *RequestLogger) *LogMetadata {
+func getMetadata(logger RequestLogger) *LogMetadata {
 	topic := logger.topic
 	c := logger.context
 	requestContext := ginext.GetRequestContext(c)
-	userSession := requestContext.UserSession
+	user := requestContext.User
 	path := c.FullPath()
 
 	metadata := LogMetadata{
@@ -90,21 +92,21 @@ func getMetadata(logger *RequestLogger) *LogMetadata {
 		BodySize:      c.Writer.Size(),
 		Latency:       logger.latency,
 	}
-	if userSession.UserSessionID != "" {
-		metadata.UserID = int(userSession.User.AppUserID)
-		metadata.Roles = userSession.User.UserRoles
+	if user.IsPresent() {
+		metadata.UserID = primitive.ObjectID(user.ID()).Hex()
+		metadata.Roles = user.UserRoles
 	}
 	return &metadata
 }
 
-func (r *RequestLogger) Info(format string, args ...interface{}) {
-	logger.WriteLog(getMetadata(r), logger.LogLevelInfo, format, args...)
+func (r RequestLogger) Info(message string) {
+	logger.WriteLog(getMetadata(r), logger.LogLevelInfo, message)
 }
 
-func (r *RequestLogger) Warn(format string, args ...interface{}) {
-	logger.WriteLog(getMetadata(r), logger.LogLevelWarn, format, args...)
+func (r RequestLogger) Warn(message string) {
+	logger.WriteLog(getMetadata(r), logger.LogLevelWarn, message)
 }
 
-func (r *RequestLogger) Err(e error) {
-	logger.WriteLog(getMetadata(r), logger.LogLevelError, "%s", e.Error())
+func (r RequestLogger) Err(e error) {
+	logger.WriteLog(getMetadata(r), logger.LogLevelError, e.Error())
 }

@@ -5,7 +5,7 @@ import (
 	"user-manager/cmd/mock-3rd-party-apis/config"
 	"user-manager/cmd/mock-3rd-party-apis/util"
 	dm "user-manager/domain-model"
-	"user-manager/util/errors"
+	"user-manager/util/errs"
 )
 
 func TestChangePassword(config *config.Config, _ util.Emails, testUser *util.TestUser) error {
@@ -26,7 +26,7 @@ func TestChangePassword(config *config.Config, _ util.Emails, testUser *util.Tes
 		NewPassword: newPassword,
 	})
 	if err := client.AssertLastResponseEq(403, nil); err != nil {
-		return errors.Wrap("change without sudo mode response mismatch", err)
+		return errs.Wrap("change without sudo mode response mismatch", err)
 	}
 
 	// Sudo login
@@ -42,7 +42,7 @@ func TestChangePassword(config *config.Config, _ util.Emails, testUser *util.Tes
 		NewPassword: newPassword,
 	})
 	if err := client.AssertLastResponseEq(400, nil); err != nil {
-		return errors.Wrap("change with wrong old password response mismatch", err)
+		return errs.Wrap("change with wrong old password response mismatch", err)
 	}
 
 	// Login with old password should still work
@@ -51,17 +51,17 @@ func TestChangePassword(config *config.Config, _ util.Emails, testUser *util.Tes
 		Password: password,
 	})
 	if err := client.AssertLastResponseEq(200, resource.LoginResponseTO{Status: resource.LoginResponseLoggedIn}); err != nil {
-		return errors.Wrap("login response mismatch", err)
+		return errs.Wrap("login response mismatch", err)
 	}
 
 	if !client.HasSessionCookie() {
-		return errors.Error("session cookie not found")
+		return errs.Error("session cookie not found")
 	}
 
 	// Check user
 	client.MakeApiRequest("GET", "user-info", nil)
 	if err := client.AssertLastResponseEq(200, resource.UserInfoTO{Roles: []dm.UserRole{dm.UserRoleUser}, EmailVerified: testUser.EmailVerified, Language: testUser.Language}); err != nil {
-		return errors.Wrap("auth role response mismatch", err)
+		return errs.Wrap("auth role response mismatch", err)
 	}
 
 	// Change with correct password
@@ -70,7 +70,7 @@ func TestChangePassword(config *config.Config, _ util.Emails, testUser *util.Tes
 		NewPassword: newPassword,
 	})
 	if err := client.AssertLastResponseEq(204, nil); err != nil {
-		return errors.Wrap("change with correct password response mismatch", err)
+		return errs.Wrap("change with correct password response mismatch", err)
 	}
 
 	// Login with old password should no longer work
@@ -79,7 +79,7 @@ func TestChangePassword(config *config.Config, _ util.Emails, testUser *util.Tes
 		Password: password,
 	})
 	if err := client.AssertLastResponseEq(200, resource.LoginResponseTO{Status: resource.LoginResponseInvalidCredentials}); err != nil {
-		return errors.Wrap("login response mismatch", err)
+		return errs.Wrap("login response mismatch", err)
 	}
 
 	// Login with new password should work now
@@ -88,16 +88,16 @@ func TestChangePassword(config *config.Config, _ util.Emails, testUser *util.Tes
 		Password: newPassword,
 	})
 	if err := client.AssertLastResponseEq(200, resource.LoginResponseTO{Status: resource.LoginResponseLoggedIn}); err != nil {
-		return errors.Wrap("login response with new password mismatch", err)
+		return errs.Wrap("login response with new password mismatch", err)
 	}
 	if !client.HasSessionCookie() {
-		return errors.Error("session cookie not found")
+		return errs.Error("session cookie not found")
 	}
 
 	// Check user
 	client.MakeApiRequest("GET", "user-info", nil)
 	if err := client.AssertLastResponseEq(200, resource.UserInfoTO{Roles: []dm.UserRole{dm.UserRoleUser}, EmailVerified: testUser.EmailVerified, Language: testUser.Language}); err != nil {
-		return errors.Wrap("auth role response mismatch", err)
+		return errs.Wrap("auth role response mismatch", err)
 	}
 
 	testUser.Password = newPassword

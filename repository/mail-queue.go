@@ -2,36 +2,31 @@ package repository
 
 import (
 	"context"
-	"database/sql"
+	"go.mongodb.org/mongo-driver/mongo"
 	"user-manager/db"
-	. "user-manager/db/generated/models/postgres/public/enum"
-	. "user-manager/db/generated/models/postgres/public/table"
 	dm "user-manager/domain-model"
-	"user-manager/util/errors"
+	"user-manager/util/errs"
 )
 
 func InsertPendingMail(
-	ctx context.Context, tx *sql.Tx,
-	from string,
-	to string,
-	content string,
-	subject string,
-	priority dm.MailQueuePriority,
+	ctx context.Context,
+	database *mongo.Database,
+	mail dm.MailInsert,
 ) error {
-	err := db.ExecSingleMutation(
-		ctx,
-		MailQueue.INSERT(
-			MailQueue.FromAddress,
-			MailQueue.ToAddress,
-			MailQueue.Content,
-			MailQueue.Subject,
-			MailQueue.Status,
-			MailQueue.Priority).
-			VALUES(from, to, content, subject, EmailStatus.Pending, int16(priority)).
-			ExecContext,
-		tx)
+	queryCtx, cancel := db.DefaultQueryContext(ctx)
+	defer cancel()
+
+	_, err := database.Collection(dm.MailQueueCollectionName).InsertOne(queryCtx, dm.Mail{
+		From:     mail.From,
+		To:       mail.To,
+		Subject:  mail.Subject,
+		Content:  mail.Content,
+		Priority: mail.Priority,
+		Status:   dm.MailStatusPending,
+	})
+
 	if err != nil {
-		return errors.Wrap("issue inserting email in db", err)
+		return errs.Wrap("issue inserting email in db", err)
 	}
 
 	return nil

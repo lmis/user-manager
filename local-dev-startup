@@ -1,46 +1,49 @@
 #!/bin/sh
 export ENVIRONMENT=local
 export PORT=8080
-export APP_URL=http://localhost:8080
+export APP_URL=http://localhost:"$PORT"
 export SERVICE_NAME=TestApp
 export EMAIL_FROM=test-email-from@example.com
-export EMAIL_API_URL=http://localhost:8081/mock-send-email
 export MOCK_API_PORT=8081
-export DB_NAME=postgres
+export EMAIL_API_URL=http://localhost:"$MOCK_API_PORT"/mock-send-email
+export DB_NAME=db
 export DB_HOST=localhost
-export DB_PORT=5432
-export DB_USER=postgres
-export DB_PASSWORD=$(cat /dev/random | head -c 15 | base64)
-_DOCKER_POSTGRES_NAME=postgres-local-dev
+export DB_PORT=27017
+export DB_USER=test
+if [ ! -n "$DB_PASSWORD" ]
+then
+  DB_PASSWORD=$(head -c 15 < /dev/random | base64)
+fi
+export DB_PASSWORD
+
+DOCKER_MONGO_NAME=mongo-local-dev
 
 killIfExists() {
-    if [[ -n "$1" ]]
+    if [ -n "$1" ]
     then
-      kill $1
+      kill "$1"
     fi
 }
 
 cleanup() {
     echo "------ CLEANUP ------"
     echo "------ KILLING PROCESSES ------"
-    killIfExists $_APP_PID
-    killIfExists $_EMAILER_PID
-    killIfExists $_MOCK_THIRD_PARTY_APIS
+    killIfExists "$_APP_PID"
+    killIfExists "$_EMAILER_PID"
+    killIfExists "$_MOCK_THIRD_PARTY_APIS"
 
     sleep 2
     echo "------ REMOVING DOCKER CONTAINERS ------"
-    docker rm $_DOCKER_POSTGRES_NAME -f > /dev/null
+    docker rm $DOCKER_MONGO_NAME -f > /dev/null
 }
 
-trap cleanup exit
+trap cleanup EXIT
 
-echo "------ START LOCAL DB ($_DOCKER_POSTGRES_NAME) ------"
-docker run --name $_DOCKER_POSTGRES_NAME -p $DB_PORT:$DB_PORT -e POSTGRES_PASSWORD=$DB_PASSWORD -d postgres > /dev/null
-
-echo "------ RUN MIGRATOR ------"
-go run cmd/migrator/main.go
-
-if [[ $? = 0 ]]
+echo "------ START LOCAL DB ($DOCKER_MONGO_NAME) ------"
+if docker run -p $DB_PORT:$DB_PORT --name $DOCKER_MONGO_NAME \
+  -e MONGO_INITDB_ROOT_USERNAME=test \
+	-e MONGO_INITDB_ROOT_PASSWORD="$DB_PASSWORD" \
+  -d mongo
 then
     echo "------ START MOCK 3RD-PARTY API ------"
     go run cmd/mock-3rd-party-apis/main.go &

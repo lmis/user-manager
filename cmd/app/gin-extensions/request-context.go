@@ -1,10 +1,10 @@
 package ginext
 
 import (
-	"database/sql"
+	"go.mongodb.org/mongo-driver/mongo"
 	"reflect"
 	dm "user-manager/domain-model"
-	"user-manager/util/errors"
+	"user-manager/util/errs"
 
 	"github.com/gin-gonic/gin"
 )
@@ -14,8 +14,8 @@ const (
 )
 
 type RequestContext struct {
-	UserSession dm.UserSession
-	Tx          *sql.Tx
+	User        dm.User
+	Database    *mongo.Database
 	Log         dm.Log
 	SecurityLog dm.SecurityLog
 	Emailing    dm.Emailing
@@ -25,11 +25,11 @@ type RequestContext struct {
 func GetRequestContext(c *gin.Context) *RequestContext {
 	val, ok := c.Get(RequestContextKey)
 	if !ok {
-		panic(errors.Error("missing request context"))
+		panic(errs.Error("missing request context"))
 	}
 	ctx, ok := val.(*RequestContext)
 	if !ok {
-		panic(errors.Errorf("mistyped request context %s", reflect.TypeOf(val)))
+		panic(errs.Errorf("mistyped request context %s", reflect.TypeOf(val)))
 	}
 	return ctx
 }

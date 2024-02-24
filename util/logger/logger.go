@@ -2,7 +2,6 @@ package logger
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 	"os"
 	"runtime"
@@ -23,8 +22,8 @@ const (
 )
 
 type Logger interface {
-	Info(format string, args ...interface{})
-	Warn(format string, args ...interface{})
+	Info(message string)
+	Warn(message string)
 	Err(e error)
 }
 
@@ -49,35 +48,34 @@ const (
 )
 
 type SimpleLogger struct {
-	Topic string `json:"topic"`
+	Topic string
 }
 
-func (logger *SimpleLogger) Info(format string, args ...interface{}) {
-	WriteLog(logger, LogLevelInfo, format, args...)
+func (logger SimpleLogger) Info(message string) {
+	WriteLog(logger.Topic, LogLevelInfo, message)
 }
 
-func (logger *SimpleLogger) Warn(format string, args ...interface{}) {
-	WriteLog(logger, LogLevelWarn, fmt.Sprintf(format, args...))
+func (logger SimpleLogger) Warn(message string) {
+	WriteLog(logger.Topic, LogLevelWarn, message)
 }
 
-func (logger *SimpleLogger) Err(e error) {
-	WriteLog(logger, LogLevelError, "%s", e.Error())
+func (logger SimpleLogger) Err(e error) {
+	WriteLog(logger.Topic, LogLevelError, e.Error())
 
 }
 
 func NewLogger(topic string) Logger {
-	return &SimpleLogger{
+	return SimpleLogger{
 		topic,
 	}
 }
 
-func WriteLog(metadata interface{}, level LogLevel, format string, args ...interface{}) {
+func WriteLog(metadata interface{}, level LogLevel, message string) {
 	defer func() {
 		if p := recover(); p != nil {
-			log.Printf("Panic while printing log line. Level=%s format=%s", level, format)
+			log.Printf("Panic while printing log line. Level=%s message=%s", level, message)
 		}
 	}()
-	message := fmt.Sprintf(format, args...)
 	_, file, number, _ := runtime.Caller(2)
 
 	fileParts := strings.Split(file, "/")

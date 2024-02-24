@@ -1,9 +1,10 @@
 package command
 
 import (
+	"fmt"
 	"os"
 	"runtime/debug"
-	"user-manager/util/errors"
+	"user-manager/util/errs"
 	"user-manager/util/logger"
 )
 
@@ -16,15 +17,15 @@ func Run(topic string, command Command) {
 
 	defer func() {
 		if p := recover(); p != nil {
-			log.Err(errors.WrapRecoveredPanic(p, debug.Stack()))
+			log.Err(errs.WrapRecoveredPanic(p, debug.Stack()))
 			exitCode = 1
 		}
-		log.Info("Shutdown complete. ExitCode: %d", exitCode)
+		log.Info(fmt.Sprintf("Shutdown complete. ExitCode: %d", exitCode))
 		os.Exit(exitCode)
 	}()
 
 	if err := command(log); err != nil {
-		log.Err(errors.Wrap("command returned error", err))
+		log.Err(errs.Wrap("command returned error", err))
 		log.Warn("Exited abnormally")
 		exitCode = 1
 	}

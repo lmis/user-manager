@@ -6,7 +6,7 @@ import (
 	dm "user-manager/domain-model"
 	"user-manager/repository"
 	"user-manager/service"
-	"user-manager/util/errors"
+	"user-manager/util/errs"
 	"user-manager/util/random"
 
 	"github.com/gin-gonic/gin"
@@ -26,22 +26,22 @@ func RequestPasswordReset(ctx *gin.Context, r *ginext.RequestContext, requestTO 
 
 	securityLog.Info("Password reset requested")
 
-	user, err := repository.GetUserForEmail(ctx, r.Tx, requestTO.Email)
+	user, err := repository.GetUserForEmail(ctx, r.Database, requestTO.Email)
 	if err != nil {
-		return errors.Wrap("error finding user for email", err)
+		return errs.Wrap("error finding user for email", err)
 	}
-	if user.AppUserID == 0 {
+	if !user.IsPresent() {
 		securityLog.Info("Password reset request for non-existing email")
 		return nil
 	}
 
 	token := random.MakeRandomURLSafeB64(21)
-	if err := repository.SetPasswordResetToken(ctx, r.Tx, user.AppUserID, token, time.Now().Add(dm.PasswordResetTokenDuration)); err != nil {
-		return errors.Wrap("issue persisting password reset token", err)
+	if err := repository.SetPasswordResetToken(ctx, r.Database, user.ID(), token, time.Now().Add(dm.PasswordResetTokenDuration)); err != nil {
+		return errs.Wrap("issue persisting password reset token", err)
 	}
 
 	if err := service.SendResetPasswordEmail(ctx, r, user.Language, user.Email, token); err != nil {
-		return errors.Wrap("error sending password reset email", err)
+		return errs.Wrap("error sending password reset email", err)
 	}
 	return nil
 }
@@ -67,12 +67,12 @@ func ResetPassword(ctx *gin.Context, r *ginext.RequestContext, requestTO ResetPa
 	securityLog := r.SecurityLog
 	securityLog.Info("Password reset")
 
-	user, err := repository.GetUserForEmail(ctx, r.Tx, requestTO.Email)
+	user, err := repository.GetUserForEmail(ctx, r.Database, requestTO.Email)
 	if err != nil {
-		return ResetPasswordResponseTO{}, errors.Wrap("error finding user", err)
+		return ResetPasswordResponseTO{}, errs.Wrap("error finding user", err)
 	}
 
-	if user.AppUserID == 0 {
+	if !user.IsPresent() {
 		securityLog.Info("Password reset attempt for non-existing email")
 		return ResetPasswordResponseTO{ResetPasswordResponseInvalid}, nil
 	}
@@ -85,13 +85,13 @@ func ResetPassword(ctx *gin.Context, r *ginext.RequestContext, requestTO ResetPa
 		return ResetPasswordResponseTO{ResetPasswordResponseInvalid}, nil
 	}
 
-	hash, err := service.HashPassword(requestTO.NewPassword)
+	hash, err := service.MakeCredentials(requestTO.NewPassword)
 	if err != nil {
-		return ResetPasswordResponseTO{}, errors.Wrap("issue making password hash", err)
+		return ResetPasswordResponseTO{}, errs.Wrap("issue making password hash", err)
 	}
 
-	if err := repository.SetPasswordHash(ctx, r.Tx, user.AppUserID, hash); err != nil {
-		return ResetPasswordResponseTO{}, errors.Wrap("issue setting password hash", err)
+	if err := repository.SetCredentials(ctx, r.Database, user.ID(), hash); err != nil {
+		return ResetPasswordResponseTO{}, errs.Wrap("issue setting password hash", err)
 	}
 
 	return ResetPasswordResponseTO{ResetPasswordResponseSuccess}, nil

@@ -1,10 +1,10 @@
 package domain_model
 
 import (
+	env "github.com/caarlos0/env/v6"
 	"time"
 	"user-manager/db"
-	"user-manager/util/env"
-	"user-manager/util/errors"
+	"user-manager/util/errs"
 )
 
 type Config struct {
@@ -35,12 +35,12 @@ func (conf *Config) IsStagingEnv() bool {
 	return conf.Environment == "staging"
 }
 
-// TODO: Make this more strict with regards to missing env variables for non-local environments
 func GetConfig() (*Config, error) {
 	config := &Config{}
 
-	if err := env.ParseEnv(config); err != nil {
-		return nil, errors.Wrap("issue parsing environment", err)
+	var target interface{} = config
+	if err := env.Parse(target, env.Options{RequiredIfNoDef: true}); err != nil {
+		return nil, errs.Wrap("issue parsing environment", err)
 	}
 
 	return config, nil

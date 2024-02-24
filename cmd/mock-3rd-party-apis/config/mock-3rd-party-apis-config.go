@@ -1,8 +1,8 @@
 package config
 
 import (
-	"user-manager/util/env"
-	"user-manager/util/errors"
+	env "github.com/caarlos0/env/v6"
+	"user-manager/util/errs"
 )
 
 type Config struct {
@@ -13,8 +13,9 @@ type Config struct {
 func GetConfig() (*Config, error) {
 	config := &Config{}
 
-	if err := env.ParseEnv(config); err != nil {
-		return nil, errors.Wrap("error parsing env", err)
+	var target interface{} = config
+	if err := env.Parse(target, env.Options{RequiredIfNoDef: true}); err != nil {
+		return nil, errs.Wrap("error parsing env", err)
 	}
 	return config, nil
 }

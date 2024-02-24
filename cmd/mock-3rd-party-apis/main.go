@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 	"user-manager/cmd/app/middleware"
@@ -10,7 +11,7 @@ import (
 	dm "user-manager/domain-model"
 	email "user-manager/third-party-models/email-api"
 	"user-manager/util/command"
-	"user-manager/util/errors"
+	"user-manager/util/errs"
 	httputil "user-manager/util/http"
 	"user-manager/util/logger"
 	"user-manager/util/random"
@@ -28,7 +29,7 @@ func startServer(log logger.Logger) error {
 	log.Info("Starting up")
 	conf, err := config.GetConfig()
 	if err != nil {
-		return errors.Wrap("cannot read config", err)
+		return errs.Wrap("cannot read config", err)
 	}
 
 	app := gin.New()
@@ -41,7 +42,7 @@ func startServer(log logger.Logger) error {
 		Addr:    ":" + conf.Port,
 		Handler: app,
 	}); err != nil {
-		return errors.Wrap("issue running http server", err)
+		return errs.Wrap("issue running http server", err)
 	}
 
 	return nil
@@ -51,7 +52,7 @@ func registerMockEmailApi(log logger.Logger, app *gin.Engine, emails util.Emails
 	app.POST("/mock-send-email", func(c *gin.Context) {
 		var mail email.EmailTO
 		if err := c.BindJSON(&mail); err != nil {
-			_ = c.AbortWithError(http.StatusBadRequest, errors.Wrap("cannot bind to EmailTO", err))
+			_ = c.AbortWithError(http.StatusBadRequest, errs.Wrap("cannot bind to EmailTO", err))
 			return
 		}
 		m, ok := emails[mail.To]
@@ -60,7 +61,7 @@ func registerMockEmailApi(log logger.Logger, app *gin.Engine, emails util.Emails
 		} else {
 			emails[mail.To] = append(m, mail)
 		}
-		log.Info("Email received %v", mail)
+		log.Info(fmt.Sprintf("Email received %v", mail))
 	})
 }
 
