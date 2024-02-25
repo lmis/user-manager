@@ -47,7 +47,7 @@ func TestPasswordReset(config *config.Config, emails util.Emails, testUser *util
 
 	// Check user
 	client.MakeApiRequest("GET", "user-info", nil)
-	if err := client.AssertLastResponseEq(200, resource.UserInfoTO{Roles: []dm.UserRole{dm.UserRoleUser}, EmailVerified: testUser.EmailVerified, Language: testUser.Language}); err != nil {
+	if err := client.AssertLastResponseEq(200, resource.UserInfoTO{Roles: []dm.UserRole{dm.UserRoleUser}, EmailVerified: testUser.EmailVerified}); err != nil {
 		return errs.Wrap("auth role response mismatch", err)
 	}
 
@@ -61,9 +61,8 @@ func TestPasswordReset(config *config.Config, emails util.Emails, testUser *util
 	token := ""
 	for i := 0; token == "" && i < 10; i++ {
 		for _, e := range emails[email] {
-			// TODO: make independent of language
-			if e.Subject == "Passwort zurücksetzen" {
-				token = strings.TrimSpace(strings.Split(strings.Split(e.Body, "password-reset?token=")[1], " ")[0])
+			if e.Subject == "Password reset" {
+				token = strings.TrimSpace(strings.Split(strings.Split(e.Body, "password-reset?token=")[1], "\n")[0])
 			}
 		}
 		if token == "" {
@@ -126,7 +125,7 @@ func TestPasswordReset(config *config.Config, emails util.Emails, testUser *util
 
 	// Check user
 	client.MakeApiRequest("GET", "user-info", nil)
-	if err := client.AssertLastResponseEq(200, resource.UserInfoTO{Roles: []dm.UserRole{dm.UserRoleUser}, EmailVerified: testUser.EmailVerified, Language: testUser.Language}); err != nil {
+	if err := client.AssertLastResponseEq(200, resource.UserInfoTO{Roles: []dm.UserRole{dm.UserRoleUser}, EmailVerified: testUser.EmailVerified}); err != nil {
 		return errs.Wrap("auth role response mismatch", err)
 	}
 

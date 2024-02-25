@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"net/http"
-	ginext "user-manager/cmd/app/gin-extensions"
 	dm "user-manager/domain-model"
 	"user-manager/util/logger"
 
@@ -22,7 +21,7 @@ func LoggerMiddleware(c *gin.Context) {
 	requestLogger := RequestLogger{topic: "REQUEST", context: c}
 	securityLogger := RequestLogger{topic: "SECURITY", context: c}
 
-	requestContext := ginext.GetRequestContext(c)
+	requestContext := GetRequestContext(c)
 	requestContext.Log = dm.Log(requestLogger)
 	requestContext.SecurityLog = dm.SecurityLog(securityLogger)
 
@@ -77,7 +76,7 @@ type RequestLogger struct {
 func getMetadata(logger RequestLogger) *LogMetadata {
 	topic := logger.topic
 	c := logger.context
-	requestContext := ginext.GetRequestContext(c)
+	requestContext := GetRequestContext(c)
 	user := requestContext.User
 	path := c.FullPath()
 

@@ -3,9 +3,10 @@ package resource
 import (
 	"time"
 	ginext "user-manager/cmd/app/gin-extensions"
+	"user-manager/cmd/app/service/auth"
+	"user-manager/cmd/app/service/mail"
+	"user-manager/cmd/app/service/users"
 	dm "user-manager/domain-model"
-	"user-manager/repository"
-	"user-manager/service"
 	"user-manager/util/errs"
 	"user-manager/util/random"
 
@@ -21,12 +22,12 @@ type PasswordResetRequestTO struct {
 	Email string `json:"email"`
 }
 
-func RequestPasswordReset(ctx *gin.Context, r *ginext.RequestContext, requestTO *PasswordResetRequestTO) error {
+func RequestPasswordReset(ctx *gin.Context, r *dm.RequestContext, requestTO *PasswordResetRequestTO) error {
 	securityLog := r.SecurityLog
 
 	securityLog.Info("Password reset requested")
 
-	user, err := repository.GetUserForEmail(ctx, r.Database, requestTO.Email)
+	user, err := users.GetUserForEmail(ctx, r.Database, requestTO.Email)
 	if err != nil {
 		return errs.Wrap("error finding user for email", err)
 	}
@@ -36,11 +37,11 @@ func RequestPasswordReset(ctx *gin.Context, r *ginext.RequestContext, requestTO 
 	}
 
 	token := random.MakeRandomURLSafeB64(21)
-	if err := repository.SetPasswordResetToken(ctx, r.Database, user.ID(), token, time.Now().Add(dm.PasswordResetTokenDuration)); err != nil {
+	if err := users.SetPasswordResetToken(ctx, r.Database, user.ID(), token, time.Now().Add(dm.PasswordResetTokenDuration)); err != nil {
 		return errs.Wrap("issue persisting password reset token", err)
 	}
 
-	if err := service.SendResetPasswordEmail(ctx, r, user.Language, user.Email, token); err != nil {
+	if err := mail.SendResetPasswordEmail(ctx, r, user.Email, token); err != nil {
 		return errs.Wrap("error sending password reset email", err)
 	}
 	return nil
@@ -63,11 +64,11 @@ type ResetPasswordResponseTO struct {
 	Status ResetPasswordStatus `json:"status"`
 }
 
-func ResetPassword(ctx *gin.Context, r *ginext.RequestContext, requestTO ResetPasswordTO) (ResetPasswordResponseTO, error) {
+func ResetPassword(ctx *gin.Context, r *dm.RequestContext, requestTO ResetPasswordTO) (ResetPasswordResponseTO, error) {
 	securityLog := r.SecurityLog
 	securityLog.Info("Password reset")
 
-	user, err := repository.GetUserForEmail(ctx, r.Database, requestTO.Email)
+	user, err := users.GetUserForEmail(ctx, r.Database, requestTO.Email)
 	if err != nil {
 		return ResetPasswordResponseTO{}, errs.Wrap("error finding user", err)
 	}
@@ -85,12 +86,12 @@ func ResetPassword(ctx *gin.Context, r *ginext.RequestContext, requestTO ResetPa
 		return ResetPasswordResponseTO{ResetPasswordResponseInvalid}, nil
 	}
 
-	hash, err := service.MakeCredentials(requestTO.NewPassword)
+	hash, err := auth.MakeCredentials(requestTO.NewPassword)
 	if err != nil {
 		return ResetPasswordResponseTO{}, errs.Wrap("issue making password hash", err)
 	}
 
-	if err := repository.SetCredentials(ctx, r.Database, user.ID(), hash); err != nil {
+	if err := users.SetCredentials(ctx, r.Database, user.ID(), hash); err != nil {
 		return ResetPasswordResponseTO{}, errs.Wrap("issue setting password hash", err)
 	}
 

@@ -2,8 +2,9 @@ package resource
 
 import (
 	ginext "user-manager/cmd/app/gin-extensions"
-	"user-manager/repository"
-	"user-manager/service"
+	"user-manager/cmd/app/service/mail"
+	"user-manager/cmd/app/service/users"
+	dm "user-manager/domain-model"
 	"user-manager/util/errs"
 	"user-manager/util/random"
 
@@ -31,7 +32,7 @@ type EmailConfirmationResponseTO struct {
 	Status EmailConfirmationStatus `json:"status"`
 }
 
-func ConfirmEmail(ctx *gin.Context, r *ginext.RequestContext, request EmailConfirmationTO) (EmailConfirmationResponseTO, error) {
+func ConfirmEmail(ctx *gin.Context, r *dm.RequestContext, request EmailConfirmationTO) (EmailConfirmationResponseTO, error) {
 	securityLog := r.SecurityLog
 	user := r.User
 
@@ -53,7 +54,7 @@ func ConfirmEmail(ctx *gin.Context, r *ginext.RequestContext, request EmailConfi
 		return EmailConfirmationResponseTO{EmailConfirmationResponseInvalidToken}, nil
 	}
 
-	if err := repository.SetEmailToVerified(ctx, r.Database, user.ID()); err != nil {
+	if err := users.SetEmailToVerified(ctx, r.Database, user.ID()); err != nil {
 		return EmailConfirmationResponseTO{}, errs.Wrap("issue setting email to verified", err)
 	}
 
@@ -64,7 +65,7 @@ type RetriggerConfirmationEmailResponseTO struct {
 	Sent bool `json:"sent"`
 }
 
-func RetriggerVerificationEmail(ctx *gin.Context, r *ginext.RequestContext) (RetriggerConfirmationEmailResponseTO, error) {
+func RetriggerVerificationEmail(ctx *gin.Context, r *dm.RequestContext) (RetriggerConfirmationEmailResponseTO, error) {
 	user := r.User
 	securityLog := r.SecurityLog
 
@@ -77,14 +78,14 @@ func RetriggerVerificationEmail(ctx *gin.Context, r *ginext.RequestContext) (Ret
 		return RetriggerConfirmationEmailResponseTO{Sent: false}, nil
 	}
 
-	if err := repository.UpdateUserEmailVerificationToken(ctx, r.Database, user.ID(), random.MakeRandomURLSafeB64(21)); err != nil {
+	if err := users.UpdateUserEmailVerificationToken(ctx, r.Database, user.ID(), random.MakeRandomURLSafeB64(21)); err != nil {
 		return RetriggerConfirmationEmailResponseTO{}, errs.Wrap("issue updating token", err)
 	}
 
 	if user.EmailVerificationToken == "" {
 		return RetriggerConfirmationEmailResponseTO{}, errs.Errorf("missing email verification token")
 	}
-	if err := service.SendVerificationEmail(ctx, r, user.Language, user.Email, user.EmailVerificationToken); err != nil {
+	if err := mail.SendVerificationEmail(ctx, r, user.Email, user.EmailVerificationToken); err != nil {
 		return RetriggerConfirmationEmailResponseTO{}, errs.Wrap("error sending verification email", err)
 	}
 

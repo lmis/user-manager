@@ -58,7 +58,7 @@ func TestSimpleLogin(config *config.Config, _ util.Emails, testUser *util.TestUs
 
 	// Get user info
 	client.MakeApiRequest("GET", "user-info", nil)
-	if err := client.AssertLastResponseEq(200, resource.UserInfoTO{Roles: []dm.UserRole{dm.UserRoleUser}, EmailVerified: testUser.EmailVerified, Language: testUser.Language}); err != nil {
+	if err := client.AssertLastResponseEq(200, resource.UserInfoTO{Roles: []dm.UserRole{dm.UserRoleUser}, EmailVerified: testUser.EmailVerified}); err != nil {
 		return errs.Wrap("second get user info response mismatch", err)
 	}
 	return nil

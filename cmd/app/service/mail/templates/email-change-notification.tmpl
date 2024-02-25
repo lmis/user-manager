@@ -1,0 +1,6 @@
+{{ define "subject"}}Email address about to be changed{{ end }}
+{{ define "content" -}}
+Email address about to be changed.
+You have changed your email address for {{.ServiceName}} to {{.NewEmail}}.
+Your current email will remain in use, until you have confirmed your new email.
+{{- end }}

@@ -2,8 +2,9 @@ package resource
 
 import (
 	ginext "user-manager/cmd/app/gin-extensions"
-	"user-manager/repository"
-	"user-manager/service"
+	"user-manager/cmd/app/service/mail"
+	"user-manager/cmd/app/service/users"
+	dm "user-manager/domain-model"
 	"user-manager/util/errs"
 
 	"user-manager/util/random"
@@ -19,7 +20,7 @@ type ChangeEmailTO struct {
 	NewEmail string `json:"newEmail"`
 }
 
-func InitiateEmailChange(ctx *gin.Context, r *ginext.RequestContext, requestTO ChangeEmailTO) error {
+func InitiateEmailChange(ctx *gin.Context, r *dm.RequestContext, requestTO ChangeEmailTO) error {
 	securityLog := r.SecurityLog
 	user := r.User
 
@@ -32,14 +33,14 @@ func InitiateEmailChange(ctx *gin.Context, r *ginext.RequestContext, requestTO C
 	securityLog.Info("Changing user email")
 
 	verificationToken := random.MakeRandomURLSafeB64(21)
-	if err := repository.SetNextEmail(ctx, r.Database, user.ID(), nextEmail, verificationToken); err != nil {
+	if err := users.SetNextEmail(ctx, r.Database, user.ID(), nextEmail, verificationToken); err != nil {
 		return errs.Wrap("issue setting next email for user", err)
 	}
 
-	if err := service.SendChangeVerificationEmail(ctx, r, user.Language, nextEmail, verificationToken); err != nil {
+	if err := mail.SendChangeVerificationEmail(ctx, r, nextEmail, verificationToken); err != nil {
 		return errs.Wrap("error sending change verification email", err)
 	}
-	if err := service.SendChangeNotificationEmail(ctx, r, user.Language, user.Email, nextEmail); err != nil {
+	if err := mail.SendChangeNotificationEmail(ctx, r, user.Email, nextEmail); err != nil {
 		return errs.Wrap("error sending change notification email", err)
 	}
 

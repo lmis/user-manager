@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"net/http"
-	ginext "user-manager/cmd/app/gin-extensions"
 	dm "user-manager/domain-model"
 	"user-manager/util/errs"
 	"user-manager/util/slices"
@@ -12,7 +11,7 @@ import (
 
 func RegisterRequireRoleMiddleware(group *gin.RouterGroup, requiredRole dm.UserRole) {
 	group.Use(func(ctx *gin.Context) {
-		r := ginext.GetRequestContext(ctx)
+		r := GetRequestContext(ctx)
 		securityLog := r.SecurityLog
 		user := r.User
 		if !user.IsPresent() {

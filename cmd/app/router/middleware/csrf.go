@@ -3,7 +3,6 @@ package middleware
 import (
 	"errors"
 	"net/http"
-	ginext "user-manager/cmd/app/gin-extensions"
 	"user-manager/util/errs"
 
 	"github.com/gin-gonic/gin"
@@ -11,7 +10,7 @@ import (
 
 func RegisterCsrfMiddleware(group *gin.RouterGroup) {
 	group.Use(func(ctx *gin.Context) {
-		config := ginext.GetRequestContext(ctx).Config
+		config := GetRequestContext(ctx).Config
 
 		cookieName := "__Host-CSRF-Token"
 		if config.IsLocalEnv() {

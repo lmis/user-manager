@@ -4,8 +4,9 @@ import (
 	"fmt"
 	"net/http"
 	ginext "user-manager/cmd/app/gin-extensions"
-	"user-manager/repository"
-	"user-manager/service"
+	"user-manager/cmd/app/service/auth"
+	"user-manager/cmd/app/service/users"
+	dm "user-manager/domain-model"
 	"user-manager/util/errs"
 
 	"github.com/gin-gonic/gin"
@@ -20,7 +21,7 @@ type ChangePasswordTO struct {
 	NewPassword []byte `json:"newPassword"`
 }
 
-func ChangePassword(ctx *gin.Context, r *ginext.RequestContext, requestTO ChangePasswordTO) error {
+func ChangePassword(ctx *gin.Context, r *dm.RequestContext, requestTO ChangePasswordTO) error {
 	securityLog := r.SecurityLog
 	user := r.User
 
@@ -29,18 +30,18 @@ func ChangePassword(ctx *gin.Context, r *ginext.RequestContext, requestTO Change
 	}
 	securityLog.Info("Changing user password")
 
-	if !service.VerifyCredentials(requestTO.OldPassword, user.Credentials) {
+	if !auth.VerifyCredentials(requestTO.OldPassword, user.Credentials) {
 		securityLog.Info(fmt.Sprintf("Password mismatch for user %s trying to change password", user.ID()))
 		ctx.AbortWithStatus(http.StatusBadRequest)
 		return nil
 	}
 
-	newCredentials, err := service.MakeCredentials(requestTO.NewPassword)
+	newCredentials, err := auth.MakeCredentials(requestTO.NewPassword)
 	if err != nil {
 		return errs.Wrap("error making credentials from new password", err)
 	}
 
-	if err := repository.SetCredentials(ctx, r.Database, user.ID(), newCredentials); err != nil {
+	if err := users.SetCredentials(ctx, r.Database, user.ID(), newCredentials); err != nil {
 		return errs.Wrap("issue setting new password hash for user", err)
 	}
 

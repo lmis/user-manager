@@ -3,7 +3,7 @@ package domain_model
 import (
 	env "github.com/caarlos0/env/v6"
 	"time"
-	"user-manager/db"
+	"user-manager/util/db"
 	"user-manager/util/errs"
 )
 
@@ -38,8 +38,7 @@ func (conf *Config) IsStagingEnv() bool {
 func GetConfig() (*Config, error) {
 	config := &Config{}
 
-	var target interface{} = config
-	if err := env.Parse(target, env.Options{RequiredIfNoDef: true}); err != nil {
+	if err := env.Parse(config, env.Options{RequiredIfNoDef: true}); err != nil {
 		return nil, errs.Wrap("issue parsing environment", err)
 	}
 

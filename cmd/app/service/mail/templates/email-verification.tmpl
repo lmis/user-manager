@@ -1,0 +1,5 @@
+{{ define "subject"}}Email verification{{ end }}
+{{ define "content" -}}
+You have registered for an account on {{.ServiceName}}.
+To verify your email address, please click on the following link: {{.AppUrl}}/email-verification?token={{.Token}}
+{{- end }}

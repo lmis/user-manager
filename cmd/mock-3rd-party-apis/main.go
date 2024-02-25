@@ -4,11 +4,10 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
-	"user-manager/cmd/app/middleware"
+	"user-manager/cmd/app/router/middleware"
 	"user-manager/cmd/mock-3rd-party-apis/config"
 	test "user-manager/cmd/mock-3rd-party-apis/functional-tests"
 	"user-manager/cmd/mock-3rd-party-apis/util"
-	dm "user-manager/domain-model"
 	email "user-manager/third-party-models/email-api"
 	"user-manager/util/command"
 	"user-manager/util/errs"
@@ -102,7 +101,6 @@ func registerFunctionalTests(config *config.Config, app *gin.Engine, emails util
 		testUser = util.TestUser{
 			Email:    "test-user-" + random.MakeRandomURLSafeB64(5) + "@example.com",
 			Password: []byte("hunter12"),
-			Language: dm.AllUserLanguages()[1], // Test code that grabs the email content assumes German.
 		}
 	})
 	app.POST("/tests/:n/trigger", func(c *gin.Context) {

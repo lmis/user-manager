@@ -1,0 +1,13 @@
+{{ define "salutation" -}}
+    Hello{{if .Name }} {{ .Name }}{{end}},
+{{- end }}
+{{ define "footer" -}}
+    Kind Regards, your {{ .ServiceName }} Team
+{{- end }}
+{{ define "body" -}}
+{{ template "salutation" . }}
+
+{{ template "content" . }}
+
+{{ template "footer" . }}
+{{- end }}

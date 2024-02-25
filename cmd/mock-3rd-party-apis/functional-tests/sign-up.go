@@ -13,19 +13,17 @@ import (
 func TestSignUp(config *config.Config, emails util.Emails, testUser *util.TestUser) error {
 	email := testUser.Email
 	password := testUser.Password
-	language := testUser.Language
 	client := util.NewRequestClient(config)
 
 	// Check user before sign-up
 	client.MakeApiRequest("GET", "user-info", nil)
-	if err := client.AssertLastResponseEq(200, resource.UserInfoTO{Roles: nil, EmailVerified: false, Language: ""}); err != nil {
+	if err := client.AssertLastResponseEq(200, resource.UserInfoTO{Roles: nil, EmailVerified: false}); err != nil {
 		return errs.Wrap("response mismatch", err)
 	}
 
 	// Sign-up
 	client.MakeApiRequest("POST", "auth/sign-up", resource.SignUpTO{
 		UserName: "test-user",
-		Language: string(language),
 		Email:    email,
 		Password: password,
 	})
@@ -49,7 +47,7 @@ func TestSignUp(config *config.Config, emails util.Emails, testUser *util.TestUs
 
 	// Check user
 	client.MakeApiRequest("GET", "user-info", nil)
-	if err := client.AssertLastResponseEq(200, resource.UserInfoTO{Roles: []dm.UserRole{dm.UserRoleUser}, EmailVerified: false, Language: language}); err != nil {
+	if err := client.AssertLastResponseEq(200, resource.UserInfoTO{Roles: []dm.UserRole{dm.UserRoleUser}, EmailVerified: false}); err != nil {
 		return errs.Wrap("user response mismatch", err)
 	}
 
@@ -65,8 +63,8 @@ func TestSignUp(config *config.Config, emails util.Emails, testUser *util.TestUs
 	token := ""
 	for i := 0; token == "" && i < 10; i++ {
 		for _, e := range emails[email] {
-			if e.Subject == "Email Bestätigung" {
-				token = strings.TrimSpace(strings.Split(strings.Split(e.Body, "email-verification?token=")[1], " ")[0])
+			if e.Subject == "Email verification" {
+				token = strings.TrimSpace(strings.Split(strings.Split(e.Body, "email-verification?token=")[1], "\n")[0])
 			}
 		}
 		if token == "" {
@@ -94,7 +92,7 @@ func TestSignUp(config *config.Config, emails util.Emails, testUser *util.TestUs
 
 	// Check user
 	client.MakeApiRequest("GET", "user-info", nil)
-	if err := client.AssertLastResponseEq(200, resource.UserInfoTO{Roles: []dm.UserRole{dm.UserRoleUser}, EmailVerified: true, Language: language}); err != nil {
+	if err := client.AssertLastResponseEq(200, resource.UserInfoTO{Roles: []dm.UserRole{dm.UserRoleUser}, EmailVerified: true}); err != nil {
 		return errs.Wrap("user after confirmation response mismatch", err)
 	}
 	testUser.EmailVerified = true
@@ -114,7 +112,6 @@ func TestSignUp(config *config.Config, emails util.Emails, testUser *util.TestUs
 	// Signup again with same user
 	client.MakeApiRequest("POST", "auth/sign-up", resource.SignUpTO{
 		UserName: "same-email-different-user",
-		Language: "EN",
 		Email:    email,
 		Password: []byte("another-bad-password"),
 	})
@@ -125,9 +122,8 @@ func TestSignUp(config *config.Config, emails util.Emails, testUser *util.TestUs
 	// Grab email
 	receivedNotificationEmail := false
 	for i := 0; !receivedNotificationEmail && i < 10; i++ {
-		// TODO: make independent of language
 		for _, email := range emails[email] {
-			if email.Subject == "Anmeldeversuch" {
+			if email.Subject == "Sign up attempted" {
 				receivedNotificationEmail = true
 				break
 			}

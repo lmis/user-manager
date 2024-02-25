@@ -4,7 +4,6 @@ import (
 	"user-manager/cmd/app/resource"
 	"user-manager/cmd/mock-3rd-party-apis/config"
 	"user-manager/cmd/mock-3rd-party-apis/util"
-	dm "user-manager/domain-model"
 	"user-manager/util/errs"
 )
 
@@ -35,17 +34,11 @@ func TestCallWithMismatchingCsrfTokens(config *config.Config, _ util.Emails, tes
 		return errs.Error("session cookie not found")
 	}
 
-	// Change language settings (logged in, with wrong tokens)
-	var otherLanguage dm.UserLanguage
-	for _, lang := range dm.AllUserLanguages() {
-		if lang != testUser.Language {
-			otherLanguage = lang
-		}
-	}
+	// POST (logged in, with wrong tokens)
 	client.SetCsrfTokens("some", "other")
-	client.MakeApiRequest("POST", "user/settings/language", &resource.LanguageTO{Language: otherLanguage})
+	client.MakeApiRequest("POST", "user/re-trigger-confirmation-email", nil)
 	if err := client.AssertLastResponseEq(400, nil); err != nil {
-		return errs.Wrap("language response mismatch", err)
+		return errs.Wrap("POST response mismatch", err)
 	}
 	return nil
 }

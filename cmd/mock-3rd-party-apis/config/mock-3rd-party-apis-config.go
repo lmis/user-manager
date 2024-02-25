@@ -13,8 +13,7 @@ type Config struct {
 func GetConfig() (*Config, error) {
 	config := &Config{}
 
-	var target interface{} = config
-	if err := env.Parse(target, env.Options{RequiredIfNoDef: true}); err != nil {
+	if err := env.Parse(config, env.Options{RequiredIfNoDef: true}); err != nil {
 		return nil, errs.Wrap("error parsing env", err)
 	}
 	return config, nil

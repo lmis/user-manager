@@ -2,7 +2,6 @@ package domain_model
 
 import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	"slices"
 	"time"
 )
 
@@ -10,7 +9,6 @@ type UserID primitive.ObjectID
 
 type UserSessionType string
 type UserSessionToken string
-type UserLanguage string
 type UserRole string
 
 const (
@@ -18,23 +16,12 @@ const (
 	UserSessionTypeSudo           UserSessionType = "SUDO"
 	UserSessionTypeRememberDevice UserSessionType = "REMEMBER-DEVICE"
 
-	UserLanguageEn UserLanguage = "EN"
-	UserLanguageDe UserLanguage = "DE"
-
 	UserRoleUser       UserRole = "user"
 	UserRoleAdmin      UserRole = "admin"
 	UserRoleSuperAdmin UserRole = "super-admin"
 
-	UserCollectionName = "user"
+	UserCollectionName = "users"
 )
-
-func (l UserLanguage) IsValid() bool {
-	return slices.Contains(AllUserLanguages(), l)
-}
-
-func AllUserLanguages() []UserLanguage {
-	return []UserLanguage{UserLanguageEn, UserLanguageDe}
-}
 
 type SecondFactorThrottling struct {
 	FailuresSinceSuccess int32     `bson:"failedAttemptsSinceLastSuccess,omitempty"`
@@ -57,8 +44,7 @@ type UserCredentials struct {
 
 type User struct {
 	ObjectID                     primitive.ObjectID     `bson:"_id,omitempty"`
-	Language                     UserLanguage           `bson:"language,omitempty"`
-	UserName                     string                 `bson:"userName,omitempty"`
+	Name                         string                 `bson:"name,omitempty"`
 	Credentials                  UserCredentials        `bson:"credentials,omitempty"`
 	Email                        string                 `bson:"email,omitempty"`
 	EmailVerified                bool                   `bson:"emailVerified,omitempty"`
@@ -82,7 +68,6 @@ func (u User) IsPresent() bool {
 }
 
 type UserInsert struct {
-	Language               UserLanguage
 	UserName               string
 	Credentials            UserCredentials
 	Email                  string

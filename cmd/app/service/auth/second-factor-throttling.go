@@ -1,4 +1,4 @@
-package repository
+package auth
 
 import (
 	"context"
@@ -6,8 +6,8 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"time"
-	"user-manager/db"
 	dm "user-manager/domain-model"
+	"user-manager/util/db"
 	"user-manager/util/errs"
 )
 

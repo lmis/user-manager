@@ -2,9 +2,8 @@ package resource
 
 import (
 	ginext "user-manager/cmd/app/gin-extensions"
+	"user-manager/cmd/app/service/auth"
 	dm "user-manager/domain-model"
-	"user-manager/repository"
-	"user-manager/service"
 	"user-manager/util/errs"
 
 	"github.com/gin-gonic/gin"
@@ -18,7 +17,7 @@ type LogoutTO struct {
 	ForgetDevice bool `json:"forgetDevice"`
 }
 
-func Logout(ctx *gin.Context, r *ginext.RequestContext, request LogoutTO) error {
+func Logout(ctx *gin.Context, r *dm.RequestContext, request LogoutTO) error {
 	securityLog := r.SecurityLog
 
 	securityLog.Info("Logout")
@@ -43,14 +42,14 @@ func Logout(ctx *gin.Context, r *ginext.RequestContext, request LogoutTO) error 
 	return nil
 }
 
-func forgetSession(ctx *gin.Context, r *ginext.RequestContext, sessionType dm.UserSessionType) error {
-	sessionToken, err := service.GetSessionCookie(ctx, sessionType)
+func forgetSession(ctx *gin.Context, r *dm.RequestContext, sessionType dm.UserSessionType) error {
+	sessionToken, err := auth.GetSessionCookie(ctx, sessionType)
 	if err != nil {
 		return errs.Wrap("issue reading session cookie", err)
 	}
 	if sessionToken != "" {
-		service.RemoveSessionCookie(ctx, r.Config, sessionType)
-		if err := repository.DeleteSession(ctx, r.Database, sessionToken); err != nil {
+		auth.RemoveSessionCookie(ctx, r.Config, sessionType)
+		if err := auth.DeleteSession(ctx, r.Database, sessionToken); err != nil {
 			return errs.Wrap("issue while deleting session", err)
 		}
 	}

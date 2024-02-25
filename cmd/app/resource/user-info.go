@@ -11,12 +11,11 @@ func RegisterUserInfoResource(group *gin.RouterGroup) {
 }
 
 type UserInfoTO struct {
-	Roles         []dm.UserRole   `json:"roles"`
-	EmailVerified bool            `json:"emailVerified"`
-	Language      dm.UserLanguage `json:"language"`
+	Roles         []dm.UserRole `json:"roles"`
+	EmailVerified bool          `json:"emailVerified"`
 }
 
-func Get(_ *gin.Context, r *ginext.RequestContext) (UserInfoTO, error) {
+func Get(_ *gin.Context, r *dm.RequestContext) (UserInfoTO, error) {
 	user := r.User
 
 	if !user.IsPresent() {
@@ -26,6 +25,5 @@ func Get(_ *gin.Context, r *ginext.RequestContext) (UserInfoTO, error) {
 	return UserInfoTO{
 		Roles:         user.UserRoles,
 		EmailVerified: user.EmailVerified,
-		Language:      user.Language,
 	}, nil
 }

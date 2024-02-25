@@ -24,7 +24,7 @@ type Mail struct {
 	ObjectID       primitive.ObjectID `bson:"_id,omitempty"`
 	From           string             `bson:"from,omitempty"`
 	To             string             `bson:"to,omitempty"`
-	Content        string             `bson:"content,omitempty"`
+	Body           string             `bson:"body,omitempty"`
 	Subject        string             `bson:"subject,omitempty"`
 	Status         MailStatus         `bson:"status,omitempty"`
 	Priority       MailQueuePriority  `bson:"priority,omitempty"`
@@ -42,7 +42,7 @@ func (m Mail) IsPresent() bool {
 type MailInsert struct {
 	From     string
 	To       string
-	Content  string
+	Body     string
 	Subject  string
 	Priority MailQueuePriority
 }

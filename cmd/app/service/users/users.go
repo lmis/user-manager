@@ -1,4 +1,4 @@
-package repository
+package users
 
 import (
 	"context"
@@ -7,8 +7,8 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"time"
-	"user-manager/db"
 	dm "user-manager/domain-model"
+	"user-manager/util/db"
 	"user-manager/util/errs"
 )
 
@@ -101,25 +101,12 @@ func SetCredentials(ctx context.Context, database *mongo.Database, userId dm.Use
 	return nil
 }
 
-func SetLanguage(ctx context.Context, database *mongo.Database, userID dm.UserID, language dm.UserLanguage) error {
-	queryCtx, cancel := db.DefaultQueryContext(ctx)
-	defer cancel()
-
-	_, err := database.Collection(dm.UserCollectionName).UpdateByID(queryCtx, primitive.ObjectID(userID), bson.M{"$set": bson.M{"language": language}})
-	if err != nil {
-		return errs.Wrap("cannot set language", err)
-	}
-
-	return nil
-}
-
 func InsertUser(ctx context.Context, database *mongo.Database, user dm.UserInsert) error {
 	queryCtx, cancel := db.DefaultQueryContext(ctx)
 	defer cancel()
 
 	_, err := database.Collection(dm.UserCollectionName).InsertOne(queryCtx, dm.User{
-		Language:               user.Language,
-		UserName:               user.UserName,
+		Name:                   user.UserName,
 		Credentials:            user.Credentials,
 		Email:                  user.Email,
 		EmailVerified:          user.EmailVerified,

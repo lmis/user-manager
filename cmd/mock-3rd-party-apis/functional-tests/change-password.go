@@ -60,7 +60,7 @@ func TestChangePassword(config *config.Config, _ util.Emails, testUser *util.Tes
 
 	// Check user
 	client.MakeApiRequest("GET", "user-info", nil)
-	if err := client.AssertLastResponseEq(200, resource.UserInfoTO{Roles: []dm.UserRole{dm.UserRoleUser}, EmailVerified: testUser.EmailVerified, Language: testUser.Language}); err != nil {
+	if err := client.AssertLastResponseEq(200, resource.UserInfoTO{Roles: []dm.UserRole{dm.UserRoleUser}, EmailVerified: testUser.EmailVerified}); err != nil {
 		return errs.Wrap("auth role response mismatch", err)
 	}
 
@@ -96,7 +96,7 @@ func TestChangePassword(config *config.Config, _ util.Emails, testUser *util.Tes
 
 	// Check user
 	client.MakeApiRequest("GET", "user-info", nil)
-	if err := client.AssertLastResponseEq(200, resource.UserInfoTO{Roles: []dm.UserRole{dm.UserRoleUser}, EmailVerified: testUser.EmailVerified, Language: testUser.Language}); err != nil {
+	if err := client.AssertLastResponseEq(200, resource.UserInfoTO{Roles: []dm.UserRole{dm.UserRoleUser}, EmailVerified: testUser.EmailVerified}); err != nil {
 		return errs.Wrap("auth role response mismatch", err)
 	}
 

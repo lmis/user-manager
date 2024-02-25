@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"time"
 	ginext "user-manager/cmd/app/gin-extensions"
+	"user-manager/cmd/app/service/auth"
+	"user-manager/cmd/app/service/users"
 	dm "user-manager/domain-model"
-	"user-manager/repository"
-	"user-manager/service"
 	"user-manager/util/errs"
 
 	"user-manager/util/random"
@@ -38,7 +38,7 @@ type LoginResponseTO struct {
 	Status LoginResponseStatus `json:"status"`
 }
 
-func Login(ctx *gin.Context, r *ginext.RequestContext, requestTO LoginTO) (LoginResponseTO, error) {
+func Login(ctx *gin.Context, r *dm.RequestContext, requestTO LoginTO) (LoginResponseTO, error) {
 	securityLog := r.SecurityLog
 
 	loginDescription := "Login"
@@ -50,7 +50,8 @@ func Login(ctx *gin.Context, r *ginext.RequestContext, requestTO LoginTO) (Login
 		}
 	}
 
-	user, err := repository.GetUserForEmail(ctx, r.Database, requestTO.Email)
+	user, err := users.
+		GetUserForEmail(ctx, r.Database, requestTO.Email)
 	if err != nil {
 		return LoginResponseTO{}, errs.Wrap("error fetching user", err)
 	}
@@ -66,7 +67,7 @@ func Login(ctx *gin.Context, r *ginext.RequestContext, requestTO LoginTO) (Login
 		}
 	}
 
-	if !service.VerifyCredentials(requestTO.Password, user.Credentials) {
+	if !auth.VerifyCredentials(requestTO.Password, user.Credentials) {
 		securityLog.Info(fmt.Sprintf("Password mismatch for user %s", user.ID()))
 		return LoginResponseTO{LoginResponseInvalidCredentials}, nil
 	}
@@ -86,11 +87,11 @@ func Login(ctx *gin.Context, r *ginext.RequestContext, requestTO LoginTO) (Login
 		session.Type = dm.UserSessionTypeSudo
 		session.TimeoutAt = time.Now().Add(dm.SudoSessionDuration)
 	}
-	if err = repository.InsertSession(ctx, r.Database, user.ID(), session); err != nil {
+	if err = auth.InsertSession(ctx, r.Database, user.ID(), session); err != nil {
 		return LoginResponseTO{}, errs.Wrap("error inserting session", err)
 	}
 
-	service.SetSessionCookie(ctx, r.Config, string(session.Token), session.Type)
+	auth.SetSessionCookie(ctx, r.Config, string(session.Token), session.Type)
 	return LoginResponseTO{LoginResponseLoggedIn}, nil
 }
 
@@ -105,7 +106,7 @@ type LoginWithSecondFactorResponseTO struct {
 	TimeoutUntil time.Time `json:"timeoutUntil,omitempty"`
 }
 
-func LoginWithSecondFactor(ctx *gin.Context, r *ginext.RequestContext, requestTO LoginWithSecondFactorTO) (LoginWithSecondFactorResponseTO, error) {
+func LoginWithSecondFactor(ctx *gin.Context, r *dm.RequestContext, requestTO LoginWithSecondFactorTO) (LoginWithSecondFactorResponseTO, error) {
 	securityLog := r.SecurityLog
 
 	loginDescription := "Login (2FA)"
@@ -116,7 +117,7 @@ func LoginWithSecondFactor(ctx *gin.Context, r *ginext.RequestContext, requestTO
 			return LoginWithSecondFactorResponseTO{}, nil
 		}
 	}
-	user, err := repository.GetUserForEmail(ctx, r.Database, requestTO.Email)
+	user, err := users.GetUserForEmail(ctx, r.Database, requestTO.Email)
 	if err != nil {
 		return LoginWithSecondFactorResponseTO{}, errs.Wrap("error finding user", err)
 	}
@@ -125,7 +126,7 @@ func LoginWithSecondFactor(ctx *gin.Context, r *ginext.RequestContext, requestTO
 		return LoginWithSecondFactorResponseTO{}, nil
 	}
 
-	if !service.VerifyCredentials(requestTO.Password, user.Credentials) {
+	if !auth.VerifyCredentials(requestTO.Password, user.Credentials) {
 		securityLog.Info("password mismatch")
 		return LoginWithSecondFactorResponseTO{}, nil
 	}
@@ -141,7 +142,7 @@ func LoginWithSecondFactor(ctx *gin.Context, r *ginext.RequestContext, requestTO
 		tokenMatches := user.SecondFactorToken != "" && totp.Validate(requestTO.SecondFactor, user.SecondFactorToken)
 
 		if tokenMatches {
-			if err := repository.UpdateSecondFactorThrottling(ctx, r.Database, user.ID(), 0, nil); err != nil {
+			if err := auth.UpdateSecondFactorThrottling(ctx, r.Database, user.ID(), 0, nil); err != nil {
 				return LoginWithSecondFactorResponseTO{}, errs.Wrap("issue resetting throttling in db", err)
 			}
 		} else {
@@ -151,7 +152,7 @@ func LoginWithSecondFactor(ctx *gin.Context, r *ginext.RequestContext, requestTO
 			if failedAttemptsSinceLastSuccess%5 == 0 {
 				*maybeTimeoutUntil = time.Now().Add(time.Minute * 3 * time.Duration(failedAttemptsSinceLastSuccess))
 			}
-			if err := repository.UpdateSecondFactorThrottling(ctx, r.Database, user.ID(), failedAttemptsSinceLastSuccess, maybeTimeoutUntil); err != nil {
+			if err := auth.UpdateSecondFactorThrottling(ctx, r.Database, user.ID(), failedAttemptsSinceLastSuccess, maybeTimeoutUntil); err != nil {
 				return LoginWithSecondFactorResponseTO{}, errs.Wrap("issue updating throttling in db", err)
 			}
 			securityLog.Info("2FA mismatch")
@@ -165,17 +166,17 @@ func LoginWithSecondFactor(ctx *gin.Context, r *ginext.RequestContext, requestTO
 				Type:      dm.UserSessionTypeRememberDevice,
 				TimeoutAt: time.Now().Add(dm.DeviceSessionDuration),
 			}
-			err = repository.InsertSession(ctx, r.Database, user.ID(), deviceSession)
+			err = auth.InsertSession(ctx, r.Database, user.ID(), deviceSession)
 			if err != nil {
 				return LoginWithSecondFactorResponseTO{}, errs.Wrap("error inserting device session", err)
 			}
 
-			service.SetSessionCookie(ctx, r.Config, string(deviceSession.Token), deviceSession.Type)
+			auth.SetSessionCookie(ctx, r.Config, string(deviceSession.Token), deviceSession.Type)
 		}
 
 		securityLog.Info("Login passed with 2FA token")
 	} else {
-		maybeDeviceSessionID, err := service.GetSessionCookie(ctx, dm.UserSessionTypeLogin)
+		maybeDeviceSessionID, err := auth.GetSessionCookie(ctx, dm.UserSessionTypeLogin)
 		if err != nil {
 			return LoginWithSecondFactorResponseTO{}, errs.Wrap("issue reading device session cookie", err)
 		}
@@ -183,7 +184,7 @@ func LoginWithSecondFactor(ctx *gin.Context, r *ginext.RequestContext, requestTO
 			return LoginWithSecondFactorResponseTO{}, nil
 		}
 
-		deviceSession, err := repository.GetUserForSession(ctx, r.Database, maybeDeviceSessionID, dm.UserSessionTypeRememberDevice)
+		deviceSession, err := auth.GetUserForSession(ctx, r.Database, maybeDeviceSessionID, dm.UserSessionTypeRememberDevice)
 
 		if err != nil {
 			return LoginWithSecondFactorResponseTO{}, errs.Wrap("fetching device session failed", err)
@@ -203,10 +204,10 @@ func LoginWithSecondFactor(ctx *gin.Context, r *ginext.RequestContext, requestTO
 		session.Type = dm.UserSessionTypeSudo
 		session.TimeoutAt = time.Now().Add(dm.SudoSessionDuration)
 	}
-	if err = repository.InsertSession(ctx, r.Database, user.ID(), session); err != nil {
+	if err = auth.InsertSession(ctx, r.Database, user.ID(), session); err != nil {
 		return LoginWithSecondFactorResponseTO{}, errs.Wrap("error inserting login session", err)
 	}
 
-	service.SetSessionCookie(ctx, r.Config, string(session.Token), session.Type)
+	auth.SetSessionCookie(ctx, r.Config, string(session.Token), session.Type)
 	return LoginWithSecondFactorResponseTO{LoggedIn: true}, nil
 }

@@ -7,7 +7,6 @@ import (
 	"io"
 	"net/http"
 	"user-manager/cmd/mock-3rd-party-apis/config"
-	dm "user-manager/domain-model"
 	"user-manager/util/errs"
 )
 
@@ -15,7 +14,6 @@ type TestUser struct {
 	Email         string
 	EmailVerified bool
 	Password      []byte
-	Language      dm.UserLanguage
 }
 
 type FunctionalTest struct {

@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"time"
 	ginext "user-manager/cmd/app/gin-extensions"
+	"user-manager/cmd/app/service/auth"
+	"user-manager/cmd/app/service/users"
 	dm "user-manager/domain-model"
-	"user-manager/repository"
-	"user-manager/service"
 	"user-manager/util/errs"
 
 	"user-manager/util/random"
@@ -15,31 +15,8 @@ import (
 )
 
 func RegisterSettingsResource(group *gin.RouterGroup) {
-	group.POST("language", ginext.WrapEndpointWithoutResponseBody(SetLanguage))
 	group.POST("confirm-email-change", ginext.WrapEndpoint(ConfirmEmailChange))
 	group.POST("enter-sudo-mode", ginext.WrapEndpoint(EnterSudoMode))
-}
-
-type LanguageTO struct {
-	Language dm.UserLanguage `json:"language"`
-}
-
-func SetLanguage(ctx *gin.Context, r *ginext.RequestContext, requestTO *LanguageTO) error {
-	user := r.User
-
-	if !user.IsPresent() {
-		return errs.Error("no user")
-	}
-
-	language := requestTO.Language
-	if !language.IsValid() {
-		return errs.Errorf("invalid language %s", language)
-	}
-
-	if err := repository.SetLanguage(ctx, r.Database, user.ID(), language); err != nil {
-		return errs.Wrap("error updating language", err)
-	}
-	return nil
 }
 
 type SudoTO struct {
@@ -50,7 +27,7 @@ type SudoResponseTO struct {
 	Success bool `json:"success"`
 }
 
-func EnterSudoMode(ctx *gin.Context, r *ginext.RequestContext, requestTO *SudoTO) (*SudoResponseTO, error) {
+func EnterSudoMode(ctx *gin.Context, r *dm.RequestContext, requestTO *SudoTO) (*SudoResponseTO, error) {
 	securityLog := r.SecurityLog
 	user := r.User
 
@@ -58,7 +35,7 @@ func EnterSudoMode(ctx *gin.Context, r *ginext.RequestContext, requestTO *SudoTO
 		return nil, errs.Error("no user")
 	}
 
-	if !service.VerifyCredentials(requestTO.Password, user.Credentials) {
+	if !auth.VerifyCredentials(requestTO.Password, user.Credentials) {
 		securityLog.Info(fmt.Sprintf("Password mismatch in sudo attempt for user %s", user.ID()))
 		return &SudoResponseTO{}, nil
 	}
@@ -69,11 +46,11 @@ func EnterSudoMode(ctx *gin.Context, r *ginext.RequestContext, requestTO *SudoTO
 		Type:      dm.UserSessionTypeSudo,
 		TimeoutAt: time.Now().Add(dm.SudoSessionDuration),
 	}
-	if err := repository.InsertSession(ctx, r.Database, user.ID(), session); err != nil {
+	if err := auth.InsertSession(ctx, r.Database, user.ID(), session); err != nil {
 		return nil, errs.Wrap("error inserting session", err)
 	}
 
-	service.SetSessionCookie(ctx, r.Config, string(session.Token), session.Type)
+	auth.SetSessionCookie(ctx, r.Config, string(session.Token), session.Type)
 	return &SudoResponseTO{Success: true}, nil
 }
 
@@ -93,7 +70,7 @@ type EmailChangeConfirmationResponseTO struct {
 	Status EmailChangeStatus `json:"status"`
 }
 
-func ConfirmEmailChange(ctx *gin.Context, r *ginext.RequestContext, request EmailChangeConfirmationTO) (EmailChangeConfirmationResponseTO, error) {
+func ConfirmEmailChange(ctx *gin.Context, r *dm.RequestContext, request EmailChangeConfirmationTO) (EmailChangeConfirmationResponseTO, error) {
 	securityLog := r.SecurityLog
 	user := r.User
 
@@ -114,7 +91,7 @@ func ConfirmEmailChange(ctx *gin.Context, r *ginext.RequestContext, request Emai
 		return EmailChangeConfirmationResponseTO{EmailChangeResponseInvalidToken}, nil
 	}
 
-	if err := repository.SetEmailAndClearNextEmail(ctx, r.Database, user.ID(), user.NextEmail); err != nil {
+	if err := users.SetEmailAndClearNextEmail(ctx, r.Database, user.ID(), user.NextEmail); err != nil {
 		return EmailChangeConfirmationResponseTO{}, errs.Wrap("issue setting email ", err)
 	}
 
