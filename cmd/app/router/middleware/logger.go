@@ -78,7 +78,7 @@ func getMetadata(logger RequestLogger) *LogMetadata {
 	c := logger.context
 	requestContext := GetRequestContext(c)
 	user := requestContext.User
-	path := c.FullPath()
+	path := fmt.Sprintf("%s (%s)", c.Request.URL.Path, c.FullPath())
 
 	metadata := LogMetadata{
 		Topic:         topic,

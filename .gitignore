@@ -1,3 +1,7 @@
 go.sum
 .idea
 go_build_*
+cmd/app/router/assets/tailwind.css
+node_modules
+package-lock.json
+package.json

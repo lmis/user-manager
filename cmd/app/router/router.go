@@ -1,25 +1,48 @@
 package router
 
 import (
+	"embed"
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/mongo"
+	"io/fs"
+	"net/http"
 	"time"
 	"user-manager/cmd/app/resource"
-	middleware2 "user-manager/cmd/app/router/middleware"
+	"user-manager/cmd/app/router/components"
+	"user-manager/cmd/app/router/middleware"
 	dm "user-manager/domain-model"
 	"user-manager/util/errs"
 )
+
+//go:embed assets/*
+var assetsFS embed.FS
 
 func New(config *dm.Config, database *mongo.Database) (*gin.Engine, error) {
 	r := gin.New()
 	r.HandleMethodNotAllowed = true
 
-	err := middleware2.RegisterRequestContextMiddleware(r, database, config)
+	err := middleware.RegisterRequestContextMiddleware(r, database, config)
 	if err != nil {
 		return nil, errs.Wrap("cannot setup RequestContextMiddleware", err)
 	}
-	middleware2.RegisterLoggerMiddleware(r)
-	middleware2.RegisterRecoveryMiddleware(r)
+	middleware.RegisterLoggerMiddleware(r)
+	middleware.RegisterRecoveryMiddleware(r)
+
+	subFS, err := fs.Sub(assetsFS, "assets")
+	if err != nil {
+		return nil, errs.Wrap("cannot create FS rooted at assets for assetsFS", err)
+	}
+	r.StaticFS("/assets", http.FS(subFS))
+
+	r.GET("/index.html", func(c *gin.Context) {
+		c.Set("Content-Type", "text/html")
+		if err := components.Index(middleware.GetRequestContext(c), c.Writer); err != nil {
+			_ = c.AbortWithError(http.StatusBadRequest, errs.Wrap("cannot render index.html", err))
+		}
+		if !c.IsAborted() {
+			c.Status(200)
+		}
+	})
 
 	err = registerApiGroup(r.Group("api"))
 	if err != nil {
@@ -30,8 +53,8 @@ func New(config *dm.Config, database *mongo.Database) (*gin.Engine, error) {
 }
 
 func registerApiGroup(api *gin.RouterGroup) error {
-	middleware2.RegisterCsrfMiddleware(api)
-	middleware2.RegisterExtractLoginSessionMiddleware(api)
+	middleware.RegisterCsrfMiddleware(api)
+	middleware.RegisterExtractLoginSessionMiddleware(api)
 
 	resource.RegisterUserInfoResource(api)
 
@@ -42,7 +65,7 @@ func registerApiGroup(api *gin.RouterGroup) error {
 }
 
 func registerAuthGroup(auth *gin.RouterGroup) {
-	middleware2.RegisterTimingObfuscationMiddleware(auth, 400*time.Millisecond)
+	middleware.RegisterTimingObfuscationMiddleware(auth, 400*time.Millisecond)
 
 	resource.RegisterSignUpResource(auth)
 	resource.RegisterLoginResource(auth)
@@ -51,20 +74,20 @@ func registerAuthGroup(auth *gin.RouterGroup) {
 }
 
 func registerAdminGroup(admin *gin.RouterGroup) {
-	middleware2.RegisterRequireRoleMiddleware(admin, dm.UserRoleAdmin)
+	middleware.RegisterRequireRoleMiddleware(admin, dm.UserRoleAdmin)
 
 	registerSuperAdminGroup(admin.Group("super-admin"))
 }
 
 func registerSuperAdminGroup(superAdmin *gin.RouterGroup) {
-	middleware2.RegisterRequireRoleMiddleware(superAdmin, dm.UserRoleSuperAdmin)
+	middleware.RegisterRequireRoleMiddleware(superAdmin, dm.UserRoleSuperAdmin)
 
 	// POST("add-admin-user", todo).
 	// POST("change-password", todo)
 }
 
 func registerUserGroup(user *gin.RouterGroup) {
-	middleware2.RegisterRequireRoleMiddleware(user, dm.UserRoleUser)
+	middleware.RegisterRequireRoleMiddleware(user, dm.UserRoleUser)
 
 	resource.RegisterEmailConfirmationResource(user)
 
@@ -72,7 +95,7 @@ func registerUserGroup(user *gin.RouterGroup) {
 }
 
 func registerSettingsGroup(settings *gin.RouterGroup) {
-	middleware2.RegisterVerifiedEmailAuthorizationMiddleware(settings)
+	middleware.RegisterVerifiedEmailAuthorizationMiddleware(settings)
 
 	resource.RegisterSettingsResource(settings)
 	// POST("generate-temporary-second-factor-token"
@@ -80,7 +103,7 @@ func registerSettingsGroup(settings *gin.RouterGroup) {
 	registerSensitiveSettingsGroup(settings.Group("sensitive-settings"))
 }
 func registerSensitiveSettingsGroup(sensitiveSettings *gin.RouterGroup) {
-	middleware2.RegisterRequireSudoModeMiddleware(sensitiveSettings)
+	middleware.RegisterRequireSudoModeMiddleware(sensitiveSettings)
 
 	resource.RegisterSensitiveSettingsResource(sensitiveSettings)
 	resource.RegisterChangePasswordResource(sensitiveSettings)

@@ -6,4 +6,6 @@ go generate ./...
 echo "go fmt"
 go fmt ./...
 echo "lint"
-go run github.com/golangci/golangci-lint/cmd/golangci-lint run 
+go run github.com/golangci/golangci-lint/cmd/golangci-lint run
+echo "generate tailwind.css"
+npx tailwindcss -i main.css -o cmd/app/router/assets/tailwind.css
