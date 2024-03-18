@@ -16,15 +16,13 @@ import (
 	dm "user-manager/domain-model"
 	email "user-manager/third-party-models/email-api"
 	"user-manager/util/command"
-	db2 "user-manager/util/db"
+	"user-manager/util/db"
 	"user-manager/util/errs"
 	"user-manager/util/logger"
-
-	_ "github.com/lib/pq"
 )
 
 type Config struct {
-	DbInfo      db2.Info
+	DbInfo      db.Info
 	EmailApiUrl string `env:"EMAIL_API_URL"`
 	Environment string `env:"ENVIRONMENT"`
 }
@@ -41,11 +39,11 @@ func startJob(log logger.Logger) error {
 		return errs.Wrap("error parsing env", err)
 	}
 
-	database, err := db2.OpenDbConnection(log, config.DbInfo)
+	database, err := db.OpenDbConnection(log, config.DbInfo)
 	if err != nil {
 		return errs.Wrap("issue opening db connection", err)
 	}
-	defer db2.CloseOrPanic(database.Client())
+	defer db.CloseOrPanic(database.Client())
 
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, syscall.SIGTERM, syscall.SIGINT)
@@ -73,7 +71,7 @@ func startJob(log logger.Logger) error {
 
 func sendOneEmail(log logger.Logger, database *mongo.Database, config Config) (ret error) {
 	maxNumFailedAttempts := int8(3)
-	ctx, cancelTimeout := db2.DefaultQueryContext(context.Background())
+	ctx, cancelTimeout := db.DefaultQueryContext(context.Background())
 	defer cancelTimeout()
 
 	var mail dm.Mail

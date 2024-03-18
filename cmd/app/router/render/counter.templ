@@ -1,0 +1,18 @@
+package render
+
+const counterInitScript = `
+    Alpine.data('counter', () => ({
+        count: 1,
+
+        increment() {
+            this.count++;
+        },
+    }))
+`
+templ counter() {
+        <div x-data="counter">
+            <button x-on:click="increment">
+            <span x-text="count"></span>
+            </button>
+        </div>
+}

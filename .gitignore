@@ -1,3 +1,5 @@
+*.gen.go
+*_templ.go
 go.sum
 .idea
 go_build_*

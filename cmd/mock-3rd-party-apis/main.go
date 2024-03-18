@@ -16,7 +16,6 @@ import (
 	"user-manager/util/random"
 
 	"github.com/gin-gonic/gin"
-	_ "github.com/lib/pq"
 )
 
 func main() {

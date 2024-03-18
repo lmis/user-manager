@@ -7,9 +7,10 @@ import (
 	"io/fs"
 	"net/http"
 	"time"
+	ginext "user-manager/cmd/app/gin-extensions"
 	"user-manager/cmd/app/resource"
-	"user-manager/cmd/app/router/components"
 	"user-manager/cmd/app/router/middleware"
+	"user-manager/cmd/app/router/render"
 	dm "user-manager/domain-model"
 	"user-manager/util/errs"
 )
@@ -19,7 +20,6 @@ var assetsFS embed.FS
 
 func New(config *dm.Config, database *mongo.Database) (*gin.Engine, error) {
 	r := gin.New()
-	r.HandleMethodNotAllowed = true
 
 	err := middleware.RegisterRequestContextMiddleware(r, database, config)
 	if err != nil {
@@ -28,21 +28,12 @@ func New(config *dm.Config, database *mongo.Database) (*gin.Engine, error) {
 	middleware.RegisterLoggerMiddleware(r)
 	middleware.RegisterRecoveryMiddleware(r)
 
-	subFS, err := fs.Sub(assetsFS, "assets")
+	err = registerAssets(r)
 	if err != nil {
-		return nil, errs.Wrap("cannot create FS rooted at assets for assetsFS", err)
+		return nil, errs.Wrap("cannot setup assets", err)
 	}
-	r.StaticFS("/assets", http.FS(subFS))
 
-	r.GET("/index.html", func(c *gin.Context) {
-		c.Set("Content-Type", "text/html")
-		if err := components.Index(middleware.GetRequestContext(c), c.Writer); err != nil {
-			_ = c.AbortWithError(http.StatusBadRequest, errs.Wrap("cannot render index.html", err))
-		}
-		if !c.IsAborted() {
-			c.Status(200)
-		}
-	})
+	r.GET("/", ginext.WrapTempl(render.Index))
 
 	err = registerApiGroup(r.Group("api"))
 	if err != nil {
@@ -50,6 +41,16 @@ func New(config *dm.Config, database *mongo.Database) (*gin.Engine, error) {
 	}
 
 	return r, nil
+}
+
+func registerAssets(r *gin.Engine) error {
+	subFS, err := fs.Sub(assetsFS, "assets")
+	if err != nil {
+		return errs.Wrap("cannot create FS rooted at assets for assetsFS", err)
+	}
+	r.StaticFS("/assets", http.FS(subFS))
+
+	return nil
 }
 
 func registerApiGroup(api *gin.RouterGroup) error {

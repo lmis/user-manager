@@ -11,10 +11,9 @@ import (
 	"user-manager/util/errs"
 	util "user-manager/util/http"
 	"user-manager/util/logger"
-
-	_ "github.com/lib/pq"
 )
 
+//go:generate go run github.com/a-h/templ/cmd/templ generate
 func main() {
 	command.Run("LIFECYCLE", runServer)
 }
