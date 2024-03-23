@@ -1,7 +1,6 @@
 package resource
 
 import (
-	"fmt"
 	"net/http"
 	ginext "user-manager/cmd/app/gin-extensions"
 	"user-manager/cmd/app/service/auth"
@@ -22,16 +21,16 @@ type ChangePasswordTO struct {
 }
 
 func ChangePassword(ctx *gin.Context, r *dm.RequestContext, requestTO ChangePasswordTO) error {
-	securityLog := r.SecurityLog
+	logger := r.Logger
 	user := r.User
 
 	if !user.IsPresent() {
 		return errs.Error("missing user")
 	}
-	securityLog.Info("Changing user password")
+	logger.Info("Changing user password")
 
 	if !auth.VerifyCredentials(requestTO.OldPassword, user.Credentials) {
-		securityLog.Info(fmt.Sprintf("Password mismatch for user %s trying to change password", user.ID()))
+		logger.Info("Password mismatch for user trying to change password", "userID", user.IDHex())
 		ctx.AbortWithStatus(http.StatusBadRequest)
 		return nil
 	}

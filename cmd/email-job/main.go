@@ -6,8 +6,10 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/caarlos0/env/v6"
+	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
@@ -28,18 +30,24 @@ type Config struct {
 }
 
 func main() {
-	command.Run("EMAILER", startJob)
+	slog.SetDefault(logger.NewLogger(false).With("service", "app"))
+	command.Run(startJob)
 }
 
-func startJob(log logger.Logger) error {
-	log.Info("Starting up")
+func startJob() error {
+	slog.Info("Starting up")
 
 	config := Config{}
 	if err := env.Parse(&config, env.Options{RequiredIfNoDef: true}); err != nil {
 		return errs.Wrap("error parsing env", err)
 	}
 
-	database, err := db.OpenDbConnection(log, config.DbInfo)
+	if config.Environment != "local" {
+		slog.SetDefault(logger.NewLogger(true).With("service", "app"))
+		gin.SetMode(gin.ReleaseMode)
+	}
+
+	database, err := db.OpenDbConnection(config.DbInfo)
 	if err != nil {
 		return errs.Wrap("issue opening db connection", err)
 	}
@@ -54,14 +62,14 @@ func startJob(log logger.Logger) error {
 	for {
 		select {
 		case <-signals:
-			log.Info("Shutdown signal received. About to shut down")
+			slog.Info("Shutdown signal received. About to shut down")
 			return nil
 		default:
 			timeSinceLastEmailSent := time.Since(lastEmailSentAt)
 			if timeSinceLastEmailSent < minTimeBetweenSendingEmails {
 				time.Sleep(minTimeBetweenSendingEmails - timeSinceLastEmailSent)
 			}
-			if err = sendOneEmail(log, database, config); err != nil {
+			if err = sendOneEmail(database, config); err != nil {
 				return errs.Wrap("issue sending email", err)
 			}
 			lastEmailSentAt = time.Now()
@@ -69,7 +77,7 @@ func startJob(log logger.Logger) error {
 	}
 }
 
-func sendOneEmail(log logger.Logger, database *mongo.Database, config Config) (ret error) {
+func sendOneEmail(database *mongo.Database, config Config) (ret error) {
 	maxNumFailedAttempts := int8(3)
 	ctx, cancelTimeout := db.DefaultQueryContext(context.Background())
 	defer cancelTimeout()
@@ -84,7 +92,7 @@ func sendOneEmail(log logger.Logger, database *mongo.Database, config Config) (r
 
 	if err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
-			log.Info("No emails to send")
+			slog.Info("No emails to send")
 			return nil
 		}
 		return errs.Wrap("issue getting email from db", err)
@@ -109,7 +117,7 @@ func sendOneEmail(log logger.Logger, database *mongo.Database, config Config) (r
 	if err != nil {
 		status = dm.MailStatusFailed
 		failedAttempts++
-		log.Warn(errs.Wrap("issue sending email", err).Error())
+		slog.Warn(errs.Wrap("issue sending email", err).Error())
 	}
 
 	_, err = database.Collection(dm.MailQueueCollectionName).UpdateByID(ctx, mail.ObjectID, bson.M{

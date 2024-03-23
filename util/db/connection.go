@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+	"log/slog"
 	"runtime/debug"
 	"time"
 	"user-manager/util/errs"
-	"user-manager/util/logger"
 )
 
 type Info struct {
@@ -19,7 +19,7 @@ type Info struct {
 	Password string `env:"DB_PASSWORD"`
 }
 
-func OpenDbConnection(log logger.Logger, info Info) (_ *mongo.Database, err error) {
+func OpenDbConnection(info Info) (_ *mongo.Database, err error) {
 	clientOptions := options.Client().ApplyURI(fmt.Sprintf("mongodb://%s:%d", info.Host, info.Port)).SetAuth(options.Credential{
 		Username: info.User,
 		Password: info.Password,
@@ -36,7 +36,7 @@ func OpenDbConnection(log logger.Logger, info Info) (_ *mongo.Database, err erro
 		}
 	}()
 
-	if err = CheckConnection(log, client); err != nil {
+	if err = CheckConnection(client); err != nil {
 		CloseOrPanic(client)
 		return nil, errs.Wrap("could not check db connection", err)
 	}
@@ -53,23 +53,23 @@ func CloseOrPanic(client *mongo.Client) {
 	}
 }
 
-func CheckConnection(log logger.Logger, client *mongo.Client) error {
+func CheckConnection(client *mongo.Client) error {
 	numAttempts := 10
 	sleepTime := 500 * time.Millisecond
 	ctx := context.Background() //context.WithTimeout(context.Background(), time.Duration(numAttempts)*sleepTime+1*time.Second)
 	//defer cancel()
 
-	log.Info("Pinging DB")
+	slog.Info("Pinging DB")
 	err := client.Ping(ctx, nil)
 	for attempts := 1; err != nil && attempts < numAttempts; attempts++ {
 		time.Sleep(sleepTime)
-		log.Info("Retry pinging DB")
+		slog.Info("Retry pinging DB")
 		err = client.Ping(ctx, nil)
 	}
 	if err != nil {
 		return errs.Wrap("issue pinging db", err)
 	}
 
-	log.Info("Pinging DB successful")
+	slog.Info("Pinging DB successful")
 	return nil
 }

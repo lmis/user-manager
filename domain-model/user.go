@@ -63,6 +63,10 @@ func (u User) ID() UserID {
 	return UserID(u.ObjectID)
 }
 
+func (u User) IDHex() string {
+	return u.ObjectID.Hex()
+}
+
 func (u User) IsPresent() bool {
 	return u.ObjectID != primitive.NilObjectID
 }

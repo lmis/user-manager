@@ -1,7 +1,6 @@
 package resource
 
 import (
-	"fmt"
 	"time"
 	ginext "user-manager/cmd/app/gin-extensions"
 	"user-manager/cmd/app/service/auth"
@@ -28,7 +27,7 @@ type SudoResponseTO struct {
 }
 
 func EnterSudoMode(ctx *gin.Context, r *dm.RequestContext, requestTO *SudoTO) (*SudoResponseTO, error) {
-	securityLog := r.SecurityLog
+	logger := r.Logger
 	user := r.User
 
 	if !user.IsPresent() {
@@ -36,11 +35,11 @@ func EnterSudoMode(ctx *gin.Context, r *dm.RequestContext, requestTO *SudoTO) (*
 	}
 
 	if !auth.VerifyCredentials(requestTO.Password, user.Credentials) {
-		securityLog.Info(fmt.Sprintf("Password mismatch in sudo attempt for user %s", user.ID()))
+		logger.Info("Password mismatch in sudo attempt", "userID", user.IDHex())
 		return &SudoResponseTO{}, nil
 	}
 
-	securityLog.Info("Entering sudo mode")
+	logger.Info("Entering sudo mode")
 	session := dm.UserSession{
 		Token:     dm.UserSessionToken(random.MakeRandomURLSafeB64(21)),
 		Type:      dm.UserSessionTypeSudo,
@@ -71,7 +70,7 @@ type EmailChangeConfirmationResponseTO struct {
 }
 
 func ConfirmEmailChange(ctx *gin.Context, r *dm.RequestContext, request EmailChangeConfirmationTO) (EmailChangeConfirmationResponseTO, error) {
-	securityLog := r.SecurityLog
+	logger := r.Logger
 	user := r.User
 
 	if user.IsPresent() {
@@ -87,7 +86,7 @@ func ConfirmEmailChange(ctx *gin.Context, r *dm.RequestContext, request EmailCha
 	}
 
 	if request.Token != user.EmailVerificationToken {
-		securityLog.Info("Invalid email verification token")
+		logger.Info("Invalid email verification token")
 		return EmailChangeConfirmationResponseTO{EmailChangeResponseInvalidToken}, nil
 	}
 

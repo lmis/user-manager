@@ -6,6 +6,8 @@ import (
 	"reflect"
 	dm "user-manager/domain-model"
 	"user-manager/util/errs"
+
+	"github.com/teris-io/shortid"
 )
 
 const (
@@ -32,8 +34,13 @@ func RegisterRequestContextMiddleware(app *gin.Engine, database *mongo.Database,
 		return errs.Error("Invalid database: nil")
 	}
 
+	sid, err := shortid.New(1, shortid.DefaultABC, 2342)
+	if err != nil {
+		return errs.Wrap("error creating shortid generator", err)
+	}
+
 	app.Use(func(ctx *gin.Context) {
-		ctx.Set(RequestContextKey, &dm.RequestContext{Config: config, Database: database})
+		ctx.Set(RequestContextKey, &dm.RequestContext{Config: config, Database: database, RequestID: sid.MustGenerate()})
 	})
 	return nil
 }

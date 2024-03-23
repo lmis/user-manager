@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/gin-gonic/gin"
+	"log/slog"
 	"net/http"
 	"time"
 	"user-manager/cmd/app/router"
@@ -15,11 +16,12 @@ import (
 
 //go:generate go run github.com/a-h/templ/cmd/templ generate
 func main() {
-	command.Run("LIFECYCLE", runServer)
+	slog.SetDefault(logger.NewLogger(false).With("service", "app"))
+	command.Run(runServer)
 }
 
-func runServer(log logger.Logger) error {
-	log.Info("Starting up")
+func runServer() error {
+	slog.Info("Starting up")
 
 	config, err := dm.GetConfig()
 	if err != nil {
@@ -27,10 +29,11 @@ func runServer(log logger.Logger) error {
 	}
 
 	if !config.IsLocalEnv() {
+		slog.SetDefault(logger.NewLogger(true).With("service", "app"))
 		gin.SetMode(gin.ReleaseMode)
 	}
 
-	database, err := db.OpenDbConnection(log, config.DbInfo)
+	database, err := db.OpenDbConnection(config.DbInfo)
 	if err != nil {
 		return errs.Wrap("could not open db connection", err)
 	}
@@ -40,7 +43,7 @@ func runServer(log logger.Logger) error {
 	if err != nil {
 		return errs.Wrap("cannot setup router", err)
 	}
-	if err = util.RunHttpServer(log, &http.Server{
+	if err = util.RunHttpServer(&http.Server{
 		Addr:         ":" + config.AppPort,
 		Handler:      engine,
 		ReadTimeout:  1 * time.Minute,

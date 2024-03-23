@@ -21,7 +21,7 @@ type ChangeEmailTO struct {
 }
 
 func InitiateEmailChange(ctx *gin.Context, r *dm.RequestContext, requestTO ChangeEmailTO) error {
-	securityLog := r.SecurityLog
+	logger := r.Logger
 	user := r.User
 
 	nextEmail := requestTO.NewEmail
@@ -30,7 +30,7 @@ func InitiateEmailChange(ctx *gin.Context, r *dm.RequestContext, requestTO Chang
 		return errs.Error("missing user")
 
 	}
-	securityLog.Info("Changing user email")
+	logger.Info("Changing user email")
 
 	verificationToken := random.MakeRandomURLSafeB64(21)
 	if err := users.SetNextEmail(ctx, r.Database, user.ID(), nextEmail, verificationToken); err != nil {

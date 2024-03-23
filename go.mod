@@ -9,7 +9,9 @@ require (
 	github.com/caarlos0/env/v6 v6.9.3
 	github.com/gin-gonic/gin v1.9.1
 	github.com/golangci/golangci-lint v1.51.2
+	github.com/lmittmann/tint v1.0.4
 	github.com/pquerna/otp v1.3.0
+	github.com/teris-io/shortid v0.0.0-20220617161101-71ec9f2aa569
 	go.mongodb.org/mongo-driver v1.13.1
 	golang.org/x/crypto v0.21.0
 )

@@ -1,7 +1,6 @@
 package resource
 
 import (
-	"fmt"
 	"time"
 	ginext "user-manager/cmd/app/gin-extensions"
 	"user-manager/cmd/app/service/auth"
@@ -39,13 +38,13 @@ type LoginResponseTO struct {
 }
 
 func Login(ctx *gin.Context, r *dm.RequestContext, requestTO LoginTO) (LoginResponseTO, error) {
-	securityLog := r.SecurityLog
+	logger := r.Logger
 
 	loginDescription := "Login"
 	if requestTO.Sudo {
 		loginDescription = "Sudo-login"
 		if !r.User.IsPresent() {
-			securityLog.Info("Sudo login attempted without valid user.")
+			logger.Info("Sudo login attempted without valid user.")
 			return LoginResponseTO{LoginResponseInvalidCredentials}, nil
 		}
 	}
@@ -56,19 +55,19 @@ func Login(ctx *gin.Context, r *dm.RequestContext, requestTO LoginTO) (LoginResp
 		return LoginResponseTO{}, errs.Wrap("error fetching user", err)
 	}
 	if !user.IsPresent() {
-		securityLog.Info(loginDescription + " attempt for non-existent user")
+		logger.Info(loginDescription + " attempt for non-existent user")
 		return LoginResponseTO{LoginResponseInvalidCredentials}, nil
 	}
 
 	for _, role := range user.UserRoles {
 		if role != dm.UserRoleUser {
-			securityLog.Info(fmt.Sprintf(loginDescription+" attempt without second factor for non-user %d", user.ID()))
+			logger.Info(loginDescription+" attempt without second factor for non-user", "userID", user.IDHex())
 			return LoginResponseTO{LoginResponseInvalidCredentials}, nil
 		}
 	}
 
 	if !auth.VerifyCredentials(requestTO.Password, user.Credentials) {
-		securityLog.Info(fmt.Sprintf("Password mismatch for user %s", user.ID()))
+		logger.Info("Password mismatch for user", "userID", user.IDHex())
 		return LoginResponseTO{LoginResponseInvalidCredentials}, nil
 	}
 
@@ -76,7 +75,7 @@ func Login(ctx *gin.Context, r *dm.RequestContext, requestTO LoginTO) (LoginResp
 		return LoginResponseTO{LoginResponse2faRequired}, nil
 	}
 
-	securityLog.Info(loginDescription)
+	logger.Info(loginDescription)
 	session := dm.UserSession{
 		Token:     dm.UserSessionToken(random.MakeRandomURLSafeB64(21)),
 		Type:      dm.UserSessionTypeLogin,
@@ -107,13 +106,13 @@ type LoginWithSecondFactorResponseTO struct {
 }
 
 func LoginWithSecondFactor(ctx *gin.Context, r *dm.RequestContext, requestTO LoginWithSecondFactorTO) (LoginWithSecondFactorResponseTO, error) {
-	securityLog := r.SecurityLog
+	logger := r.Logger
 
 	loginDescription := "Login (2FA)"
 	if requestTO.Sudo {
 		loginDescription = "Sudo-login (2FA)"
 		if !r.User.IsPresent() {
-			securityLog.Info("Sudo 2FA attempted without valid session.")
+			logger.Info("Sudo 2FA attempted without valid session.")
 			return LoginWithSecondFactorResponseTO{}, nil
 		}
 	}
@@ -122,12 +121,12 @@ func LoginWithSecondFactor(ctx *gin.Context, r *dm.RequestContext, requestTO Log
 		return LoginWithSecondFactorResponseTO{}, errs.Wrap("error finding user", err)
 	}
 	if !user.IsPresent() {
-		securityLog.Info(loginDescription + " attempt for non-existent user")
+		logger.Info(loginDescription + " attempt for non-existent user")
 		return LoginWithSecondFactorResponseTO{}, nil
 	}
 
 	if !auth.VerifyCredentials(requestTO.Password, user.Credentials) {
-		securityLog.Info("password mismatch")
+		logger.Info("password mismatch")
 		return LoginWithSecondFactorResponseTO{}, nil
 	}
 
@@ -135,7 +134,7 @@ func LoginWithSecondFactor(ctx *gin.Context, r *dm.RequestContext, requestTO Log
 		throttling := user.SecondFactorThrottling
 
 		if throttling.FailuresSinceSuccess != 0 && throttling.TimeoutUntil.After(time.Now()) {
-			securityLog.Info("Throttled 2FA attempted")
+			logger.Info("Throttled 2FA attempted")
 			return LoginWithSecondFactorResponseTO{TimeoutUntil: throttling.TimeoutUntil}, nil
 		}
 
@@ -155,12 +154,12 @@ func LoginWithSecondFactor(ctx *gin.Context, r *dm.RequestContext, requestTO Log
 			if err := auth.UpdateSecondFactorThrottling(ctx, r.Database, user.ID(), failedAttemptsSinceLastSuccess, maybeTimeoutUntil); err != nil {
 				return LoginWithSecondFactorResponseTO{}, errs.Wrap("issue updating throttling in db", err)
 			}
-			securityLog.Info("2FA mismatch")
+			logger.Info("2FA mismatch")
 			return LoginWithSecondFactorResponseTO{}, nil
 		}
 
 		if requestTO.RememberDevice {
-			securityLog.Info("2FA login with 'remember device' enabled, issuing device token")
+			logger.Info("2FA login with 'remember device' enabled, issuing device token")
 			deviceSession := dm.UserSession{
 				Token:     dm.UserSessionToken(random.MakeRandomURLSafeB64(21)),
 				Type:      dm.UserSessionTypeRememberDevice,
@@ -174,7 +173,7 @@ func LoginWithSecondFactor(ctx *gin.Context, r *dm.RequestContext, requestTO Log
 			auth.SetSessionCookie(ctx, r.Config, string(deviceSession.Token), deviceSession.Type)
 		}
 
-		securityLog.Info("Login passed with 2FA token")
+		logger.Info("Login passed with 2FA token")
 	} else {
 		maybeDeviceSessionID, err := auth.GetSessionCookie(ctx, dm.UserSessionTypeLogin)
 		if err != nil {
@@ -192,7 +191,7 @@ func LoginWithSecondFactor(ctx *gin.Context, r *dm.RequestContext, requestTO Log
 		if !deviceSession.IsPresent() {
 			return LoginWithSecondFactorResponseTO{}, nil
 		}
-		securityLog.Info("Login passed with device token cookie")
+		logger.Info("Login passed with device token cookie")
 	}
 
 	session := dm.UserSession{

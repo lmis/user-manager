@@ -33,7 +33,7 @@ type EmailConfirmationResponseTO struct {
 }
 
 func ConfirmEmail(ctx *gin.Context, r *dm.RequestContext, request EmailConfirmationTO) (EmailConfirmationResponseTO, error) {
-	securityLog := r.SecurityLog
+	logger := r.Logger
 	user := r.User
 
 	if !user.IsPresent() {
@@ -41,7 +41,7 @@ func ConfirmEmail(ctx *gin.Context, r *dm.RequestContext, request EmailConfirmat
 	}
 
 	if user.EmailVerified {
-		securityLog.Info("Email already verified")
+		logger.Info("Email already verified")
 		return EmailConfirmationResponseTO{EmailConfirmationResponseAlreadyConfirmed}, nil
 	}
 
@@ -50,7 +50,7 @@ func ConfirmEmail(ctx *gin.Context, r *dm.RequestContext, request EmailConfirmat
 	}
 
 	if request.Token != user.EmailVerificationToken {
-		securityLog.Info("Invalid email verification token")
+		logger.Info("Invalid email verification token")
 		return EmailConfirmationResponseTO{EmailConfirmationResponseInvalidToken}, nil
 	}
 
@@ -67,14 +67,14 @@ type RetriggerConfirmationEmailResponseTO struct {
 
 func RetriggerVerificationEmail(ctx *gin.Context, r *dm.RequestContext) (RetriggerConfirmationEmailResponseTO, error) {
 	user := r.User
-	securityLog := r.SecurityLog
+	logger := r.Logger
 
 	if !user.IsPresent() {
 		return RetriggerConfirmationEmailResponseTO{}, errs.Error("no user")
 	}
 
 	if user.EmailVerified {
-		securityLog.Info("Email already verified")
+		logger.Info("Email already verified")
 		return RetriggerConfirmationEmailResponseTO{Sent: false}, nil
 	}
 

@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log/slog"
 	"net/http"
 	"strconv"
 	"user-manager/cmd/app/router/middleware"
@@ -19,12 +20,13 @@ import (
 )
 
 func main() {
-	command.Run("MOCK 3RD-PARTY APIS", startServer)
+	slog.SetDefault(logger.NewLogger(false).With("service", "mock-3rd-party-apis"))
+	command.Run(startServer)
 }
 
-func startServer(log logger.Logger) error {
+func startServer() error {
 	emails := make(util.Emails)
-	log.Info("Starting up")
+	slog.Info("Starting up")
 	conf, err := config.GetConfig()
 	if err != nil {
 		return errs.Wrap("cannot read config", err)
@@ -33,10 +35,10 @@ func startServer(log logger.Logger) error {
 	app := gin.New()
 	app.Use(middleware.RecoveryMiddleware)
 
-	registerMockEmailApi(log, app, emails)
+	registerMockEmailApi(app, emails)
 	registerFunctionalTests(conf, app, emails)
 
-	if err = httputil.RunHttpServer(log, &http.Server{
+	if err = httputil.RunHttpServer(&http.Server{
 		Addr:    ":" + conf.Port,
 		Handler: app,
 	}); err != nil {
@@ -46,7 +48,7 @@ func startServer(log logger.Logger) error {
 	return nil
 }
 
-func registerMockEmailApi(log logger.Logger, app *gin.Engine, emails util.Emails) {
+func registerMockEmailApi(app *gin.Engine, emails util.Emails) {
 	app.POST("/mock-send-email", func(c *gin.Context) {
 		var mail email.EmailTO
 		if err := c.BindJSON(&mail); err != nil {
@@ -59,7 +61,7 @@ func registerMockEmailApi(log logger.Logger, app *gin.Engine, emails util.Emails
 		} else {
 			emails[mail.To] = append(m, mail)
 		}
-		log.Info(fmt.Sprintf("Email received %v", mail))
+		slog.Info("Email received", "mail", fmt.Sprintf("%v", mail))
 	})
 }
 

@@ -23,14 +23,14 @@ type SignUpTO struct {
 }
 
 func SignUp(ctx *gin.Context, r *dm.RequestContext, requestTO SignUpTO) error {
-	securityLog := r.SecurityLog
+	logger := r.Logger
 
 	user, err := users.GetUserForEmail(ctx, r.Database, requestTO.Email)
 	if err != nil {
 		return errs.Wrap("error fetching user", err)
 	}
 	if user.IsPresent() {
-		securityLog.Info("User already exists")
+		logger.Info("User already exists")
 		if err = mail.SendSignUpAttemptEmail(ctx, r, user.Email); err != nil {
 			return errs.Wrap("error sending signup attempted email", err)
 		}

@@ -33,6 +33,8 @@ func RegisterExtractLoginSessionMiddleware(group *gin.RouterGroup) {
 		if user.IsPresent() {
 			r := GetRequestContext(ctx)
 			r.User = user
+			r.Logger = r.Logger.With("userID", user.IDHex())
+			r.Logger.Info("User session found", "roles", user.UserRoles)
 
 			if err := auth.UpdateSessionTimeout(ctx, r.Database, sessionToken, time.Now().Add(dm.LoginSessionDuration)); err != nil {
 				_ = ctx.AbortWithError(http.StatusInternalServerError, errs.Wrap("issue updating session timeout in db", err))

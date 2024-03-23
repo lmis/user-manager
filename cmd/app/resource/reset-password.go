@@ -23,16 +23,16 @@ type PasswordResetRequestTO struct {
 }
 
 func RequestPasswordReset(ctx *gin.Context, r *dm.RequestContext, requestTO *PasswordResetRequestTO) error {
-	securityLog := r.SecurityLog
+	logger := r.Logger
 
-	securityLog.Info("Password reset requested")
+	logger.Info("Password reset requested")
 
 	user, err := users.GetUserForEmail(ctx, r.Database, requestTO.Email)
 	if err != nil {
 		return errs.Wrap("error finding user for email", err)
 	}
 	if !user.IsPresent() {
-		securityLog.Info("Password reset request for non-existing email")
+		logger.Info("Password reset request for non-existing email")
 		return nil
 	}
 
@@ -65,8 +65,8 @@ type ResetPasswordResponseTO struct {
 }
 
 func ResetPassword(ctx *gin.Context, r *dm.RequestContext, requestTO ResetPasswordTO) (ResetPasswordResponseTO, error) {
-	securityLog := r.SecurityLog
-	securityLog.Info("Password reset")
+	logger := r.Logger
+	logger.Info("Password reset")
 
 	user, err := users.GetUserForEmail(ctx, r.Database, requestTO.Email)
 	if err != nil {
@@ -74,15 +74,15 @@ func ResetPassword(ctx *gin.Context, r *dm.RequestContext, requestTO ResetPasswo
 	}
 
 	if !user.IsPresent() {
-		securityLog.Info("Password reset attempt for non-existing email")
+		logger.Info("Password reset attempt for non-existing email")
 		return ResetPasswordResponseTO{ResetPasswordResponseInvalid}, nil
 	}
 	if user.PasswordResetToken == "" || user.PasswordResetToken != requestTO.Token {
-		securityLog.Info("Password reset attempt with wrong token")
+		logger.Info("Password reset attempt with wrong token")
 		return ResetPasswordResponseTO{ResetPasswordResponseInvalid}, nil
 	}
 	if user.PasswordResetTokenValidUntil.Before(time.Now()) {
-		securityLog.Info("Password reset attempt with expired token")
+		logger.Info("Password reset attempt with expired token")
 		return ResetPasswordResponseTO{ResetPasswordResponseInvalid}, nil
 	}
 

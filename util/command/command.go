@@ -1,32 +1,29 @@
 package command
 
 import (
-	"fmt"
+	"log/slog"
 	"os"
 	"runtime/debug"
 	"user-manager/util/errs"
-	"user-manager/util/logger"
 )
 
-type Command func(log logger.Logger) error
+type Command func() error
 
-func Run(topic string, command Command) {
-	logger.SetLogJSON(os.Getenv("LOG_JSON") != "")
-	log := logger.NewLogger(topic)
+func Run(command Command) {
 	exitCode := 0
 
 	defer func() {
 		if p := recover(); p != nil {
-			log.Err(errs.WrapRecoveredPanic(p, debug.Stack()))
+			slog.Error(errs.WrapRecoveredPanic(p, debug.Stack()).Error())
 			exitCode = 1
 		}
-		log.Info(fmt.Sprintf("Shutdown complete. ExitCode: %d", exitCode))
+		slog.Info("Shutdown complete", "exitCode", exitCode)
 		os.Exit(exitCode)
 	}()
 
-	if err := command(log); err != nil {
-		log.Err(errs.Wrap("command returned error", err))
-		log.Warn("Exited abnormally")
+	if err := command(); err != nil {
+		slog.Error(errs.Wrap("command returned error", err).Error())
+		slog.Warn("Exited abnormally")
 		exitCode = 1
 	}
 }

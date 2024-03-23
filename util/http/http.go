@@ -3,23 +3,22 @@ package http
 import (
 	"context"
 	"errors"
-	"fmt"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 	"user-manager/util/errs"
-	"user-manager/util/logger"
 )
 
-func RunHttpServer(log logger.Logger, httpServer *http.Server) error {
-	log.Info(fmt.Sprintf("Starting http server on %s", httpServer.Addr))
+func RunHttpServer(httpServer *http.Server) error {
+	slog.Info("Starting http server", "addr", httpServer.Addr)
 	httpServerError := make(chan error, 1)
 	go func() {
 		if err := httpServer.ListenAndServe(); err != nil {
 			if errors.Is(err, http.ErrServerClosed) {
-				log.Info("Http server closed")
+				slog.Info("Http server closed")
 			} else {
 				httpServerError <- errs.Wrap("httpServer stopped with unexpected error", err)
 			}
@@ -31,16 +30,16 @@ func RunHttpServer(log logger.Logger, httpServer *http.Server) error {
 	signal.Notify(signals, syscall.SIGTERM, syscall.SIGINT)
 	select {
 	case <-signals:
-		log.Info("Shutdown signal received. About to shut down")
+		slog.Info("Shutdown signal received. About to shut down")
 
-		log.Info("Shutting down http server down gracefully")
+		slog.Info("Shutting down http server down gracefully")
 		ctx, cancel := context.WithTimeout(context.Background(), 45*time.Second)
 		defer cancel()
 		if err := httpServer.Shutdown(ctx); err != nil {
 			return errs.Wrap("httpServer shutdown error", err)
 		}
 
-		log.Info("Http server has shutdown normally")
+		slog.Info("Http server has shutdown normally")
 	case err := <-httpServerError:
 		return err
 	}

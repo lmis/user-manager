@@ -18,9 +18,9 @@ type LogoutTO struct {
 }
 
 func Logout(ctx *gin.Context, r *dm.RequestContext, request LogoutTO) error {
-	securityLog := r.SecurityLog
+	logger := r.Logger
 
-	securityLog.Info("Logout")
+	logger.Info("Logout")
 
 	err := forgetSession(ctx, r, dm.UserSessionTypeLogin)
 	if err != nil {
