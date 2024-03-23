@@ -5,13 +5,8 @@ templ indexPage(serviceName string, title string, nonce string, csrfToken string
     <html lang="en">
     @head(title, nonce, csrfToken, environment)
     <body>
-    <div class="bg-orange-400 rounded-lg p-4">
-        <h1 class="text-orange-800 text-center">Welcome to { serviceName }</h1>
-        <button hx-get="/api/user-info" hx-swap="innerHTML">Get User Info</button>
-        @counter()
-        @counter()
-    </div>
-    </body>
+    @loginForm()
     @footer(serviceName)
+    </body>
     </html>
 }

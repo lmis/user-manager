@@ -1,0 +1,36 @@
+package render
+
+const passwordInputInitScript = `
+    Alpine.data('passwordInput', () => ({
+        hidden: true,
+
+        toggle() {
+            this.hidden = !this.hidden
+        },
+        type() {
+            return this.hidden ? 'password' : 'text'
+        }
+    }));
+`
+templ loginForm() {
+<div class="bg-gray-100 flex flex-col justify-center items-center h-screen bg-white p-8 rounded-lg shadow-md">
+    <h2 class="text-2xl font-semibold mb-6 text-gray-700">Login</h2>
+    <form>
+        <div class="mb-4">
+            <label for="email" class="block text-sm font-medium text-gray-700">Email</label>
+            <input type="email" id="email" placeholder="Email" name="email" class="mt-1 block text-sm w-full indent-2 border-gray-300 rounded-md shadow-sm focus:outline-none focus:border-orange-500 focus:ring focus:ring-orange-500 focus:ring-opacity-50"/>
+        </div>
+        <div x-data="passwordInput" class="mb-6">
+            <label for="password" class="block text-sm font-medium text-gray-700">Password</label>
+            <div x-on:click="toggle">UNHIDE</div> // TODO -> move over right of input
+            <input :type="type" id="password" placeholder="Password" name="password" class="mt-1 block w-full indent-2 border-gray-300 rounded-md shadow-sm focus:outline-none focus:border-orange-500 focus:ring focus:ring-orange-500 focus:ring-opacity-50"/>
+        </div>
+        <div class="flex items-center justify-between">
+            <button type="submit" class="w-full bg-orange-500 text-white py-2 px-4 mr-4 rounded-md hover:bg-orange-600 focus:outline-none focus:border-orange-700 focus:ring focus:ring-orange-500 focus:ring-opacity-50">Sign in</button>
+            <a href="/reset-password" class="text-sm text-orange-800 hover:underline">Forgot password?</a>
+        </div>
+        <div class="border-b-2 border-gray-300 my-5"/>
+        <a href="/sign-up" class="text-sm text-orange-800 hover:underline">Don't have an account? Sign up here!</a>
+    </form>
+</div>
+}
