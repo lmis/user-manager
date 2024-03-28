@@ -2,16 +2,15 @@ package functional_tests
 
 import (
 	"user-manager/cmd/app/resource"
-	"user-manager/cmd/mock-3rd-party-apis/config"
-	"user-manager/cmd/mock-3rd-party-apis/util"
 	dm "user-manager/domain-model"
+	"user-manager/functional-tests/helper"
 	"user-manager/util/errs"
 )
 
-func TestSimpleLogin(config *config.Config, _ util.Emails, testUser *util.TestUser) error {
+func TestSimpleLogin(testUser *helper.TestUser) error {
 	email := testUser.Email
 	password := testUser.Password
-	client := util.NewRequestClient(config)
+	client := helper.NewRequestClient(testUser)
 
 	// Login with wrong email
 	client.MakeApiRequest("POST", "auth/login", resource.LoginTO{

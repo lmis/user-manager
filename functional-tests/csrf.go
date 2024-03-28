@@ -2,15 +2,14 @@ package functional_tests
 
 import (
 	"user-manager/cmd/app/resource"
-	"user-manager/cmd/mock-3rd-party-apis/config"
-	"user-manager/cmd/mock-3rd-party-apis/util"
+	"user-manager/functional-tests/helper"
 	"user-manager/util/errs"
 )
 
-func TestCallWithMismatchingCsrfTokens(config *config.Config, _ util.Emails, testUser *util.TestUser) error {
+func TestCallWithMismatchingCsrfTokens(testUser *helper.TestUser) error {
 	email := testUser.Email
 	password := testUser.Password
-	client := util.NewRequestClient(config)
+	client := helper.NewRequestClient(testUser)
 	client.SetCsrfTokens("some", "other")
 
 	// Check user with mismatching CSRF tokens

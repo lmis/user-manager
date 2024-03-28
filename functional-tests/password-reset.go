@@ -4,17 +4,16 @@ import (
 	"strings"
 	"time"
 	"user-manager/cmd/app/resource"
-	"user-manager/cmd/mock-3rd-party-apis/config"
-	"user-manager/cmd/mock-3rd-party-apis/util"
 	dm "user-manager/domain-model"
+	"user-manager/functional-tests/helper"
 	"user-manager/util/errs"
 )
 
-func TestPasswordReset(config *config.Config, emails util.Emails, testUser *util.TestUser) error {
+func TestPasswordReset(testUser *helper.TestUser) error {
 	email := testUser.Email
 	password := testUser.Password
 	newPassword := []byte("hunter13")
-	client := util.NewRequestClient(config)
+	client := helper.NewRequestClient(testUser)
 
 	// Trigger reset for non-existent email
 	client.MakeApiRequest("POST", "auth/request-password-reset", resource.SignUpTO{
@@ -60,11 +59,14 @@ func TestPasswordReset(config *config.Config, emails util.Emails, testUser *util
 	// Grab token from email
 	token := ""
 	for i := 0; token == "" && i < 10; i++ {
-		for _, e := range emails[email] {
-			if e.Subject == "Password reset" {
-				token = strings.TrimSpace(strings.Split(strings.Split(e.Body, "password-reset?token=")[1], "\n")[0])
-			}
+		emails := helper.GetSentEmails(testUser, email, "Password reset")
+		if len(emails) > 1 {
+			return errs.Error("too many password reset emails found")
 		}
+		if len(emails) == 1 {
+			token = strings.TrimSpace(strings.Split(strings.Split(emails[0].Body, "password-reset?token=")[1], "\n")[0])
+		}
+
 		if token == "" {
 			time.Sleep(500 * time.Millisecond)
 		}

@@ -14,9 +14,8 @@ import (
 	"user-manager/util/logger"
 )
 
-//go:generate go run github.com/a-h/templ/cmd/templ generate
 func main() {
-	slog.SetDefault(logger.NewLogger(false).With("service", "app"))
+	slog.SetDefault(logger.NewLogger(false))
 	command.Run(runServer)
 }
 
@@ -29,7 +28,7 @@ func runServer() error {
 	}
 
 	if !config.IsLocalEnv() {
-		slog.SetDefault(logger.NewLogger(true).With("service", "app"))
+		slog.SetDefault(logger.NewLogger(true))
 		gin.SetMode(gin.ReleaseMode)
 	}
 

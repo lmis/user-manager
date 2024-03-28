@@ -1,9 +1,13 @@
-*.gen.go
-*_templ.go
-go.sum
 .idea
-go_build_*
+
 cmd/app/router/assets/tailwind.css
+*_templ.go
+
+go.sum
+go_build_*
+
 node_modules
 package-lock.json
 package.json
+
+bin/

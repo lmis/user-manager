@@ -4,16 +4,15 @@ import (
 	"strings"
 	"time"
 	"user-manager/cmd/app/resource"
-	"user-manager/cmd/mock-3rd-party-apis/config"
-	"user-manager/cmd/mock-3rd-party-apis/util"
 	dm "user-manager/domain-model"
+	"user-manager/functional-tests/helper"
 	"user-manager/util/errs"
 )
 
-func TestSignUp(config *config.Config, emails util.Emails, testUser *util.TestUser) error {
+func TestSignUp(testUser *helper.TestUser) error {
 	email := testUser.Email
 	password := testUser.Password
-	client := util.NewRequestClient(config)
+	client := helper.NewRequestClient(testUser)
 
 	// Check user before sign-up
 	client.MakeApiRequest("GET", "user-info", nil)
@@ -62,10 +61,12 @@ func TestSignUp(config *config.Config, emails util.Emails, testUser *util.TestUs
 	// Grab token from email
 	token := ""
 	for i := 0; token == "" && i < 10; i++ {
-		for _, e := range emails[email] {
-			if e.Subject == "Email verification" {
-				token = strings.TrimSpace(strings.Split(strings.Split(e.Body, "email-verification?token=")[1], "\n")[0])
-			}
+		emails := helper.GetSentEmails(testUser, email, "Email verification")
+		if len(emails) > 1 {
+			return errs.Error("too many email verification emails found")
+		}
+		if len(emails) == 1 {
+			token = strings.TrimSpace(strings.Split(strings.Split(emails[0].Body, "email-verification?token=")[1], "\n")[0])
 		}
 		if token == "" {
 			time.Sleep(500 * time.Millisecond)
@@ -122,12 +123,15 @@ func TestSignUp(config *config.Config, emails util.Emails, testUser *util.TestUs
 	// Grab email
 	receivedNotificationEmail := false
 	for i := 0; !receivedNotificationEmail && i < 10; i++ {
-		for _, email := range emails[email] {
-			if email.Subject == "Sign up attempted" {
-				receivedNotificationEmail = true
-				break
-			}
+		emails := helper.GetSentEmails(testUser, email, "Sign up attempted")
+		if len(emails) > 1 {
+			return errs.Error("too many sign up attempted emails found")
 		}
+		if len(emails) == 1 {
+			receivedNotificationEmail = true
+			break
+		}
+
 		if !receivedNotificationEmail {
 			time.Sleep(500 * time.Millisecond)
 		}

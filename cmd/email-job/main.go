@@ -30,7 +30,7 @@ type Config struct {
 }
 
 func main() {
-	slog.SetDefault(logger.NewLogger(false).With("service", "app"))
+	slog.SetDefault(logger.NewLogger(false))
 	command.Run(startJob)
 }
 
@@ -43,7 +43,7 @@ func startJob() error {
 	}
 
 	if config.Environment != "local" {
-		slog.SetDefault(logger.NewLogger(true).With("service", "app"))
+		slog.SetDefault(logger.NewLogger(true))
 		gin.SetMode(gin.ReleaseMode)
 	}
 
@@ -109,15 +109,19 @@ func sendOneEmail(database *mongo.Database, config Config) (ret error) {
 		return errs.Wrap("issue marshalling payload for api call", err)
 	}
 	// TODO: how does this work in GCP?
-	_, err = http.Post(config.EmailApiUrl, "application/json", bytes.NewReader(payload))
+	resp, err := http.Post(config.EmailApiUrl, "application/json", bytes.NewReader(payload))
 
 	// If sending the mail failed, log and continue
 	failedAttempts := mail.FailedAttempts
 	status := dm.MailStatusSent
-	if err != nil {
+	if err != nil || resp.StatusCode != http.StatusOK {
 		status = dm.MailStatusFailed
 		failedAttempts++
-		slog.Warn(errs.Wrap("issue sending email", err).Error())
+		if err != nil {
+			slog.Warn(errs.Wrap("issue sending email", err).Error())
+		} else {
+			slog.Warn("unexpected response from mail api", "status", resp.Status)
+		}
 	}
 
 	_, err = database.Collection(dm.MailQueueCollectionName).UpdateByID(ctx, mail.ObjectID, bson.M{

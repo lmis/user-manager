@@ -2,11 +2,10 @@ package middleware
 
 import (
 	"fmt"
+	"github.com/gin-gonic/gin"
+	"log/slog"
 	"net/http"
 	"time"
-	"user-manager/util/logger"
-
-	"github.com/gin-gonic/gin"
 )
 
 func RegisterLoggerMiddleware(app *gin.Engine) {
@@ -17,7 +16,7 @@ func LoggerMiddleware(c *gin.Context) {
 	requestContext := GetRequestContext(c)
 
 	// Add requestLogger to context
-	requestLogger := logger.NewLogger(!requestContext.Config.IsLocalEnv()).With(
+	requestLogger := slog.Default().With(
 		"correlationID", c.GetHeader("X-Correlation-ID"),
 		"request", fmt.Sprintf("%s %s (%s)", c.Request.Method, c.Request.URL.Path, requestContext.RequestID))
 

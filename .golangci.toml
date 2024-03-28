@@ -1,5 +1,5 @@
-[run]
-skip-dirs = [ "db/generated" ]
+[issues]
+exclude-files = [ "._templ.go" ]
 
 [linters-settings.errcheck]
 exclude-functions = [

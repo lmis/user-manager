@@ -19,7 +19,6 @@ var initScriptTemplate = template.Must(template.New("initScript").Parse(`
 
         // AlpineJS components
         document.addEventListener('alpine:init', () => {` +
-            counterInitScript +
             passwordInputInitScript +
         `});
     </script>

@@ -1,4 +1,4 @@
-package util
+package helper
 
 import (
 	"bytes"
@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"user-manager/cmd/mock-3rd-party-apis/config"
+	emailapi "user-manager/third-party-models/email-api"
 	"user-manager/util/errs"
 )
 
@@ -14,25 +14,27 @@ type TestUser struct {
 	Email         string
 	EmailVerified bool
 	Password      []byte
+	AppURL        string
+	MockApiURL    string
 }
 
 type FunctionalTest struct {
 	Description string
-	Test        func(*config.Config, Emails, *TestUser) error
+	Test        func(*TestUser) error
 }
 
 type RequestClient struct {
-	config       *config.Config
+	testUser     *TestUser
 	cookies      map[string]*http.Cookie
 	headers      map[string]string
 	lastResponse *http.Response
 }
 
-func NewRequestClient(config *config.Config) *RequestClient {
+func NewRequestClient(testUser *TestUser) *RequestClient {
 	client := &RequestClient{
-		config:  config,
-		cookies: map[string]*http.Cookie{},
-		headers: map[string]string{},
+		testUser: testUser,
+		cookies:  map[string]*http.Cookie{},
+		headers:  map[string]string{},
 	}
 	client.SetCsrfTokens("abcdef", "abcdef")
 	return client
@@ -47,8 +49,7 @@ func (r *RequestClient) SetCsrfTokens(header string, cookie string) {
 }
 
 func (r *RequestClient) MakeApiRequest(method string, subpath string, payload interface{}) {
-	conf := r.config
-	req, err := http.NewRequest(method, fmt.Sprintf("%s/api/%s", conf.AppUrl, subpath), nil)
+	req, err := http.NewRequest(method, fmt.Sprintf("%s/api/%s", r.testUser.AppURL, subpath), nil)
 	if err != nil {
 		panic(errs.Wrap("error building request", err))
 	}
@@ -127,4 +128,27 @@ func readAllClose(reader io.ReadCloser) []byte {
 	}
 
 	return body
+}
+
+func GetSentEmails(testUser *TestUser, address string, subject string) []emailapi.EmailTO {
+	req, err := http.NewRequest("GET", fmt.Sprintf("%s/mock-emails/%s", testUser.MockApiURL, address), nil)
+	if err != nil {
+		panic(errs.Wrap("error building request", err))
+	}
+	q := req.URL.Query()
+	q.Add("subject", subject)
+	req.URL.RawQuery = q.Encode()
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		panic(errs.Wrap("error making request", err))
+	}
+
+	body := readAllClose(resp.Body)
+	var emails []emailapi.EmailTO
+	if err := json.Unmarshal(body, &emails); err != nil {
+		panic(errs.Wrap("issue unmarshalling email", err))
+	}
+
+	return emails
 }

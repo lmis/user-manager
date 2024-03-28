@@ -1,0 +1,38 @@
+services:
+  mongo:
+    image: mongo
+    restart: always
+    container_name: mongo-local-dev
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: test
+      MONGO_INITDB_ROOT_PASSWORD: mongo-test-password
+  email-job:
+    image: alpine
+    restart: always
+    container_name: email-job-local-dev
+    entrypoint: ./email-job
+    working_dir: /go/src/user-manager/bin
+    volumes:
+      - ./bin:/go/src/user-manager/bin
+    environment:
+      DB_NAME: db
+      DB_HOST: mongo
+      DB_PORT: 27017
+      DB_USER: test
+      DB_PASSWORD: mongo-test-password
+      EMAIL_API_URL: http://mock-3rd-party-apis:8081/mock-send-email
+      ENVIRONMENT: local
+  mock-3rd-party-apis:
+    image: alpine
+    restart: always
+    container_name: mock-3rd-party-apis-local-dev
+    entrypoint: ./mock-api
+    working_dir: /go/src/user-manager/bin
+    volumes:
+      - ./bin:/go/src/user-manager/bin
+    environment:
+      MOCK_API_PORT: 8081
+    ports:
+      - "8081:8081"
