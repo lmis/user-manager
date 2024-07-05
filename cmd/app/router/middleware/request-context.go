@@ -3,28 +3,12 @@ package middleware
 import (
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/mongo"
-	"reflect"
+	ginext "user-manager/cmd/app/gin-extensions"
 	dm "user-manager/domain-model"
 	"user-manager/util/errs"
 
 	"github.com/teris-io/shortid"
 )
-
-const (
-	RequestContextKey = "ctx"
-)
-
-func GetRequestContext(c *gin.Context) *dm.RequestContext {
-	val, ok := c.Get(RequestContextKey)
-	if !ok {
-		panic(errs.Error("missing request context"))
-	}
-	ctx, ok := val.(*dm.RequestContext)
-	if !ok {
-		panic(errs.Errorf("mistyped request context %s", reflect.TypeOf(val)))
-	}
-	return ctx
-}
 
 func RegisterRequestContextMiddleware(app *gin.Engine, database *mongo.Database, config *dm.Config) error {
 	if config == nil {
@@ -40,7 +24,7 @@ func RegisterRequestContextMiddleware(app *gin.Engine, database *mongo.Database,
 	}
 
 	app.Use(func(ctx *gin.Context) {
-		ctx.Set(RequestContextKey, &dm.RequestContext{Config: config, Database: database, RequestID: sid.MustGenerate()})
+		ginext.SetRequestContext(ctx, &dm.RequestContext{Config: config, Database: database, RequestID: sid.MustGenerate()})
 	})
 	return nil
 }

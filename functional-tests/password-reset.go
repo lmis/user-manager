@@ -88,7 +88,7 @@ func TestPasswordReset(testUser *helper.TestUser) error {
 	// Login with new password should not yet work
 	client.MakeApiRequest("POST", "auth/login", resource.LoginTO{
 		Email:    email,
-		Password: newPassword,
+		Password: string(newPassword),
 	})
 	if err := client.AssertLastResponseEq(200, resource.LoginResponseTO{Status: resource.LoginResponseInvalidCredentials}); err != nil {
 		return errs.Wrap("login response mismatch", err)
@@ -116,7 +116,7 @@ func TestPasswordReset(testUser *helper.TestUser) error {
 	// Login with new password should work now
 	client.MakeApiRequest("POST", "auth/login", resource.LoginTO{
 		Email:    email,
-		Password: newPassword,
+		Password: string(newPassword),
 	})
 	if err := client.AssertLastResponseEq(200, resource.LoginResponseTO{Status: resource.LoginResponseLoggedIn}); err != nil {
 		return errs.Wrap("login response with new password mismatch", err)
@@ -131,6 +131,6 @@ func TestPasswordReset(testUser *helper.TestUser) error {
 		return errs.Wrap("auth role response mismatch", err)
 	}
 
-	testUser.Password = newPassword
+	testUser.Password = string(newPassword)
 	return nil
 }

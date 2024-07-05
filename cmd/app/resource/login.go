@@ -1,8 +1,10 @@
 package resource
 
 import (
+	"github.com/a-h/templ"
 	"time"
 	ginext "user-manager/cmd/app/gin-extensions"
+	"user-manager/cmd/app/router/render"
 	"user-manager/cmd/app/service/auth"
 	"user-manager/cmd/app/service/users"
 	dm "user-manager/domain-model"
@@ -15,14 +17,16 @@ import (
 )
 
 func RegisterLoginResource(group *gin.RouterGroup) {
-	group.POST("login", ginext.WrapEndpoint(Login))
-	group.POST("login-with-second-factor", ginext.WrapEndpoint(LoginWithSecondFactor))
+	group.GET("login", ginext.WrapTemplWithoutPayload(GetLogin))
+	group.POST("login", ginext.WrapTempl(PostLogin))
+	group.POST("login-with-second-factor", ginext.WrapEndpoint(SecondFactor))
 }
 
 type LoginTO struct {
-	Email    string `json:"email"`
-	Password []byte `json:"password"`
-	Sudo     bool   `json:"sudo"`
+	Email       string `form:"email"`
+	Password    string `form:"password"`
+	Sudo        bool   `form:"sudo"`
+	RedirectURL string `form:"redirectUrl"`
 }
 
 type LoginResponseStatus string
@@ -37,7 +41,15 @@ type LoginResponseTO struct {
 	Status LoginResponseStatus `json:"status"`
 }
 
-func Login(ctx *gin.Context, r *dm.RequestContext, requestTO LoginTO) (LoginResponseTO, error) {
+func GetLogin(ctx *gin.Context, r *dm.RequestContext) (templ.Component, error) {
+	redirectURL, ok := ctx.GetQuery("redirectUrl")
+	if redirectURL == "" || !ok {
+		redirectURL = "/"
+	}
+	return render.FullPage(ctx, r, "Login", render.LoginForm(redirectURL)), nil
+}
+
+func PostLogin(ctx *gin.Context, r *dm.RequestContext, requestTO LoginTO) (templ.Component, error) {
 	logger := r.Logger
 
 	loginDescription := "Login"
@@ -45,34 +57,35 @@ func Login(ctx *gin.Context, r *dm.RequestContext, requestTO LoginTO) (LoginResp
 		loginDescription = "Sudo-login"
 		if !r.User.IsPresent() {
 			logger.Info("Sudo login attempted without valid user.")
-			return LoginResponseTO{LoginResponseInvalidCredentials}, nil
+			return render.LoginFormError("Invalid credentials"), nil
 		}
 	}
 
 	user, err := users.
 		GetUserForEmail(ctx, r.Database, requestTO.Email)
 	if err != nil {
-		return LoginResponseTO{}, errs.Wrap("error fetching user", err)
+		return nil, errs.Wrap("error fetching user", err)
 	}
 	if !user.IsPresent() {
 		logger.Info(loginDescription + " attempt for non-existent user")
-		return LoginResponseTO{LoginResponseInvalidCredentials}, nil
+		return render.LoginFormError("Invalid credentials"), nil
 	}
 
 	for _, role := range user.UserRoles {
 		if role != dm.UserRoleUser {
 			logger.Info(loginDescription+" attempt without second factor for non-user", "userID", user.IDHex())
-			return LoginResponseTO{LoginResponseInvalidCredentials}, nil
+			return render.LoginFormError("Invalid credentials"), nil
 		}
 	}
 
-	if !auth.VerifyCredentials(requestTO.Password, user.Credentials) {
+	if !auth.VerifyCredentials([]byte(requestTO.Password), user.Credentials) {
 		logger.Info("Password mismatch for user", "userID", user.IDHex())
-		return LoginResponseTO{LoginResponseInvalidCredentials}, nil
+		return render.LoginFormError("Invalid credentials"), nil
 	}
 
 	if user.SecondFactorToken != "" {
-		return LoginResponseTO{LoginResponse2faRequired}, nil
+		ctx.Header("HX-Reswap", "innerHTML")
+		return render.Login2FA(), nil
 	}
 
 	logger.Info(loginDescription)
@@ -87,17 +100,19 @@ func Login(ctx *gin.Context, r *dm.RequestContext, requestTO LoginTO) (LoginResp
 		session.TimeoutAt = time.Now().Add(dm.SudoSessionDuration)
 	}
 	if err = auth.InsertSession(ctx, r.Database, user.ID(), session); err != nil {
-		return LoginResponseTO{}, errs.Wrap("error inserting session", err)
+		return nil, errs.Wrap("error inserting session", err)
 	}
 
 	auth.SetSessionCookie(ctx, r.Config, string(session.Token), session.Type)
-	return LoginResponseTO{LoginResponseLoggedIn}, nil
+	// TODO: Redirect URL is user input. Rethink this.
+	ginext.HXLocationOrRedirect(ctx, requestTO.RedirectURL)
+	return nil, nil
 }
 
-type LoginWithSecondFactorTO struct {
-	LoginTO
+type SecondFactorTO struct {
 	SecondFactor   string `json:"secondFactor"`
 	RememberDevice bool   `json:"rememberDevice"`
+	Sudo           bool   `json:"sudo"`
 }
 
 type LoginWithSecondFactorResponseTO struct {
@@ -105,28 +120,31 @@ type LoginWithSecondFactorResponseTO struct {
 	TimeoutUntil time.Time `json:"timeoutUntil,omitempty"`
 }
 
-func LoginWithSecondFactor(ctx *gin.Context, r *dm.RequestContext, requestTO LoginWithSecondFactorTO) (LoginWithSecondFactorResponseTO, error) {
+func SecondFactor(ctx *gin.Context, r *dm.RequestContext, requestTO SecondFactorTO) (LoginWithSecondFactorResponseTO, error) {
 	logger := r.Logger
 
 	loginDescription := "Login (2FA)"
+	sessionType := dm.UserSessionTypeLogin
 	if requestTO.Sudo {
 		loginDescription = "Sudo-login (2FA)"
-		if !r.User.IsPresent() {
-			logger.Info("Sudo 2FA attempted without valid session.")
-			return LoginWithSecondFactorResponseTO{}, nil
-		}
+		sessionType = dm.UserSessionTypeSudo
 	}
-	user, err := users.GetUserForEmail(ctx, r.Database, requestTO.Email)
+	sessionToken, err := auth.GetSessionCookie(ctx, sessionType)
+
 	if err != nil {
-		return LoginWithSecondFactorResponseTO{}, errs.Wrap("error finding user", err)
+		return LoginWithSecondFactorResponseTO{}, errs.Wrap("error getting session cookie for second factor auth", err)
 	}
-	if !user.IsPresent() {
-		logger.Info(loginDescription + " attempt for non-existent user")
+	if sessionToken == "" {
+		logger.Info(loginDescription + " attempt without session token")
 		return LoginWithSecondFactorResponseTO{}, nil
 	}
 
-	if !auth.VerifyCredentials(requestTO.Password, user.Credentials) {
-		logger.Info("password mismatch")
+	user, err := auth.GetUserForSessionForSecondFactorVerification(ctx, r.Database, sessionToken, sessionType)
+	if err != nil {
+		return LoginWithSecondFactorResponseTO{}, errs.Wrap("error fetching user for session token", err)
+	}
+	if !user.IsPresent() {
+		logger.Info(loginDescription + " attempt for non-existent user")
 		return LoginWithSecondFactorResponseTO{}, nil
 	}
 
@@ -194,19 +212,9 @@ func LoginWithSecondFactor(ctx *gin.Context, r *dm.RequestContext, requestTO Log
 		logger.Info("Login passed with device token cookie")
 	}
 
-	session := dm.UserSession{
-		Token:     dm.UserSessionToken(random.MakeRandomURLSafeB64(21)),
-		Type:      dm.UserSessionTypeLogin,
-		TimeoutAt: time.Now().Add(dm.LoginSessionDuration),
-	}
-	if requestTO.Sudo {
-		session.Type = dm.UserSessionTypeSudo
-		session.TimeoutAt = time.Now().Add(dm.SudoSessionDuration)
-	}
-	if err = auth.InsertSession(ctx, r.Database, user.ID(), session); err != nil {
-		return LoginWithSecondFactorResponseTO{}, errs.Wrap("error inserting login session", err)
+	if err = auth.SetSecondFactorVerifiedForSession(ctx, r.Database, sessionToken); err != nil {
+		return LoginWithSecondFactorResponseTO{}, errs.Wrap("issue setting second factor verified in db", err)
 	}
 
-	auth.SetSessionCookie(ctx, r.Config, string(session.Token), session.Type)
 	return LoginWithSecondFactorResponseTO{LoggedIn: true}, nil
 }

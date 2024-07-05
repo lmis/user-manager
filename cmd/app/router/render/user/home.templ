@@ -1,0 +1,11 @@
+package user
+
+templ Home(serviceName string) {
+    <div class="hero mt-8">
+        <div class="hero-content prose flex flex-col justify-center items-center p-8 rounded-lg shadow-md bg-white">
+            <h1>User Home</h1>
+            <p>Welcome to the {serviceName} user home page.</p>
+            <p>Your info: <span class="font-mono" hx-get="/user-info" hx-trigger="load"></span></p>
+        </div>
+    </div>
+}

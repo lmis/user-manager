@@ -1,6 +1,7 @@
 .idea
 
-cmd/app/router/assets/tailwind.css
+cmd/app/router/assets/
+build/
 *_templ.go
 
 go.sum
@@ -8,6 +9,6 @@ go_build_*
 
 node_modules
 package-lock.json
-package.json
+bun.lockb
 
 bin/

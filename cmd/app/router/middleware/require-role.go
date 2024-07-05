@@ -3,27 +3,28 @@ package middleware
 import (
 	"fmt"
 	"github.com/gin-gonic/gin"
-	"net/http"
+	"net/url"
+	ginext "user-manager/cmd/app/gin-extensions"
 	dm "user-manager/domain-model"
-	"user-manager/util/errs"
 	"user-manager/util/slices"
 )
 
-func RegisterRequireRoleMiddleware(group *gin.RouterGroup, requiredRole dm.UserRole) {
+func RegisterLoginRedirectIfRoleMissingMiddleware(group *gin.RouterGroup, requiredRole dm.UserRole) {
 	group.Use(func(ctx *gin.Context) {
-		r := GetRequestContext(ctx)
+		r := ginext.GetRequestContext(ctx)
 		logger := r.Logger
 		user := r.User
 		if !user.IsPresent() {
 			logger.Info(fmt.Sprintf("Not a %s: unauthenticated", requiredRole))
-			_ = ctx.AbortWithError(http.StatusUnauthorized, errs.Error("not authenticated"))
+			login := "/auth/login?redirectUrl=" + url.QueryEscape(ctx.Request.URL.Path)
+			ginext.HXLocationOrRedirect(ctx, login)
 			return
 		}
 
 		receivedRoles := user.UserRoles
 		if !slices.Contains(receivedRoles, requiredRole) {
-			logger.Info("Required role missing", "required", requiredRole, "received", receivedRoles)
-			_ = ctx.AbortWithError(http.StatusUnauthorized, errs.Errorf("wrong role. required %s, received %v", requiredRole, receivedRoles))
+			login := "/auth/login?redirectUrl=" + url.QueryEscape(ctx.Request.URL.Path)
+			ginext.HXLocationOrRedirect(ctx, login)
 			return
 		}
 	})

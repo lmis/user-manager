@@ -28,7 +28,7 @@ func Start() error {
 func Watch() error {
 	//mg.Deps(Build.App, ComposeUpLocalEnvironment)
 
-	return sh.RunV(wgo, "-xdir", "magefiles", "-xfile", "bin/app", "-xfile", ".*"+templGeneratedSuffix, "-xfile", tailwindOut, "mage", "start")
+	return sh.RunV(wgo, "-xdir", "magefiles", "-xfile", "bin/app", "-xfile", ".*"+templGeneratedSuffix, "-xdir", assets, "-xdir", buildDir, "mage", "start")
 }
 
 // ComposeUpLocalEnvironment starts a local MongoDB instance, emailer service and mock-3rd-party APIs as docker containers

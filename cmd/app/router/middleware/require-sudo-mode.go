@@ -4,6 +4,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"net/http"
 	"time"
+	ginext "user-manager/cmd/app/gin-extensions"
 	"user-manager/cmd/app/service/auth"
 	dm "user-manager/domain-model"
 	"user-manager/util/errs"
@@ -11,7 +12,7 @@ import (
 
 func RegisterRequireSudoModeMiddleware(group *gin.RouterGroup) {
 	group.Use(func(ctx *gin.Context) {
-		r := GetRequestContext(ctx)
+		r := ginext.GetRequestContext(ctx)
 		sudoSessionToken, err := auth.GetSessionCookie(ctx, dm.UserSessionTypeSudo)
 		if err != nil {
 			_ = ctx.AbortWithError(http.StatusInternalServerError, errs.Wrap("getting session cookie failed", err))

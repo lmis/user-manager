@@ -24,7 +24,7 @@ func TestSignUp(testUser *helper.TestUser) error {
 	client.MakeApiRequest("POST", "auth/sign-up", resource.SignUpTO{
 		UserName: "test-user",
 		Email:    email,
-		Password: password,
+		Password: []byte(password),
 	})
 	if err := client.AssertLastResponseEq(204, nil); err != nil {
 		return errs.Wrap("signup response mismatch", err)

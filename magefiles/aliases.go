@@ -7,5 +7,5 @@ var Aliases = map[string]interface{}{
 	"fmt": Format,
 	"cu":  ComposeUpLocalEnvironment,
 	"cd":  ComposeDownLocalEnvironment,
-	"ft":  FunctionalTests.Basic,
+	//"ft":  FunctionalTests.Basic,
 }

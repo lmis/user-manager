@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	ginext "user-manager/cmd/app/gin-extensions"
 	"user-manager/util/errs"
 
 	"net/http"
@@ -10,7 +11,7 @@ import (
 
 func RegisterVerifiedEmailAuthorizationMiddleware(group *gin.RouterGroup) {
 	group.Use(func(ctx *gin.Context) {
-		r := GetRequestContext(ctx)
+		r := ginext.GetRequestContext(ctx)
 		logger := r.Logger
 		user := r.User
 

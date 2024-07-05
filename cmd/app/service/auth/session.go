@@ -13,14 +13,24 @@ import (
 )
 
 func GetUserForSession(ctx context.Context, database *mongo.Database, sessionToken dm.UserSessionToken, sessionType dm.UserSessionType) (dm.User, error) {
+	return getUserForSession(ctx, database, sessionToken, sessionType, false)
+}
+func GetUserForSessionForSecondFactorVerification(ctx context.Context, database *mongo.Database, sessionToken dm.UserSessionToken, sessionType dm.UserSessionType) (dm.User, error) {
+	return getUserForSession(ctx, database, sessionToken, sessionType, true)
+}
+func getUserForSession(ctx context.Context, database *mongo.Database, sessionToken dm.UserSessionToken, sessionType dm.UserSessionType, requiresSecondFactor bool) (dm.User, error) {
 	queryCtx, cancel := db.DefaultQueryContext(ctx)
 	defer cancel()
 
 	var user dm.User
 	sessionMatches := bson.M{"token": sessionToken, "type": sessionType}
+	requiresSecondFactorMatches := bson.M{"requiresSecondFactor": bson.M{"$exists": false}}
+	if requiresSecondFactor {
+		requiresSecondFactorMatches = bson.M{"requiresSecondFactor": true}
+	}
 	notExpired := bson.M{"timeoutAt": bson.M{"$gt": time.Now()}}
 
-	err := database.Collection(dm.UserCollectionName).FindOne(queryCtx, bson.M{"sessions": bson.M{"$elemMatch": bson.M{"$and": bson.A{sessionMatches, notExpired}}}}).
+	err := database.Collection(dm.UserCollectionName).FindOne(queryCtx, bson.M{"sessions": bson.M{"$elemMatch": bson.M{"$and": bson.A{sessionMatches, notExpired, requiresSecondFactorMatches}}}}).
 		Decode(&user)
 
 	if err != nil {
@@ -54,6 +64,19 @@ func InsertSession(ctx context.Context, database *mongo.Database, userId dm.User
 	return nil
 }
 
+func SetSecondFactorVerifiedForSession(ctx context.Context, database *mongo.Database, sessionToken dm.UserSessionToken) error {
+	queryCtx, cancel := db.DefaultQueryContext(ctx)
+	defer cancel()
+
+	_, err := database.Collection(dm.UserCollectionName).UpdateOne(queryCtx,
+		bson.M{"sessions": bson.M{"$elemMatch": bson.M{"token": sessionToken}}},
+		bson.M{"$unset": "sessions.$.requiresSecondFactor"})
+
+	if err != nil {
+		return errs.Wrap("error updating session timeout", err)
+	}
+	return nil
+}
 func UpdateSessionTimeout(ctx context.Context, database *mongo.Database, sessionToken dm.UserSessionToken, timeout time.Time) error {
 	queryCtx, cancel := db.DefaultQueryContext(ctx)
 	defer cancel()

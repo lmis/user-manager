@@ -28,9 +28,10 @@ type SecondFactorThrottling struct {
 	TimeoutUntil         time.Time `bson:"timeoutUntil,omitempty"`
 }
 type UserSession struct {
-	Token     UserSessionToken `bson:"token,omitempty"`
-	Type      UserSessionType  `bson:"type,omitempty"`
-	TimeoutAt time.Time        `bson:"timeoutAt,omitempty"`
+	Token                UserSessionToken `bson:"token,omitempty"`
+	Type                 UserSessionType  `bson:"type,omitempty"`
+	RequiresSecondFactor bool             `bson:"requiresSecondFactor,omitempty"`
+	TimeoutAt            time.Time        `bson:"timeoutAt,omitempty"`
 }
 
 func (u UserSession) IsPresent() bool {

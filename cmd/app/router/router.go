@@ -33,9 +33,10 @@ func New(config *dm.Config, database *mongo.Database) (*gin.Engine, error) {
 		return nil, errs.Wrap("cannot setup assets", err)
 	}
 
-	r.GET("/", ginext.WrapTempl(render.Index))
-
-	err = registerApiGroup(r.Group("api"))
+	r.NoRoute(func(c *gin.Context) {
+		ginext.HXLocationOrRedirect(c, "/user/home")
+	})
+	err = registerGroups(r.Group(""))
 	if err != nil {
 		return nil, errs.Wrap("cannot setup ApiGroup", err)
 	}
@@ -53,15 +54,15 @@ func registerAssets(r *gin.Engine) error {
 	return nil
 }
 
-func registerApiGroup(api *gin.RouterGroup) error {
-	middleware.RegisterCsrfMiddleware(api)
-	middleware.RegisterExtractLoginSessionMiddleware(api)
+func registerGroups(root *gin.RouterGroup) error {
+	middleware.RegisterCsrfMiddleware(root)
+	middleware.RegisterExtractLoginSessionMiddleware(root)
 
-	resource.RegisterUserInfoResource(api)
+	resource.RegisterUserInfoResource(root)
 
-	registerAuthGroup(api.Group("auth"))
-	registerAdminGroup(api.Group("admin"))
-	registerUserGroup(api.Group("user"))
+	registerAuthGroup(root.Group("auth"))
+	registerAdminGroup(root.Group("admin"))
+	registerUserGroup(root.Group("user"))
 	return nil
 }
 
@@ -75,24 +76,29 @@ func registerAuthGroup(auth *gin.RouterGroup) {
 }
 
 func registerAdminGroup(admin *gin.RouterGroup) {
-	middleware.RegisterRequireRoleMiddleware(admin, dm.UserRoleAdmin)
+	middleware.RegisterLoginRedirectIfRoleMissingMiddleware(admin, dm.UserRoleAdmin)
 
 	registerSuperAdminGroup(admin.Group("super-admin"))
+
+	// TODO: Add redirect middleware for unmatched paths
 }
 
 func registerSuperAdminGroup(superAdmin *gin.RouterGroup) {
-	middleware.RegisterRequireRoleMiddleware(superAdmin, dm.UserRoleSuperAdmin)
+	middleware.RegisterLoginRedirectIfRoleMissingMiddleware(superAdmin, dm.UserRoleSuperAdmin)
 
 	// POST("add-admin-user", todo).
 	// POST("change-password", todo)
 }
 
 func registerUserGroup(user *gin.RouterGroup) {
-	middleware.RegisterRequireRoleMiddleware(user, dm.UserRoleUser)
+	middleware.RegisterLoginRedirectIfRoleMissingMiddleware(user, dm.UserRoleUser)
 
 	resource.RegisterEmailConfirmationResource(user)
+	user.GET("home", ginext.WrapTemplWithoutPayload(render.UserHome))
 
 	registerSettingsGroup(user.Group("settings"))
+
+	// TODO: Add redirect middleware for unmatched paths
 }
 
 func registerSettingsGroup(settings *gin.RouterGroup) {

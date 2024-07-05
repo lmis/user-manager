@@ -27,7 +27,7 @@ func TestSimpleLogin(testUser *helper.TestUser) error {
 	// Login with wrong password
 	client.MakeApiRequest("POST", "auth/login", resource.LoginTO{
 		Email:    email,
-		Password: []byte("not-the-password"),
+		Password: "not-the-password",
 	})
 	if err := client.AssertLastResponseEq(200, resource.LoginResponseTO{Status: resource.LoginResponseInvalidCredentials}); err != nil {
 		return errs.Wrap("login with wrong password response mismatch", err)

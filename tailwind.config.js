@@ -1,9 +1,12 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
-  content: [ "./cmd/app/router/render/**/*.templ"],
+  content: [ "./cmd/app/router/render/**/*.{templ,js}"],
   theme: {
     extend: {},
   },
-  plugins: [],
+  plugins: [require("@tailwindcss/typography"), require("daisyui")],
+  daisyui: {
+    themes: ["retro"],
+  },
 }
 

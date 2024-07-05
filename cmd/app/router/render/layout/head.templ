@@ -1,8 +1,7 @@
-package render
+package layout
 
 import (
     "html/template"
-    "fmt"
 )
 
 var initScriptTemplate = template.Must(template.New("initScript").Parse(`
@@ -14,13 +13,21 @@ var initScriptTemplate = template.Must(template.New("initScript").Parse(`
         tomorrow.setDate(tomorrow.getDate() + 1);
         document.cookie = `+"`"+`${csrfCookieName}=${csrfToken}; expires=${tomorrow.toUTCString()}; path=/; samesite=strict; {{ if ne .Environment "local"}}secure; {{end}}`+"`"+`;
         document.addEventListener('htmx:configRequest', (event) => {
+            // TODO: Update cookie if it's expired
             event.detail.headers['X-CSRF-Token'] = csrfToken;
         });
 
-        // AlpineJS components
-        document.addEventListener('alpine:init', () => {` +
-            passwordInputInitScript +
-        `});
+        // HTMX Settings
+        window.onload = () => {
+            htmx.config.refreshOnHistoryMiss = true;
+            htmx.config.selfRequestsOnly = true;
+            htmx.config.allowEval = false;
+            htmx.config.allowScriptTags = false;
+        };
+
+        // TODO: Handle htmx:responseError and htmx:sendError
+
+        // TODO: Use caching headers?
     </script>
 `))
 
@@ -29,14 +36,6 @@ templ head(title string, nonce string, csrfToken string, environment string) {
         <title>{title}</title>
         <meta charset="UTF-8"/>
         <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-        <meta http-equiv="Content-Security-Policy" content={fmt.Sprintf(`
-            default-src 'self';
-            script-src https: 'strict-dynamic' 'nonce-%s' 'unsafe-inline';
-            object-src 'none';
-            base-uri 'none';
-            connect-src 'self';
-            style-src 'self' 'sha256-d7rFBVhb3n/Drrf+EpNWYdITkos3kQRFpB0oSOycXg4=';
-        `, nonce)}/>
 
         <link rel="stylesheet" href="/assets/tailwind.css"/>
         @templ.FromGoHTML(initScriptTemplate, map[string]interface{}{
@@ -45,15 +44,12 @@ templ head(title string, nonce string, csrfToken string, environment string) {
                 "CsrfToken": csrfToken,
             })
 
-        <script src="https://unpkg.com/htmx.org@1.9.4/dist/htmx.min.js"
-                integrity="sha384-zUfuhFKKZCbHTY6aRR46gxiqszMk5tcHjsVFxnUo8VMus4kHGVdIYVbOYYNlKmHV"
+        // TODO: Bundle this yourself
+        <script src="https://unpkg.com/htmx.org@2.0.0/dist/htmx.min.js"
+                integrity="sha384-wS5l5IKJBvK6sPTKa2WZ1js3d947pvWXbPJ1OmWfEuxLgeHcEbjUUA5i9V5ZkpCw"
                 crossorigin="anonymous"
                 nonce={nonce}
                 />
-        <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/csp@3.13.5/dist/cdn.min.js"
-                integrity="sha384-wfbZXVysLM94lbXWxD/5B9Ra+UOJEStm4vBKyQsM8SRhLNmWyoP0WzGd3GQY041c"
-                crossorigin="anonymous"
-                nonce={nonce}
-                />
+        <script src="/assets/web-components-all.js" nonce={nonce}/>
     </head>
 }

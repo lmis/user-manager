@@ -8,12 +8,15 @@ import (
 	"io"
 	"log"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 	"time"
 )
 
 const (
+	assets               = "cmd/app/router/assets"
+	buildDir             = "build"
 	tailwindOut          = "cmd/app/router/assets/tailwind.css"
 	templDir             = "cmd/app/router/render"
 	templGeneratedSuffix = "_templ.go"
@@ -126,8 +129,14 @@ func Vet() error {
 	return sh.Run("go", "vet", "./...")
 }
 
+// BunInstall installs package.json dependencies
+func BunInstall() error {
+	return sh.Run("bun", "install")
+}
+
 // Tailwind generates tailwind.css if dirty
 func Tailwind() error {
+	mg.Deps(BunInstall)
 	templates := "cmd/app/router/render"
 
 	dirty, err := target.Dir(tailwindOut, templates, "main.css", "tailwind.config.js")
@@ -143,7 +152,7 @@ func Tailwind() error {
 	if mg.Verbose() {
 		writer = os.Stdout
 	}
-	_, err = sh.Exec(nil, writer, writer, "npx", "tailwindcss", "-i", "main.css", "-o", tailwindOut, "-m")
+	_, err = sh.Exec(nil, writer, writer, "bun", "tailwindcss", "-i", "main.css", "-o", tailwindOut, "-m")
 	if err != nil {
 		return errors.Wrap(err, "error running tailwindcss")
 	}
@@ -151,18 +160,41 @@ func Tailwind() error {
 	return sh.Run("touch", tailwindOut)
 }
 
-// CleanTailwind removes assets/tailwind.css
-func CleanTailwind() error {
-	return sh.Rm(tailwindOut)
+// CleanBuildDir removes everything in build dir
+func CleanBuildDir() error {
+	return sh.Rm(path.Join(buildDir, "*"))
+}
+
+// CleanAssets removes everything in assets
+func CleanAssets() error {
+	return sh.Rm(path.Join(assets, "*"))
+}
+
+// BuildWebComponents builds web-components-all.js
+func BuildWebComponents() error {
+	mg.Deps(BunInstall)
+
+	if err := sh.Run("mkdir", "-p", assets, buildDir); err != nil {
+		return errors.Wrap(err, "error creating build dir and assets dir")
+	}
+
+	webComponentsInputFile := path.Join(buildDir, "web-components-all.ts")
+
+	if err := sh.Run("sh", "-c", "cat cmd/app/router/render/web-components/*.ts > "+webComponentsInputFile); err != nil {
+		return errors.Wrap(err, "error concatenating web-components")
+	}
+	if err := sh.Run("bun", "build", webComponentsInputFile, "--outdir", assets, "--minify"); err != nil {
+		return errors.Wrap(err, "error building web-components")
+	}
+	return nil
 }
 
 // Check runs formats and checks
 func Check() {
-	mg.Deps(Tidy, Templ, Format, Lint, Vet, Tailwind)
+	mg.Deps(Tidy, Templ, Format, Lint, Vet, Tailwind, BuildWebComponents)
 }
 
 // Clean removes all generated files
 func Clean() {
-	mg.Deps(CleanTailwind, CleanTempl)
-
+	mg.Deps(CleanAssets, CleanTempl, CleanBuildDir)
 }

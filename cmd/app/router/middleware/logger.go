@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"net/http"
 	"time"
+	ginext "user-manager/cmd/app/gin-extensions"
 )
 
 func RegisterLoggerMiddleware(app *gin.Engine) {
@@ -13,7 +14,7 @@ func RegisterLoggerMiddleware(app *gin.Engine) {
 }
 
 func LoggerMiddleware(c *gin.Context) {
-	requestContext := GetRequestContext(c)
+	requestContext := ginext.GetRequestContext(c)
 
 	// Add requestLogger to context
 	requestLogger := slog.Default().With(

@@ -3,6 +3,7 @@ package middleware
 import (
 	"net/http"
 	"time"
+	ginext "user-manager/cmd/app/gin-extensions"
 	"user-manager/cmd/app/service/auth"
 	dm "user-manager/domain-model"
 	"user-manager/util/errs"
@@ -12,7 +13,7 @@ import (
 
 func RegisterExtractLoginSessionMiddleware(group *gin.RouterGroup) {
 	group.Use(func(ctx *gin.Context) {
-		r := GetRequestContext(ctx)
+		r := ginext.GetRequestContext(ctx)
 
 		sessionToken, err := auth.GetSessionCookie(ctx, dm.UserSessionTypeLogin)
 		if err != nil {
@@ -31,7 +32,7 @@ func RegisterExtractLoginSessionMiddleware(group *gin.RouterGroup) {
 		}
 
 		if user.IsPresent() {
-			r := GetRequestContext(ctx)
+			r := ginext.GetRequestContext(ctx)
 			r.User = user
 			r.Logger = r.Logger.With("userID", user.IDHex())
 			r.Logger.Info("User session found", "roles", user.UserRoles)

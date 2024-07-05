@@ -2,7 +2,6 @@ package ginext
 
 import (
 	"net/http"
-	"user-manager/cmd/app/router/middleware"
 	dm "user-manager/domain-model"
 	"user-manager/util/errs"
 
@@ -21,7 +20,7 @@ func WrapEndpoint[requestTO interface{}, responseTO interface{}](endpoint Endpoi
 			_ = c.AbortWithError(http.StatusBadRequest, errs.Wrap("cannot bind to request TO", err))
 			return
 		}
-		response, err := endpoint(c, middleware.GetRequestContext(c), request)
+		response, err := endpoint(c, GetRequestContext(c), request)
 		if err != nil {
 			_ = c.AbortWithError(http.StatusInternalServerError, err)
 			return
@@ -40,7 +39,7 @@ func WrapEndpointWithoutResponseBody[requestTO interface{}](endpoint EndpointWit
 			_ = c.AbortWithError(http.StatusBadRequest, errs.Wrap("cannot bind to request TO", err))
 			return
 		}
-		if err := endpoint(c, middleware.GetRequestContext(c), request); err != nil {
+		if err := endpoint(c, GetRequestContext(c), request); err != nil {
 			status := http.StatusInternalServerError
 			_ = c.AbortWithError(status, err)
 			return
@@ -54,7 +53,7 @@ func WrapEndpointWithoutResponseBody[requestTO interface{}](endpoint EndpointWit
 
 func WrapEndpointWithoutRequestBody[responseTO interface{}](endpoint EndpointWithoutRequestBody[responseTO]) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		response, err := endpoint(c, middleware.GetRequestContext(c))
+		response, err := endpoint(c, GetRequestContext(c))
 		if err != nil {
 			_ = c.AbortWithError(http.StatusInternalServerError, err)
 			return
@@ -68,7 +67,7 @@ func WrapEndpointWithoutRequestBody[responseTO interface{}](endpoint EndpointWit
 
 func WrapEndpointWithoutRequestOrResponseBody(endpoint EndpointWithoutRequestOrResponseBody) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		if err := endpoint(c, middleware.GetRequestContext(c)); err != nil {
+		if err := endpoint(c, GetRequestContext(c)); err != nil {
 			_ = c.AbortWithError(http.StatusInternalServerError, err)
 			return
 		}

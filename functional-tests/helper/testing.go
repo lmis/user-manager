@@ -13,7 +13,7 @@ import (
 type TestUser struct {
 	Email         string
 	EmailVerified bool
-	Password      []byte
+	Password      string
 	AppURL        string
 	MockApiURL    string
 }

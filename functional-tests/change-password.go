@@ -21,7 +21,7 @@ func TestChangePassword(testUser *helper.TestUser) error {
 
 	// Attempt to change without sudo mode
 	client.MakeApiRequest("POST", "user/settings/sensitive-settings/change-password", resource.ChangePasswordTO{
-		OldPassword: password,
+		OldPassword: []byte(password),
 		NewPassword: newPassword,
 	})
 	if err := client.AssertLastResponseEq(403, nil); err != nil {
@@ -65,7 +65,7 @@ func TestChangePassword(testUser *helper.TestUser) error {
 
 	// Change with correct password
 	client.MakeApiRequest("POST", "user/settings/sensitive-settings/change-password", resource.ChangePasswordTO{
-		OldPassword: testUser.Password,
+		OldPassword: []byte(testUser.Password),
 		NewPassword: newPassword,
 	})
 	if err := client.AssertLastResponseEq(204, nil); err != nil {
@@ -84,7 +84,7 @@ func TestChangePassword(testUser *helper.TestUser) error {
 	// Login with new password should work now
 	client.MakeApiRequest("POST", "auth/login", resource.LoginTO{
 		Email:    email,
-		Password: newPassword,
+		Password: string(newPassword),
 	})
 	if err := client.AssertLastResponseEq(200, resource.LoginResponseTO{Status: resource.LoginResponseLoggedIn}); err != nil {
 		return errs.Wrap("login response with new password mismatch", err)
@@ -99,6 +99,6 @@ func TestChangePassword(testUser *helper.TestUser) error {
 		return errs.Wrap("auth role response mismatch", err)
 	}
 
-	testUser.Password = newPassword
+	testUser.Password = string(newPassword)
 	return nil
 }
