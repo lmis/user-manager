@@ -1,10 +1,6 @@
 package render
 
-import (
-    "fmt"
-)
-
-templ LoginForm(redirectURL string) {
+templ LoginForm() {
     <div class="hero mt-8">
         <div class="hero-content prose flex flex-col justify-center items-center p-8 rounded-lg shadow-md bg-white">
             <h1>Login</h1>
@@ -12,7 +8,6 @@ templ LoginForm(redirectURL string) {
                   hx-post="/auth/login"
                   hx-select-oob="#login-form-error"
                   hx-swap="none"
-                  hx-vals={fmt.Sprintf("{\"redirectUrl\": \"%s\"}", redirectURL)}
                   class="w-full max-w-sm flex flex-col gap-4">
                 <!-- TODO: Does not work: hx-disabled-elt="next button[type='submit']" -->
                 <label class="input input-bordered flex items-center gap-2 input-warning">

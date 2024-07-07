@@ -8,18 +8,30 @@ var initScriptTemplate = template.Must(template.New("initScript").Parse(`
     <script type="text/javascript" nonce="{{.Nonce}}">
         // HTMX CSRF double submit
         const csrfCookieName = "{{if ne .Environment "local"}}__Host-{{end}}CSRF-Token";
-        const csrfToken = "{{.CsrfToken}}";
         const tomorrow = new Date();
         tomorrow.setDate(tomorrow.getDate() + 1);
-        document.cookie = `+"`"+`${csrfCookieName}=${csrfToken}; expires=${tomorrow.toUTCString()}; path=/; samesite=strict; {{ if ne .Environment "local"}}secure; {{end}}`+"`"+`;
         document.addEventListener('htmx:configRequest', (event) => {
             // TODO: Update cookie if it's expired
+            let csrfToken = document.cookie
+                  .split("; ")
+                  .find((row) => row.startsWith(csrfCookieName + "="))
+                  ?.split("=")[1]
+
+            if (!csrfToken) {
+                const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
+                const buf = new Uint8Array(21);
+                crypto.getRandomValues(buf);
+                csrfToken = "";
+                buf.forEach((x) => {
+                    csrfToken += alphabet[x % alphabet.length];
+                });
+                document.cookie = `+"`"+`${csrfCookieName}=${csrfToken}; expires=${tomorrow.toUTCString()}; path=/; samesite=strict; {{ if ne .Environment "local"}}secure; {{end}}`+"`"+`;
+            }
             event.detail.headers['X-CSRF-Token'] = csrfToken;
         });
 
         // HTMX Settings
         window.onload = () => {
-            htmx.config.refreshOnHistoryMiss = true;
             htmx.config.selfRequestsOnly = true;
             htmx.config.allowEval = false;
             htmx.config.allowScriptTags = false;
@@ -31,7 +43,7 @@ var initScriptTemplate = template.Must(template.New("initScript").Parse(`
     </script>
 `))
 
-templ head(title string, nonce string, csrfToken string, environment string) {
+templ head(title string, nonce string, environment string) {
     <head>
         <title>{title}</title>
         <meta charset="UTF-8"/>
@@ -41,7 +53,6 @@ templ head(title string, nonce string, csrfToken string, environment string) {
         @templ.FromGoHTML(initScriptTemplate, map[string]interface{}{
                 "Nonce": nonce,
                 "Environment": environment,
-                "CsrfToken": csrfToken,
             })
 
         // TODO: Bundle this yourself

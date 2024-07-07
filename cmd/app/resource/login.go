@@ -17,23 +17,20 @@ import (
 )
 
 func RegisterLoginResource(group *gin.RouterGroup) {
-	group.GET("login", ginext.WrapTemplWithoutPayload(GetLogin))
 	group.POST("login", ginext.WrapTempl(PostLogin))
 	group.POST("login-with-second-factor", ginext.WrapEndpoint(SecondFactor))
 }
 
 type LoginTO struct {
-	Email       string `form:"email"`
-	Password    string `form:"password"`
-	Sudo        bool   `form:"sudo"`
-	RedirectURL string `form:"redirectUrl"`
+	Email    string `form:"email"`
+	Password string `form:"password"`
+	Sudo     bool   `form:"sudo"`
 }
 
 type LoginResponseStatus string
 
 const (
 	LoginResponseLoggedIn           LoginResponseStatus = "logged-in"
-	LoginResponse2faRequired        LoginResponseStatus = "second-factor-required"
 	LoginResponseInvalidCredentials LoginResponseStatus = "invalid-credentials"
 )
 
@@ -41,14 +38,7 @@ type LoginResponseTO struct {
 	Status LoginResponseStatus `json:"status"`
 }
 
-func GetLogin(ctx *gin.Context, r *dm.RequestContext) (templ.Component, error) {
-	redirectURL, ok := ctx.GetQuery("redirectUrl")
-	if redirectURL == "" || !ok {
-		redirectURL = "/"
-	}
-	return render.FullPage(ctx, r, "Login", render.LoginForm(redirectURL)), nil
-}
-
+// TODO: Rethink approach here. It is a bit weird to have hx-target none and then reswap on 2FA. Or is it?
 func PostLogin(ctx *gin.Context, r *dm.RequestContext, requestTO LoginTO) (templ.Component, error) {
 	logger := r.Logger
 
@@ -84,7 +74,7 @@ func PostLogin(ctx *gin.Context, r *dm.RequestContext, requestTO LoginTO) (templ
 	}
 
 	if user.SecondFactorToken != "" {
-		ctx.Header("HX-Reswap", "innerHTML")
+		ginext.HXReswap(ctx, "innerHTML")
 		return render.Login2FA(), nil
 	}
 
@@ -104,8 +94,8 @@ func PostLogin(ctx *gin.Context, r *dm.RequestContext, requestTO LoginTO) (templ
 	}
 
 	auth.SetSessionCookie(ctx, r.Config, string(session.Token), session.Type)
-	// TODO: Redirect URL is user input. Rethink this.
-	ginext.HXLocationOrRedirect(ctx, requestTO.RedirectURL)
+	// Reload current URL (it should now pass the required role check)
+	ginext.HXReload(ctx)
 	return nil, nil
 }
 
